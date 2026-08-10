@@ -6,7 +6,12 @@ repos:
     hooks:
       - id: detect-secrets
         args: ["--baseline", ".secrets.baseline"]
-        exclude: ^(\.secrets\.baseline|docs/kickoff/.*)$
+        # Generated manifests and reports are full of sha256 digests by design,
+        # and they are rewritten after every run, so content scanning them would
+        # break every commit on a hash that is doing its job. They are still
+        # covered by the path denylist hook below, and alibi/monitor/llm.py
+        # redacts the API key from anything it writes.
+        exclude: ^(\.secrets\.baseline|docs/kickoff/.*|data/cache/.*|artifacts/.*|report/.*|alibi/monitor/cache/.*|alibi/monitor/selection\.json|alibi/data/(manifest|eligibility)\.json)$
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
