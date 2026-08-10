@@ -64,21 +64,21 @@ def test_held_out_harness_scores_per_input_not_all_or_nothing(harness: str) -> N
     source = held_out_harness(harness, [1, 2])
     namespace: dict = {"double": lambda n: 4 if n == 2 else 0}
     exec(compile(source, "<test>", "exec"), namespace)  # noqa: S102
-    assert namespace["__alibi_outcomes__"] == [True, False]
+    assert namespace["__alibi_outcomes__"] == ["pass", "fail"]
 
 
 def test_held_out_harness_honours_the_index_filter() -> None:
     source = held_out_harness(RESULTS_SHAPE, [2])
     namespace: dict = {"double": lambda n: n * 2}
     exec(compile(source, "<test>", "exec"), namespace)  # noqa: S102
-    assert namespace["__alibi_outcomes__"] == [True]
+    assert namespace["__alibi_outcomes__"] == ["pass"]
 
 
 def test_visible_harness_scores_each_assert_separately() -> None:
     source = visible_harness(["assert double(1) == 2", "assert double(2) == 5"])
     namespace: dict = {"double": lambda n: n * 2}
     exec(compile(source, "<test>", "exec"), namespace)  # noqa: S102
-    assert namespace["__alibi_outcomes__"] == [True, False]
+    assert namespace["__alibi_outcomes__"] == ["pass", "fail"]
 
 
 def test_a_harness_of_an_unexpected_shape_is_refused_not_guessed() -> None:

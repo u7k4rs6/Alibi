@@ -12,6 +12,7 @@ Exit codes, per doc 04 section 1:
 from __future__ import annotations
 
 import argparse
+import json
 import statistics
 import sys
 from collections import Counter
@@ -26,10 +27,7 @@ EXIT_CONFIG = 2
 EXIT_SANDBOX = 3
 
 NOT_IMPLEMENTED_YET = {
-    "train": "day 2 of the schedule in docs/kickoff/01-prd.md section 10",
     "eval": "day 3",
-    "report": "day 6",
-    "verify": "day 6",
     "replay": "day 6",
 }
 
@@ -386,6 +384,48 @@ def print_summary(summary: dict, records: list[dict]) -> None:
             print(f"  task {entry['task_id']}: {entry['reason']}")
 
 
+def cmd_verify(args: argparse.Namespace) -> int:
+    from alibi.report.verify import verify
+
+    code, lines = verify(no_gpu=args.no_gpu)
+    for line in lines:
+        print(line)
+    return EXIT_MISMATCH if code else EXIT_OK
+
+
+def cmd_report(args: argparse.Namespace) -> int:
+    from alibi.report.build import build_report
+
+    paths = build_report()
+    print(f"config hash {runlog.config_hash({'command': 'report'})}")
+    for name, path in paths.items():
+        print(f"  {name:<12s} {runlog.repo_relative(path)}")
+    print(f"run id {args.run_id or 'none, report reads artifacts and writes no run directory'}")
+    return EXIT_OK
+
+
+def cmd_train(args: argparse.Namespace) -> int:
+    from alibi.train.grpo import run, smoke
+    from alibi.train.loop import ArmConfig
+
+    if args.smoke:
+        print(f"config hash {runlog.config_hash({'command': 'train', 'smoke': True})}")
+        result = smoke(steps=args.steps or 3, prompts=2, group=2)
+        print(json.dumps({k: v for k, v in result.items() if k != "summaries"}, indent=2, sort_keys=True))
+        print(f"run id {result['run_id']}")
+        return EXIT_OK if result["status"] == "complete" else EXIT_MISMATCH
+
+    if not args.arm:
+        print("train needs --arm, or --smoke for the dry run", file=sys.stderr)
+        return EXIT_CONFIG
+    config = ArmConfig(arm=args.arm, seed=args.seed, steps=args.steps or 100, dry_run=args.dry_run)
+    print(f"config hash {config.hash()}")
+    result = run(config, run_id=args.run_id)
+    print(json.dumps({k: v for k, v in result.items() if k != "summaries"}, indent=2, sort_keys=True))
+    print(f"run id {result['run_id']}")
+    return EXIT_OK if result["status"] == "complete" else EXIT_MISMATCH
+
+
 def cmd_not_implemented(args: argparse.Namespace) -> int:
     print(f"`alibi {args.command}` is not implemented yet, scheduled for {NOT_IMPLEMENTED_YET[args.command]}")
     return EXIT_CONFIG
@@ -416,6 +456,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="also score the dict shaped cheat, which the structural check does not catch",
     )
     check.set_defaults(func=cmd_data_check)
+
+    train = sub.add_parser("train", help="train one arm at one seed, resumable by run id")
+    train.add_argument("--arm", choices=["a0", "a1", "a2", "a3"], default=None)
+    train.add_argument("--seed", type=int, default=1)
+    train.add_argument("--steps", type=int, default=None)
+    train.add_argument("--smoke", action="store_true", help="the dry run: 3 steps, 2 prompts, stub monitor")
+    train.set_defaults(func=cmd_train)
+
+    verify_parser = sub.add_parser("verify", help="recompute every published number, exit non-zero on mismatch")
+    verify_parser.add_argument("--no-gpu", action="store_true", default=True)
+    verify_parser.set_defaults(func=cmd_verify)
+
+    sub.add_parser("report", help="build REPORT.md and the figures from artifacts").set_defaults(func=cmd_report)
 
     for name in NOT_IMPLEMENTED_YET:
         sub.add_parser(name, help=f"not implemented yet, {NOT_IMPLEMENTED_YET[name]}").set_defaults(

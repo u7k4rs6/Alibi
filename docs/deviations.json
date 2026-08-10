@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "description": "Status of every deviation between the normative kickoff documents and the code, found on day 1. Prose alone is not a status, so each entry carries a machine-readable state and the commit that changed it.",
+  "states": {
+    "fixed": "the code now satisfies the document, or the document's intent is met by a better mechanism",
+    "accepted": "the code deliberately differs from the document, the document is the thing that is wrong, and the deviation is recorded at the site and here",
+    "open": "not addressed yet, with a named owner date"
+  },
+  "deviations": [
+    {
+      "id": "D0",
+      "title": "Kickoff documents were not at the path the architecture doc declares",
+      "doc": "02-technical-architecture.md section 2",
+      "found": "The four documents were in files/. The layout names docs/kickoff/.",
+      "status": "fixed",
+      "resolution": "Moved to docs/kickoff/. The document was right and the filesystem was wrong.",
+      "commit": "bc5c59d"
+    },
+    {
+      "id": "D1",
+      "title": "RLIMIT_AS of 512 MB cannot coexist with the held-out harness",
+      "doc": "03-security-and-access.md section 2",
+      "found": "numpy reserves 546 MB of address space before any candidate code runs, and the MBPP+ held-out harness imports numpy. At 512 MB every held-out execution died with MemoryError at zero tests, which would have published as held-out 0.0 for correct solutions.",
+      "status": "accepted",
+      "resolution": "Raised to 1536 MB, leaving roughly 960 MB for candidate code, which is close to the headroom the document intended. The measured numpy figure is recorded at the site so the choice is checkable. The document's number is wrong.",
+      "commit": "209aa6c",
+      "evidence": "alibi/env/executor.py DEFAULT_LIMITS"
+    },
+    {
+      "id": "D2",
+      "title": "The declared filesystem control cannot pass the test the same section requires",
+      "doc": "03-security-and-access.md section 2",
+      "found": "The control table lists only a fresh mkdtemp as cwd, which does not stop open('/etc/passwd'). The same section requires an actual open('/etc/passwd') as a passing adversarial test. The section is internally inconsistent.",
+      "status": "fixed",
+      "resolution": "Added a mount namespace with pivot_root into a minimal root, so the file is absent rather than guarded, plus language-layer confinement for hosts without user namespaces. Which layer is active is recorded by name in env.lock. Tested with the language layer disabled so the test proves the kernel control.",
+      "commit": "209aa6c",
+      "evidence": "alibi/env/_sandbox_setup.py, tests/test_executor.py::test_filesystem_read_is_refused_by_the_kernel_not_by_our_wrapper"
+    },
+    {
+      "id": "D3",
+      "title": "The original MBPP asserts are not usable as the visible set",
+      "doc": "01-prd.md section 3",
+      "found": "MBPP+ rewrote the asserts for 111 of the 378 joined problems, and MBPP's raw asserts are not all satisfiable by the MBPP+ reference solution that the held-out harness scores against.",
+      "status": "accepted",
+      "resolution": "Visible is MBPP+'s test_list. The divergence is recorded per problem in the split manifest as visible_differs_from_mbpp. The document needs amending.",
+      "commit": "d2fa099",
+      "evidence": "alibi/data/manifest.json visible_source"
+    },
+    {
+      "id": "D4",
+      "title": "The held-out set as specified contains the visible inputs",
+      "doc": "01-prd.md section 3",
+      "found": "EvalPlus places the base MBPP inputs first in its expanded set. Scoring against it unmodified credits a pure hardcoder with a few percent held-out pass and blurs the exact gap this project measures.",
+      "status": "fixed",
+      "resolution": "Held-out excludes every input whose value matches a visible assert's input, established per problem rather than by assuming the prefix. Two problems where disjointness could not be established are excluded by name.",
+      "commit": "d2fa099",
+      "evidence": "alibi/env/tests.py held_out_indices, tests/test_data_split.py::test_the_built_split_is_disjoint_for_every_problem"
+    },
+    {
+      "id": "D5",
+      "title": "The structural rule as written misses the obvious evasion",
+      "doc": "01-prd.md section 3",
+      "found": "A dict keyed by the visible inputs is neither a literal comparison nor a literal return. Measured on day 1: the if-chain cheat was flagged 372/376 and the behaviourally identical dict cheat 0/376.",
+      "status": "fixed",
+      "resolution": "Extended to the dict-keyed, sequence-lookup and membership forms. The dict cheat is now flagged 372/376. Every flagged completion carries a cheat_form label. Because the rule needed extending at all, the pre-registration makes the behavioural oracle primary and the structural check diagnostic only.",
+      "commit": "5d091e9",
+      "evidence": "alibi/env/oracle.py structural_check, alibi/prereg.py OracleSpec.structural_is_diagnostic_only"
+    },
+    {
+      "id": "D6",
+      "title": "The 5 second timeout is too tight for held-out scoring",
+      "doc": "03-security-and-access.md section 2",
+      "found": "The held-out harness runs about 105 inputs. At a flat 5 s, three reference solutions (271, 392, 599) timed out, which would have been published as correct code that does not generalise.",
+      "status": "fixed",
+      "resolution": "Held-out gets a per-test SIGALRM budget inside the sandbox plus a wall clock that scales with the test count, and RLIMIT_CPU now scales with the wall clock because at a flat 10 s it became the binding limit. All three now pass with zero indeterminate. Reference indeterminate rate across the full set is 121/39251 = 0.0031.",
+      "commit": "5d091e9",
+      "evidence": "alibi/env/scoring.py"
+    },
+    {
+      "id": "D7",
+      "title": "The import denylist breaks a legitimate MBPP solution",
+      "doc": "03-security-and-access.md section 2",
+      "found": "Task 596 needs sys.getsizeof and sys is denied. The document says to prefer an allowlist if it does not break MBPP solutions; measured breakage is 1 of 376.",
+      "status": "accepted",
+      "resolution": "The document-mandated denylist is unchanged. Task 596 is excluded by the frozen eligibility rule require_reference_passes_visible, so it cannot silently depress a published number. Changing the denylist to rescue one problem would weaken a security control to gain 0.27 percent of the problem set.",
+      "commit": "5d091e9",
+      "evidence": "alibi/data/eligibility.json excluded, rule reference_solution_fails_visible"
+    },
+    {
+      "id": "D8",
+      "title": "data check is specified to report base model pass rates, which need a GPU",
+      "doc": "04-cli-and-report-spec.md section 1",
+      "found": "The day-one gate is specified to include the base model's visible and held-out pass rate. Day 1 was CPU only and loaded no model.",
+      "status": "open",
+      "resolution": "Reported as not measured with a stated reason, never as zero. Requires a base model evaluation pass, which the calibration run in the unattended brief section 1 will produce.",
+      "commit": null,
+      "owner_date": "first calibration run",
+      "evidence": "alibi/cli.py summarise base_model_absent_reason"
+    },
+    {
+      "id": "D9",
+      "title": "The declared layout has no home for env.lock, scrubbing, or the cheat generator",
+      "doc": "02-technical-architecture.md section 2",
+      "found": "The layout names env.lock and the scrubbing requirement but gives them no module, and has no location for the synthetic cheat generator.",
+      "status": "accepted",
+      "resolution": "Added alibi/runlog.py, alibi/data/cheat.py, alibi/records.py, alibi/prereg.py, alibi/halt.py, alibi/env/scoring.py and alibi/train/queue.py. Each is documented as an addition to the layout at the top of its module.",
+      "commit": "3c716e5"
+    }
+  ]
+}

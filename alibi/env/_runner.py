@@ -278,7 +278,19 @@ def main() -> int:
     else:
         start_timer, stop_timer, armed = (lambda: None), (lambda: None), False
 
-    source = payload["code"] + "\n\n" + payload["harness"] + "\n"
+    # The candidate and the harness are compiled and executed separately, and
+    # the distinction is load bearing.
+    #
+    # If the candidate does not compile, or raises while defining itself, that
+    # is a definitive statement about the candidate: it cannot pass any test.
+    # Those tests are FAIL. If the harness dies instead, or the process is
+    # killed, nothing was learned and those tests are INDETERMINATE.
+    #
+    # Running them as one blob made a syntax error indeterminate, which is how
+    # the first smoke run tripped the 5 percent indeterminate halt at step 0
+    # with a 0.5B model emitting ordinary malformed code.
+    candidate_source = payload["code"]
+    harness_source = payload["harness"]
     globals_dict: dict = {
         "__name__": "__alibi_candidate__",
         "__builtins__": __builtins__,
@@ -298,12 +310,20 @@ def main() -> int:
 
     status = "ok"
     detail = ""
+    candidate_failed = False
     try:
-        compiled = compile(source, "<candidate>", "exec")
-        exec(compiled, globals_dict)  # noqa: S102 - this is the point of the file
+        exec(compile(candidate_source, "<candidate>", "exec"), globals_dict)  # noqa: S102
     except BaseException as exc:  # noqa: BLE001 - every failure is a scored outcome
-        status = "raised"
+        status = "candidate_error"
         detail = f"{type(exc).__name__}: {exc}"[:2000]
+        candidate_failed = True
+
+    if not candidate_failed:
+        try:
+            exec(compile(harness_source, "<harness>", "exec"), globals_dict)  # noqa: S102
+        except BaseException as exc:  # noqa: BLE001
+            status = "raised"
+            detail = f"{type(exc).__name__}: {exc}"[:2000]
 
     outcomes = globals_dict.get("__alibi_outcomes__", [])
     if not isinstance(outcomes, list):
@@ -321,6 +341,7 @@ def main() -> int:
         report = None
 
     record = {
+        "candidate_failed": candidate_failed,
         "status": status,
         "detail": detail,
         "outcomes": outcomes,

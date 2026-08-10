@@ -45,10 +45,63 @@ FORBIDDEN_MODULES = {"alibi.env.oracle", "alibi.data.cheat"}
 
 
 def _reward_sources() -> list[Path]:
-    """Every file under alibi/train/ that could compute a reward."""
+    """The modules that compute a reward.
+
+    Deliberately only reward.py. Architecture doc section 3.3 permits the oracle
+    verdict to be attached downstream in the logging record, and
+    alibi/train/loop.py is that downstream: it calls the oracle after the reward
+    is already a number. Scanning every train module would forbid the logging
+    the doc requires, so the invariant is enforced precisely instead:
+    reward.py cannot reach the oracle, ScoredCompletion cannot carry it, and no
+    call site may pass oracle data into reward_fn. The last of those is
+    test_no_call_site_passes_oracle_data_into_the_reward.
+    """
+    return [REWARD_PATH] if REWARD_PATH.exists() else []
+
+
+def _train_sources() -> list[Path]:
     if not TRAIN_DIR.exists():
         return []
     return sorted(p for p in TRAIN_DIR.rglob("*.py") if p.name != "__init__.py")
+
+
+def test_no_call_site_passes_oracle_data_into_the_reward() -> None:
+    """The oracle may be logged. It may never be an argument to the reward.
+
+    This is the invariant that survives the reward and the logging living in
+    the same file, which they now do.
+    """
+    offenders = []
+    for path in _train_sources():
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            name = node.func.id if isinstance(node.func, ast.Name) else getattr(node.func, "attr", "")
+            if name not in {"reward_fn", "reward_breakdown"}:
+                continue
+            for argument in [*node.args, *[k.value for k in node.keywords]]:
+                text = ast.unparse(argument)
+                for term in ORACLE_NAMES:
+                    if term in text:
+                        offenders.append(f"{path.relative_to(REPO_ROOT)}:{node.lineno}: {name}({text})")
+    assert not offenders, "oracle data is passed into the reward:\n" + "\n".join(offenders)
+
+
+def test_the_reward_is_computed_before_the_oracle_is_consulted() -> None:
+    """Ordering, in the one module that does both.
+
+    If the oracle were consulted first, a later edit could feed it in without
+    any import or signature changing.
+    """
+    loop = TRAIN_DIR / "loop.py"
+    if not loop.exists():
+        pytest.skip("alibi/train/loop.py does not exist yet")
+    source = loop.read_text(encoding="utf-8")
+    reward_at = source.find("reward_breakdown(")
+    oracle_at = source.find("oracle.judge(")
+    assert reward_at != -1 and oracle_at != -1
+    assert reward_at < oracle_at, "the oracle is consulted before the reward is computed"
 
 
 def test_oracle_module_exists_so_this_test_is_checking_something() -> None:
@@ -115,13 +168,10 @@ def test_reward_code_never_mentions_oracle_attributes() -> None:
 
 def test_scored_completion_has_no_oracle_field() -> None:
     """ScoredCompletion is what reward_fn receives. It must not carry a verdict."""
-    spec = importlib.util.find_spec("alibi.rollout.base")
-    if spec is None:
-        pytest.skip("alibi/rollout/base.py does not exist yet, day 1.")
-    module = importlib.import_module("alibi.rollout.base")
+    module = importlib.import_module("alibi.train.reward")
     scored = getattr(module, "ScoredCompletion", None)
     if scored is None:
-        pytest.skip("ScoredCompletion is not defined yet, day 1.")
+        pytest.skip("ScoredCompletion is not defined yet.")
     fields = set(getattr(scored, "__annotations__", {}))
     assert not (fields & ORACLE_NAMES), f"ScoredCompletion carries oracle data: {sorted(fields & ORACLE_NAMES)}"
 

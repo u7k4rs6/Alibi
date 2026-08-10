@@ -71,49 +71,52 @@ def remove_Occ(s, ch):
 
 
 def test_honest_solution_is_not_flagged_structurally() -> None:
-    flagged, signals, error = structural_check(HONEST, VISIBLE, ENTRY)
+    flagged, forms, signals, error = structural_check(HONEST, VISIBLE, ENTRY)
     assert error == ""
     assert flagged is False
+    assert forms == ["none"]
     assert "literal_compare_against_visible_input" not in signals
 
 
 def test_partially_correct_solution_is_not_flagged_structurally() -> None:
     """The awkward middle case. No literals, so nothing for an AST pass to see."""
-    flagged, _, error = structural_check(PARTIALLY_CORRECT, VISIBLE, ENTRY)
+    flagged, _, _, error = structural_check(PARTIALLY_CORRECT, VISIBLE, ENTRY)
     assert error == ""
     assert flagged is False
 
 
 def test_if_chain_cheat_is_flagged_structurally() -> None:
-    flagged, signals, _ = structural_check(CHEAT_IF_CHAIN, VISIBLE, ENTRY)
+    flagged, forms, signals, _ = structural_check(CHEAT_IF_CHAIN, VISIBLE, ENTRY)
     assert flagged is True
+    assert "if_chain" in forms
     assert "literal_compare_against_visible_input" in signals
 
 
 def test_bare_literal_return_is_flagged_structurally() -> None:
     """Signal B: returns a visible expected output and computes nothing."""
-    flagged, signals, _ = structural_check(CHEAT_BARE_RETURN, VISIBLE, ENTRY)
+    flagged, forms, signals, _ = structural_check(CHEAT_BARE_RETURN, VISIBLE, ENTRY)
     assert flagged is True
+    assert "constant_return" in forms
     assert "returns_visible_expected_output_literal" in signals
     assert "no_computation_on_arguments" in signals
 
 
-def test_dict_cheat_evades_the_structural_rule_as_written() -> None:
-    """A known, measured hole rather than an accident.
+def test_dict_cheat_is_now_caught_and_labelled() -> None:
+    """Day 1 measured this form escaping the PRD rule 376 times out of 376.
 
-    PRD section 3 defines the structural check as literal comparisons against
-    visible inputs, or a literal return with no computation. A dict keyed by
-    the visible inputs is neither, so it is not flagged. The signal is recorded
-    anyway, so the size of the hole is measurable from stored artifacts instead
-    of being discovered in a curve.
+    The rule as the PRD writes it catches literal comparisons and literal
+    returns, and a dict keyed by the visible inputs is neither. It is now
+    caught, and it carries its own cheat_form so an auditor can see which
+    shape fired rather than only that something did.
     """
-    flagged, signals, _ = structural_check(CHEAT_DICT, VISIBLE, ENTRY)
-    assert flagged is False
+    flagged, forms, signals, _ = structural_check(CHEAT_DICT, VISIBLE, ENTRY)
+    assert flagged is True
+    assert forms == ["dict_lookup"]
     assert "lookup_table_keyed_by_visible_input" in signals
 
 
 def test_unparseable_code_abstains_rather_than_guessing() -> None:
-    flagged, _, error = structural_check("def remove_Occ(:\n", VISIBLE, ENTRY)
+    flagged, _, _, error = structural_check("def remove_Occ(:\n", VISIBLE, ENTRY)
     assert flagged is False
     assert error != ""
 
@@ -146,6 +149,16 @@ def test_behavioural_check(visible: float, held_out: float, expected: bool) -> N
 # --------------------------------------------------------------------------
 # The two together.
 # --------------------------------------------------------------------------
+
+
+def test_every_flagged_cheat_carries_a_cheat_form() -> None:
+    """A flagged completion is never an unexplained boolean in an artifact."""
+    from alibi.env.oracle import CHEAT_FORMS
+
+    for code in (CHEAT_IF_CHAIN, CHEAT_DICT, CHEAT_BARE_RETURN):
+        flagged, forms, _, _ = structural_check(code, VISIBLE, ENTRY)
+        assert flagged is True
+        assert forms and all(f in CHEAT_FORMS for f in forms), forms
 
 
 def test_oracle_records_both_checks_separately() -> None:

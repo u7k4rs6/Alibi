@@ -47,10 +47,25 @@ def _assert_scored_not_raised(result) -> None:
     """The contract from architecture doc section 6.
 
     A crashed or timed out execution is a scored outcome, never an exception
-    that kills a run.
+    that kills a run. pass_fraction is 0.0 when something was determinate and
+    None when nothing was, and neither is an exception reaching the caller.
     """
+    assert result.pass_fraction in (0.0, None)
+    assert result.status in {"raised", "timeout", "killed", "no_result", "candidate_error"}
+
+
+def test_a_candidate_that_does_not_compile_fails_rather_than_being_indeterminate(executor) -> None:
+    """The distinction that stops ordinary malformed model output from tripping the halt.
+
+    A 0.5B policy emits code that does not parse all the time. That is a
+    definitive statement about the candidate, so every test is a fail. Only the
+    sandbox failing to answer is indeterminate.
+    """
+    result = executor.run("def f(:\n", visible_harness(["assert f() == 1", "assert f() == 2"]), 2)
+    assert result.status == "candidate_error"
+    assert result.outcomes == ["fail", "fail"]
+    assert result.n_indeterminate == 0
     assert result.pass_fraction == 0.0
-    assert result.status in {"raised", "timeout", "killed", "no_result"}
 
 
 # --------------------------------------------------------------------------
@@ -82,7 +97,10 @@ def test_infinite_loop_hits_the_wall_clock(executor: Executor) -> None:
     fast = Executor(timeout_seconds=2.0)
     result = fast.run("while True:\n    pass\n", TRIVIAL_HARNESS, 1)
     assert result.status == "timeout"
-    assert result.pass_fraction == 0.0
+    # Nothing was determinate, so the fraction is None rather than 0.0. A
+    # hanging sandbox is not a candidate that failed its tests.
+    assert result.pass_fraction is None
+    assert result.n_indeterminate == 1
     # Killed near the limit rather than merely eventually.
     assert result.duration_seconds < 15.0
 
@@ -93,7 +111,8 @@ def test_infinite_loop_that_ignores_interrupts_still_dies(executor: Executor) ->
     code = "import signal\nsignal.signal(signal.SIGTERM, signal.SIG_IGN)\nwhile True:\n    pass\n"
     result = fast.run(code, TRIVIAL_HARNESS, 1)
     assert result.status == "timeout"
-    assert result.pass_fraction == 0.0
+    assert result.pass_fraction is None
+    assert result.n_indeterminate == 1
 
 
 def test_filesystem_read_outside_the_sandbox_is_refused(executor: Executor) -> None:
@@ -182,7 +201,7 @@ def test_recursion_limit_is_scored(executor: Executor) -> None:
     code = "def f(n):\n    return f(n + 1)\n"
     result = executor.run(code, visible_harness(["assert f(0) == 1"]), 1)
     assert result.pass_fraction == 0.0
-    assert result.outcomes == [False]
+    assert result.outcomes == ["fail"]
 
 
 def test_partial_progress_is_kept(executor: Executor) -> None:
@@ -194,8 +213,12 @@ def test_partial_progress_is_kept(executor: Executor) -> None:
         3,
     )
     assert result.status == "timeout"
-    assert result.outcomes == [True, True]
-    assert result.pass_fraction == pytest.approx(2 / 3)
+    # Two determinate passes, and the third is indeterminate rather than a
+    # fail: nothing was learned about it. The fraction is over determinate
+    # tests only, and the indeterminate count travels beside it.
+    assert result.outcomes == ["pass", "pass", "indeterminate"]
+    assert result.n_indeterminate == 1
+    assert result.pass_fraction == pytest.approx(1.0)
 
 
 def test_environment_is_scrubbed(unguarded: Executor) -> None:

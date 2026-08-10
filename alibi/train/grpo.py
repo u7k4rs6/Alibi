@@ -13,6 +13,7 @@ logprobs.parquet, rather than a reduced subset.
 from __future__ import annotations
 
 import json
+import math
 import random
 import time
 from pathlib import Path
@@ -397,16 +398,24 @@ def _update(trainer, step_records: list[dict], completions, config: ArmConfig) -
     for index, completion in enumerate(completions):
         if not completion.token_ids or index >= len(advantage):
             continue
+        if len(completion.token_ids) < 2:
+            # A one token completion has no next token target, so its loss is
+            # undefined and would poison both the update and the KL statistic.
+            continue
         ids = torch.tensor([completion.token_ids], device=device)
         out = model(input_ids=ids, labels=ids)
         logprobs = -out.loss  # mean logprob per token under the current policy
+        current = float(logprobs.detach())
+        if not math.isfinite(current):
+            continue
         reference = (
             sum(completion.sampler_logprobs) / len(completion.sampler_logprobs)
             if completion.sampler_logprobs
-            else float(logprobs.detach())
+            else current
         )
-        kl = float(logprobs.detach()) - reference
-        kl_terms.append(abs(kl))
+        kl = current - reference
+        if math.isfinite(kl):
+            kl_terms.append(abs(kl))
         total_loss = total_loss - advantage[index].to(device) * logprobs
         counted += 1
 

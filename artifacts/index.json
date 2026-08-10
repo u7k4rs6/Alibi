@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "note": "Evidence is selected by explicit declaration, never by filename sort and never by mtime. A run that is not listed here does not back a published claim, even if it exists and looks fine. See docs/kickoff/02-technical-architecture.md section 8.",
+  "provenance_rests_on": "Run directories carry their own config hash, prereg hash, eligibility hash, git revision and dirty flag. mtimes are not tamper evident and no tree hash is captured, so provenance rests on those recorded hashes and on the git history, not on file timestamps. The defensible claim is narrower than the tempting one.",
+  "excluded_by_policy": [
+    {
+      "pattern": "smoke-*",
+      "reason": "dry runs with a stub monitor and two prompts. They prove the loop is wired and are never evidence about a hypothesis."
+    },
+    {
+      "pattern": "datacheck-*",
+      "reason": "environment gate runs. They back the day-one gate claim in docs/day-1-gate.md, not any training hypothesis."
+    },
+    {
+      "pattern": "calib-*",
+      "reason": "calibration runs for timing and budget. Explicitly not evidence, per the unattended brief section 1."
+    }
+  ],
+  "runs": [],
+  "runs_absent_reason": "No training run has completed. The matrix has not started. This file is appended to after each completed run, and a failed or halted run never enters it."
+}

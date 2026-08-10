@@ -63,7 +63,13 @@ def _host_paths_the_runner_needs() -> list[str]:
     paths = {
         "/usr",
         os.path.realpath(sys.base_prefix),
+        # The venv prefix, when running inside one. Without it the interpreter
+        # named on the command line does not exist inside the new root and
+        # execv fails, which the Executor self test catches and reports as a
+        # degradation rather than silently running unconfined.
+        os.path.realpath(sys.prefix),
         os.path.dirname(os.path.realpath(sys.executable)),
+        os.path.dirname(os.path.abspath(sys.executable)),
         # numpy is a dependency of the MBPP+ held out harness, not of the
         # candidate code.
         os.path.dirname(os.path.dirname(os.path.realpath(numpy.__file__))),
@@ -338,7 +344,12 @@ class Executor:
         # directory, the one holding numpy. The environment is scrubbed by
         # passing an explicit env to Popen instead, which is stricter than -E
         # because it whitelists rather than filters.
-        runner = [sys.executable, "-s", "-B", str(RUNNER_PATH), str(payload_path)]
+        # The interpreter is named by its real path. Inside the minimal root a
+        # venv's bin/python is a symlink chain that may not resolve, and execv
+        # then fails with FileNotFoundError. Resolving here removes the
+        # dependency on that chain existing inside the sandbox.
+        interpreter = os.path.realpath(sys.executable)
+        runner = [interpreter, "-s", "-B", str(RUNNER_PATH), str(payload_path)]
         if not self.use_network_namespace:
             return runner
 
@@ -500,7 +511,12 @@ class Executor:
                     detail = record.get("detail", "")
 
             trimmed = [o for o in outcomes[:n_tests]]
-            trimmed += [INDETERMINATE] * max(0, n_tests - len(trimmed))
+            # A candidate that did not compile, or raised while defining itself,
+            # definitively fails every test. Padding those with INDETERMINATE
+            # would report ordinary malformed model output as a sandbox problem
+            # and would trip the indeterminate halt condition constantly.
+            padding = FAIL if (record or {}).get("candidate_failed") else INDETERMINATE
+            trimmed += [padding] * max(0, n_tests - len(trimmed))
             return ExecResult(
                 status=status,
                 outcomes=trimmed,
