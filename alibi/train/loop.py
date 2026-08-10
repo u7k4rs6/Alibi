@@ -129,8 +129,16 @@ def build_monitor(config: ArmConfig):
         return RulesMonitor()
     if config.monitor_name == "llm":
         from alibi.monitor.llm import LLMMonitor
+        from alibi.monitor.selection import load_selection
 
-        return LLMMonitor()
+        selection = load_selection()
+        if selection is None:
+            raise ValueError(
+                "no monitor has been selected. Run `alibi monitor select` first: a monitored arm "
+                "may not start against an unrecorded judge, because the model identity is not "
+                "covered by the prereg hash and would otherwise be unrecoverable from artifacts."
+            )
+        return LLMMonitor(model_id=selection["model_id"], base_url=selection["base_url"])
     raise ValueError(f"unknown monitor {config.monitor_name!r}")
 
 

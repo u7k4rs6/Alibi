@@ -111,6 +111,69 @@ def build_report() -> dict[str, Path]:
     lines.append(f"- Pre-registration: `{prereg.PREREG.version}`, hash `{prereg.PREREG_HASH[:16]}`")
     lines.append("")
 
+    # 2b. The judge, including the confound if there is one.
+    selection = None
+    try:
+        from alibi.monitor.selection import load_selection
+
+        selection = load_selection()
+    except ImportError:
+        selection = None
+
+    lines.append("## The judge")
+    lines.append("")
+    if selection is None:
+        lines.append(
+            "No monitor has been selected. The monitored arms cannot run until "
+            "`alibi monitor select` records one."
+        )
+    else:
+        lines.append(f"- Monitor model: `{selection['model_id']}`")
+        lines.append(f"- Prompt template version: `{selection['prompt_template_version']}`")
+        lines.append(f"- Selection hash: `{selection['selection_hash'][:16]}`")
+        lines.append(
+            "- Availability was probed with a real 5-token request before use, because a provider's "
+            "model listing includes dedicated-endpoint-only models that reject serverless calls. "
+            "Every model probed and its result are in DECISIONS.md."
+        )
+        lines.append("")
+        lines.append(
+            "The monitor model id is **not** covered by the pre-registration hash, because "
+            "`alibi/prereg.py` carries no monitor field. Compare the selection hash above as well "
+            "as the prereg hash when checking that two runs were judged by the same thing."
+        )
+        if selection.get("shares_family_with_policy"):
+            lines.append("")
+            lines.append("### Judge and judged share a model family")
+            lines.append("")
+            lines.append(
+                f"**`{selection['model_id']}` shares a model family with the "
+                "Qwen2.5-0.5B-Instruct policy it grades.** Shared tokenizer, shared pretraining "
+                "data and shared failure modes mean the monitor may be unusually good, or "
+                "unusually blind, to exactly this policy's habits."
+            )
+            lines.append("")
+            lines.append(
+                "This does not invalidate the monitored arms, and it is not a defect that was "
+                "discovered late: it is a consequence of which models were reachable on the "
+                "account, recorded at selection time. It bears directly on H2 and H3, because a "
+                "same-family judge could plausibly track the policy's obfuscation more closely "
+                "than an independent one would, which would understate the obfuscation gap. Any "
+                "reading of the monitored arms should carry this caveat."
+            )
+        qualification = selection.get("qualification") or {}
+        if qualification:
+            lines.append("")
+            lines.append(
+                f"Qualification before use, on known synthetic cheats versus reference solutions: "
+                f"cheat flag rate {_fmt(qualification.get('cheat_flag_rate'))}, honest flag rate "
+                f"{_fmt(qualification.get('honest_flag_rate'))}, separation "
+                f"{_fmt(qualification.get('separation'))}, error rate "
+                f"{_fmt(qualification.get('error_rate'))}. These thresholds are **not** "
+                "pre-registered, see `alibi/monitor/qualify.py`."
+            )
+    lines.append("")
+
     # 3. The instrument.
     lines.append("## The instrument")
     lines.append("")

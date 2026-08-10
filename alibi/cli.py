@@ -384,6 +384,53 @@ def print_summary(summary: dict, records: list[dict]) -> None:
             print(f"  task {entry['task_id']}: {entry['reason']}")
 
 
+def cmd_monitor_probe(args: argparse.Namespace) -> int:
+    from alibi.monitor.llm import ESCALATION, probe
+
+    models = args.models or list(ESCALATION)
+    print(f"config hash {runlog.config_hash({'command': 'monitor probe', 'models': models})}")
+    any_available = False
+    for model in models:
+        result = probe(model)
+        any_available = any_available or result.available
+        state = "OK  " if result.available else "NO  "
+        print(f"  {state}{model:<46s} status={result.status} {result.latency_seconds if False else result.latency:.2f}s  {result.detail[:100]}")
+    print(f"run id {args.run_id or 'none, monitor probe writes no run directory'}")
+    return EXIT_OK if any_available else EXIT_CONFIG
+
+
+def cmd_monitor_select(args: argparse.Namespace) -> int:
+    """Probe, qualify and record. A monitored arm cannot start without this."""
+    from alibi.monitor.llm import DEFAULT_BASE_URL, PROMPT_TEMPLATE_VERSION
+    from alibi.monitor.qualify import escalate
+    from alibi.monitor.selection import write_selection
+    import os
+
+    print(f"config hash {runlog.config_hash({'command': 'monitor select', 'sample': args.sample})}")
+    chosen, trail = escalate(candidates=args.models or None, sample=args.sample)
+    for entry in trail:
+        print(f"  {entry['model']:<46s} {entry['outcome'][:120]}")
+    if chosen is None:
+        print("no candidate both served and qualified. A monitored arm cannot start.", file=sys.stderr)
+        return EXIT_CONFIG
+
+    qualification = next(e.get("qualification") for e in trail if e["model"] == chosen)
+    document = write_selection(
+        model_id=chosen,
+        prompt_template_version=PROMPT_TEMPLATE_VERSION,
+        base_url=os.environ.get("MONITOR_BASE_URL") or DEFAULT_BASE_URL,
+        trail=trail,
+        qualification=qualification,
+    )
+    print(f"selected {document['model_id']}")
+    print(f"selection hash {document['selection_hash']}")
+    if document["shares_family_with_policy"]:
+        print("WARN the selected judge shares a model family with the policy it grades")
+        print(f"WARN {document['confound_note']}")
+    print(f"run id {args.run_id or 'none, monitor select writes no run directory'}")
+    return EXIT_OK
+
+
 def cmd_verify(args: argparse.Namespace) -> int:
     from alibi.report.verify import verify
 
@@ -463,6 +510,16 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument("--steps", type=int, default=None)
     train.add_argument("--smoke", action="store_true", help="the dry run: 3 steps, 2 prompts, stub monitor")
     train.set_defaults(func=cmd_train)
+
+    monitor = sub.add_parser("monitor", help="probe, qualify and record the judge")
+    monitor_sub = monitor.add_subparsers(dest="subcommand", required=True)
+    mprobe = monitor_sub.add_parser("probe", help="5-token availability probe, never assume a listing")
+    mprobe.add_argument("--models", nargs="*", default=None)
+    mprobe.set_defaults(func=cmd_monitor_probe)
+    mselect = monitor_sub.add_parser("select", help="probe, qualify and freeze the judge identity")
+    mselect.add_argument("--models", nargs="*", default=None)
+    mselect.add_argument("--sample", type=int, default=20)
+    mselect.set_defaults(func=cmd_monitor_select)
 
     verify_parser = sub.add_parser("verify", help="recompute every published number, exit non-zero on mismatch")
     verify_parser.add_argument("--no-gpu", action="store_true", default=True)
