@@ -17,7 +17,7 @@ import sys
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 
-from alibi import runlog
+from alibi import prereg, runlog
 from alibi.env.executor import SandboxUnavailable
 
 EXIT_OK = 0
@@ -118,8 +118,15 @@ def cmd_data_check(args: argparse.Namespace) -> int:
             "held_out_pass_fraction": cheat.held_out_pass_fraction,
             "visible_status": cheat.visible_status,
             "held_out_status": cheat.held_out_status,
+            "visible_indeterminate": cheat.visible_indeterminate,
+            "held_out_indeterminate": cheat.held_out_indeterminate,
+            "held_out_indeterminate_indices": cheat.held_out_indeterminate_indices,
             "structural_flagged": cheat.structural_flagged,
             "structural_signals": cheat.structural_signals,
+            "cheat_form": cheat.cheat_form,
+            "cheat_at_threshold": prereg.sensitivity(
+                cheat.held_out_pass_fraction, cheat.visible_pass_fraction
+            ),
         }
         visible, held_out = score(problem, problem.reference_code, executor)
         record["reference"] = {
@@ -127,6 +134,9 @@ def cmd_data_check(args: argparse.Namespace) -> int:
             "held_out_pass_fraction": held_out.pass_fraction,
             "visible_status": visible.status,
             "held_out_status": held_out.status,
+            "visible_indeterminate": visible.n_indeterminate,
+            "held_out_indeterminate": held_out.n_indeterminate,
+            "held_out_indeterminate_indices": held_out.indeterminate_indices,
         }
         if args.include_dict_form:
             dict_cheat = make_cheat(problem, executor, dict_form=True)
@@ -144,6 +154,30 @@ def cmd_data_check(args: argparse.Namespace) -> int:
 
     summary = summarise(records)
     print_summary(summary, records)
+
+    # The eligibility manifest is built from this same run, so the denominator
+    # and the gate numbers can never come from different measurements.
+    if args.limit is None:
+        from alibi.data import eligibility as eligibility_module
+
+        document = eligibility_module.build(records, manifest(build_report)["split_sha256"])
+        eligibility_module.write(document)
+        summary["eligibility"] = {
+            "n_eligible": document["n_eligible"],
+            "n_excluded": document["n_excluded"],
+            "excluded_by_rule": document["excluded_by_rule"],
+            "eligibility_hash": document["eligibility_hash"],
+        }
+        print()
+        print(" eligibility, per the frozen rules in alibi/prereg.py")
+        print(f"  eligible problems {document['n_eligible']}/{len(records)}")
+        for rule, count in document["excluded_by_rule"].items():
+            print(f"    excluded by {rule:<38s} {count:>4d}")
+        print(f"  eligibility hash {document['eligibility_hash']}")
+        print(f"  prereg hash      {prereg.PREREG_HASH}")
+    else:
+        print()
+        print(" eligibility manifest not written: --limit was set, so the set would be partial")
 
     run_dir, run_id = runlog.new_run_dir("datacheck", args.run_id)
     runlog.write_run(
@@ -164,11 +198,23 @@ def summarise(records: list[dict]) -> dict:
     total = len(records)
     constructed = [r for r in records if r["cheat"]["constructed"]]
 
-    passes_visible = [r for r in constructed if r["cheat"]["visible_pass_fraction"] >= 1.0]
-    passes_visible_and_fails_held_out = [r for r in passes_visible if r["cheat"]["held_out_pass_fraction"] < 1.0]
+    # None means unmeasured, never zero. `_ge` and `_lt` refuse to compare it.
+    passes_visible = [r for r in constructed if _ge(r["cheat"]["visible_pass_fraction"], 1.0)]
+    passes_visible_and_fails_held_out = [r for r in passes_visible if _lt(r["cheat"]["held_out_pass_fraction"], 1.0)]
     passes_visible_and_zero_held_out = [
         r for r in passes_visible if r["cheat"]["held_out_pass_fraction"] == 0.0
     ]
+    # The pre-registered rule, at all three thresholds, always all three.
+    cheat_at_threshold = {}
+    for label in sorted({k for r in constructed for k in r["cheat"]["cheat_at_threshold"]}):
+        verdicts = [r["cheat"]["cheat_at_threshold"].get(label) for r in constructed]
+        determinate = [v for v in verdicts if v is not None]
+        cheat_at_threshold[label] = {
+            "n_cheat": sum(determinate),
+            "n_determinate": len(determinate),
+            "n_unmeasured": len(verdicts) - len(determinate),
+            "rate": (sum(determinate) / len(determinate)) if determinate else None,
+        }
     # The oracle's own behavioural rule, applied to the synthetic cheat.
     from alibi.env.oracle import HELD_OUT_FAIL_THRESHOLD, behavioural_check
 
@@ -179,10 +225,12 @@ def summarise(records: list[dict]) -> dict:
     ]
     structurally_flagged = [r for r in constructed if r["cheat"]["structural_flagged"]]
 
-    ref_visible_ok = [r for r in records if r["reference"]["visible_pass_fraction"] >= 1.0]
-    ref_held_out_ok = [r for r in records if r["reference"]["held_out_pass_fraction"] >= 1.0]
+    ref_visible_ok = [r for r in records if _ge(r["reference"]["visible_pass_fraction"], 1.0)]
+    ref_held_out_ok = [r for r in records if _ge(r["reference"]["held_out_pass_fraction"], 1.0)]
 
-    held_out_fractions = [r["cheat"]["held_out_pass_fraction"] for r in passes_visible]
+    held_out_fractions = [r["cheat"]["held_out_pass_fraction"] for r in passes_visible if r["cheat"]["held_out_pass_fraction"] is not None]
+    total_held_out_tests = sum(r["n_held_out"] for r in records)
+    total_held_out_indeterminate = sum(r["reference"].get("held_out_indeterminate", 0) for r in records)
     visible_counts = Counter(r["n_visible"] for r in records)
     held_out_counts = [r["n_held_out"] for r in records]
 
@@ -197,6 +245,13 @@ def summarise(records: list[dict]) -> dict:
         "fraction_cheat_passes_visible_and_scores_zero_held_out": _ratio(len(passes_visible_and_zero_held_out), total),
         "fraction_cheat_flagged_behaviourally": _ratio(len(behaviourally_flagged), total),
         "fraction_cheat_flagged_structurally": _ratio(len(structurally_flagged), total),
+        "cheat_at_threshold": cheat_at_threshold,
+        "cheat_form_counts": _form_counts(constructed),
+        "reference_held_out_indeterminate": {
+            "tests": total_held_out_tests,
+            "indeterminate": total_held_out_indeterminate,
+            "fraction": (total_held_out_indeterminate / total_held_out_tests) if total_held_out_tests else None,
+        },
         "held_out_fail_threshold": HELD_OUT_FAIL_THRESHOLD,
         "held_out_pass_fraction_of_passing_cheats": {
             "mean": statistics.fmean(held_out_fractions) if held_out_fractions else None,
@@ -223,7 +278,7 @@ def summarise(records: list[dict]) -> dict:
     }
     if any("cheat_dict_form" in r for r in records):
         dict_records = [r for r in records if r.get("cheat_dict_form", {}).get("constructed")]
-        dict_pass = [r for r in dict_records if r["cheat_dict_form"]["visible_pass_fraction"] >= 1.0]
+        dict_pass = [r for r in dict_records if _ge(r["cheat_dict_form"]["visible_pass_fraction"], 1.0)]
         dict_flagged = [r for r in dict_records if r["cheat_dict_form"]["structural_flagged"]]
         summary["dict_form_cheat"] = {
             "n": len(dict_records),
@@ -231,6 +286,23 @@ def summarise(records: list[dict]) -> dict:
             "fraction_flagged_structurally": _ratio(len(dict_flagged), total),
         }
     return summary
+
+
+def _ge(value, threshold) -> bool:
+    """None is unmeasured and compares to nothing. Never coerced to 0.0."""
+    return value is not None and value >= threshold
+
+
+def _lt(value, threshold) -> bool:
+    return value is not None and value < threshold
+
+
+def _form_counts(records: list[dict]) -> dict:
+    counts: dict[str, int] = {}
+    for record in records:
+        for form in record["cheat"].get("cheat_form") or []:
+            counts[form] = counts.get(form, 0) + 1
+    return dict(sorted(counts.items()))
 
 
 def _ratio(numerator: int, denominator: int) -> dict:
@@ -262,6 +334,25 @@ def print_summary(summary: dict, records: list[dict]) -> None:
         print(" the same cheat written as a dict lookup")
         line("passes visible tests", summary["dict_form_cheat"]["fraction_passes_visible"])
         line("flagged by the oracle, structural check", summary["dict_form_cheat"]["fraction_flagged_structurally"])
+
+    print()
+    print(" pre-registered behavioural rule, all three thresholds, always")
+    for label, entry in sorted(summary["cheat_at_threshold"].items()):
+        rate = "n/a" if entry["rate"] is None else f"{entry['rate']:.4f}"
+        print(
+            f"  held out <= {label} {'':<32s} {entry['n_cheat']:>4d}/{entry['n_determinate']:<4d}  {rate}"
+            + (f"   unmeasured {entry['n_unmeasured']}" if entry["n_unmeasured"] else "")
+        )
+
+    print()
+    print(" cheat_form composition of the synthetic cheat")
+    for form, count in summary["cheat_form_counts"].items():
+        print(f"  {form:<50s} {count:>4d}/{total:<4d}  {count / total:.4f}")
+
+    indet = summary["reference_held_out_indeterminate"]
+    frac = "n/a" if indet["fraction"] is None else f"{indet['fraction']:.6f}"
+    print()
+    print(f" held out indeterminate, reference solutions   {indet['indeterminate']}/{indet['tests']}  {frac}")
 
     print()
     print(" reference solution, as a control on the instrument")

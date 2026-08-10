@@ -28,6 +28,19 @@ RESULT_MARKER = "__ALIBI_RESULT__ "
 OUTCOME_MARKER = "__ALIBI_OUTCOME__ "
 
 
+# A test has three outcomes, not two. PASS and FAIL are statements about the
+# candidate. INDETERMINATE is a statement about the sandbox: the test did not
+# produce an answer, because the process was killed, timed out, or died before
+# reaching it. Folding it into FAIL would let an infrastructure problem read as
+# a model that does not generalise, which is the exact confusion this project
+# would otherwise publish.
+PASS = "pass"
+FAIL = "fail"
+INDETERMINATE = "indeterminate"
+_CODE = {PASS: "1", FAIL: "0", INDETERMINATE: "i"}
+_DECODE = {v: k for k, v in _CODE.items()}
+
+
 class _StreamingOutcomes(list):
     """A list that reports each outcome the moment it is appended.
 
@@ -36,6 +49,9 @@ class _StreamingOutcomes(list):
     completion that passes two visible tests and then hangs on the third would
     score 0 rather than 2/3, and that fraction is the reward signal, so losing
     it would quietly distort training rather than merely losing a log line.
+
+    Accepts either a bool, for harnesses that predate the three state outcome,
+    or one of PASS, FAIL, INDETERMINATE.
     """
 
     def __init__(self, handle) -> None:
@@ -43,9 +59,15 @@ class _StreamingOutcomes(list):
         self._handle = handle
 
     def append(self, value) -> None:
+        if value is True:
+            value = PASS
+        elif value is False:
+            value = FAIL
+        elif value not in _CODE:
+            value = INDETERMINATE
         super().append(value)
         try:
-            self._handle.write(f"{OUTCOME_MARKER}{len(self) - 1} {int(bool(value))}\n")
+            self._handle.write(f"{OUTCOME_MARKER}{len(self) - 1} {_CODE[value]}\n")
             self._handle.flush()
         except (OSError, ValueError):
             # A closed or full descriptor must not turn a scored test into a
@@ -145,6 +167,52 @@ class _DenyImports:
         return None
 
 
+class _TestTimeout(BaseException):
+    """Raised inside a single test when its own budget expires.
+
+    A BaseException rather than an Exception so that a candidate's blanket
+    `except Exception` cannot swallow its own timeout and report a pass.
+    """
+
+
+def _install_per_test_timeout(seconds: float):
+    """Per test wall clock, on top of the parent's per execution one.
+
+    The held out harness runs about 105 inputs. A single flat budget for the
+    whole harness means one pathological input starves the other 104 and turns
+    them all indeterminate. Arming a timer per test isolates the slow one and
+    lets the rest report honestly.
+
+    SIGALRM cannot interrupt a call that never returns to the interpreter, for
+    example catastrophic regex backtracking inside C. The parent's wall clock
+    kill remains the backstop for that case, which is why this is an addition
+    rather than a replacement.
+
+    Returns (start, stop). Both are no ops when signals are unavailable, and
+    the caller can tell because `armed` is False.
+    """
+    try:
+        import signal as _signal
+    except ImportError:  # pragma: no cover - signals exist on every target host
+        return (lambda: None), (lambda: None), False
+
+    def _handler(signum, frame):
+        raise _TestTimeout(f"test exceeded its own budget of {seconds}s")
+
+    try:
+        _signal.signal(_signal.SIGALRM, _handler)
+    except (ValueError, OSError, AttributeError):  # pragma: no cover
+        return (lambda: None), (lambda: None), False
+
+    def start():
+        _signal.setitimer(_signal.ITIMER_REAL, seconds)
+
+    def stop():
+        _signal.setitimer(_signal.ITIMER_REAL, 0.0)
+
+    return start, stop, True
+
+
 def _apply_limits(limits: dict) -> list[str]:
     """Apply resource limits. Returns the names of limits actually applied."""
     import resource as _resource
@@ -204,6 +272,12 @@ def main() -> int:
 
     handle = open(result_fd, "w", closefd=False, encoding="utf-8")
 
+    per_test = payload.get("per_test_timeout_seconds")
+    if per_test:
+        start_timer, stop_timer, armed = _install_per_test_timeout(float(per_test))
+    else:
+        start_timer, stop_timer, armed = (lambda: None), (lambda: None), False
+
     source = payload["code"] + "\n\n" + payload["harness"] + "\n"
     globals_dict: dict = {
         "__name__": "__alibi_candidate__",
@@ -213,6 +287,13 @@ def main() -> int:
         # loses the streaming property, so the harnesses in alibi/env/tests.py
         # append to this rather than creating their own list.
         "__alibi_outcomes__": _StreamingOutcomes(handle),
+        # The per test timeout surface the generated harnesses use.
+        "__alibi_start_timer__": start_timer,
+        "__alibi_stop_timer__": stop_timer,
+        "__alibi_Timeout__": _TestTimeout,
+        "__alibi_PASS__": PASS,
+        "__alibi_FAIL__": FAIL,
+        "__alibi_INDETERMINATE__": INDETERMINATE,
     }
 
     status = "ok"
@@ -227,7 +308,7 @@ def main() -> int:
     outcomes = globals_dict.get("__alibi_outcomes__", [])
     if not isinstance(outcomes, list):
         outcomes = []
-    outcomes = [bool(x) for x in outcomes]
+    outcomes = [x if x in _CODE else (PASS if x is True else FAIL if x is False else INDETERMINATE) for x in outcomes]
 
     # A harness may also leave a JSON serialisable value in __alibi_report__.
     # Used by the synthetic cheat generator to read a reference solution's
@@ -246,6 +327,7 @@ def main() -> int:
         "report": report,
         "limits_applied": applied,
         "warm_import_errors": warm_errors,
+        "per_test_timeout_armed": armed,
     }
     # Written through the same file object built directly on the descriptor.
     # This deliberately avoids `os`, which the denylist above has already

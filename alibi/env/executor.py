@@ -36,7 +36,15 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from alibi.env._runner import DEFAULT_DENIED_IMPORTS, OUTCOME_MARKER, RESULT_MARKER
+from alibi.env._runner import (
+    DEFAULT_DENIED_IMPORTS,
+    FAIL,
+    INDETERMINATE,
+    OUTCOME_MARKER,
+    PASS,
+    RESULT_MARKER,
+    _DECODE,
+)
 from alibi.env.probe import ControlReport, probe
 
 RUNNER_PATH = Path(__file__).with_name("_runner.py")
@@ -165,7 +173,7 @@ class ExecResult:
     """
 
     status: str  # ok | raised | timeout | killed | no_result
-    outcomes: list[bool]
+    outcomes: list[str]  # one of PASS, FAIL, INDETERMINATE per test
     n_tests: int
     detail: str = ""
     stdout: str = ""
@@ -178,20 +186,51 @@ class ExecResult:
     report: object = None
 
     @property
-    def pass_fraction(self) -> float:
-        """Fraction of the harness's tests that passed.
+    def n_pass(self) -> int:
+        return sum(1 for o in self.outcomes if o == PASS)
 
-        Denominator is the number of tests the harness was asked to run, not
-        the number it managed to reach. A timeout after two passes out of a
-        hundred scores 0.02, not 1.0.
+    @property
+    def n_fail(self) -> int:
+        return sum(1 for o in self.outcomes if o == FAIL)
+
+    @property
+    def n_indeterminate(self) -> int:
+        """Tests that produced no answer, including ones never reached.
+
+        A harness killed after 40 of 105 tests leaves 65 unreported. Those are
+        indeterminate, not failures: nothing was learned about the candidate on
+        them.
         """
+        reported = sum(1 for o in self.outcomes if o == INDETERMINATE)
+        return reported + max(0, self.n_tests - len(self.outcomes))
+
+    @property
+    def n_determinate(self) -> int:
+        return self.n_pass + self.n_fail
+
+    @property
+    def pass_fraction(self) -> float | None:
+        """Passes over determinate tests. None when nothing was determinate.
+
+        The denominator is deliberately not n_tests. A timeout that prevented
+        60 of 105 tests from running says nothing about those 60, and dividing
+        by 105 would silently report an infrastructure failure as a model that
+        does not generalise. None means unmeasured, and callers must decide
+        what to do with it rather than receiving a plausible looking 0.0.
+        """
+        if self.n_determinate == 0:
+            return None
+        return self.n_pass / self.n_determinate
+
+    @property
+    def indeterminate_fraction(self) -> float:
         if self.n_tests == 0:
             return 0.0
-        return sum(self.outcomes) / self.n_tests
+        return self.n_indeterminate / self.n_tests
 
     @property
     def all_passed(self) -> bool:
-        return self.n_tests > 0 and len(self.outcomes) == self.n_tests and all(self.outcomes)
+        return self.n_tests > 0 and self.n_pass == self.n_tests
 
 
 class Executor:
@@ -353,13 +392,32 @@ class Executor:
             "LANG": "C",
         }
 
-    def run(self, code: str, harness: str, n_tests: int) -> ExecResult:
+    def run(
+        self,
+        code: str,
+        harness: str,
+        n_tests: int,
+        timeout_seconds: float | None = None,
+        per_test_timeout_seconds: float | None = None,
+    ) -> ExecResult:
         """Execute `code` then `harness` in a sandbox and score the outcome.
 
         `n_tests` is the number of tests the harness was constructed to run. It
         is passed in rather than inferred so that a harness which dies before
         appending anything still scores against the right denominator.
+
+        `timeout_seconds` overrides the executor default for this call, and
+        `per_test_timeout_seconds` arms a per test alarm inside the sandbox.
+        Held out scoring uses both: about 105 tests cannot share the 5 second
+        budget that suits 3 visible asserts.
         """
+        wall_clock = self.timeout_seconds if timeout_seconds is None else timeout_seconds
+        # RLIMIT_CPU is the backstop for a process that ignores the wall clock.
+        # It has to sit above the wall clock, or it becomes the binding limit
+        # and kills long but legitimate held out harnesses: at a flat 10 s it
+        # killed task 599 at 9 s with 37 of its 87 tests still unrun.
+        limits = dict(self.limits)
+        limits["cpu_seconds"] = max(int(limits.get("cpu_seconds") or 0), int(wall_clock) + 5)
         import time
 
         workdir = Path(tempfile.mkdtemp(prefix="alibi-exec-"))
@@ -377,13 +435,14 @@ class Executor:
                     {
                         "code": code,
                         "harness": harness,
-                        "limits": self.limits,
+                        "limits": limits,
                         "denied_imports": list(self.denied_imports),
                         "warm_imports": list(WARM_IMPORTS),
                         "recursion_limit": 1000,
                         "result_fd": write_fd,
                         "sandbox_root": str(workdir),
                         "confine_open_to_cwd": self.confine_open_to_cwd,
+                        "per_test_timeout_seconds": per_test_timeout_seconds,
                     }
                 ),
                 encoding="utf-8",
@@ -411,10 +470,10 @@ class Executor:
             status = "ok"
             detail = ""
             try:
-                proc.wait(timeout=self.timeout_seconds)
+                proc.wait(timeout=wall_clock)
             except subprocess.TimeoutExpired:
                 status = "timeout"
-                detail = f"wall clock limit of {self.timeout_seconds}s exceeded"
+                detail = f"wall clock limit of {wall_clock}s exceeded"
                 self._kill_group(proc)
 
             raw = self._drain(read_fd)
@@ -429,7 +488,7 @@ class Executor:
                         detail = f"runner produced no result, returncode {proc.returncode}"
                 # A killed or timed out execution never wrote its result line.
                 # The outcomes it streamed before dying are still real.
-                outcomes: list[bool] = streamed
+                outcomes: list[str] = streamed
                 limits_applied: list[str] = []
                 harness_report = None
             else:
@@ -440,9 +499,11 @@ class Executor:
                     status = record["status"]
                     detail = record.get("detail", "")
 
+            trimmed = [o for o in outcomes[:n_tests]]
+            trimmed += [INDETERMINATE] * max(0, n_tests - len(trimmed))
             return ExecResult(
                 status=status,
-                outcomes=outcomes[:n_tests],
+                outcomes=trimmed,
                 n_tests=n_tests,
                 detail=detail,
                 stdout=self._read_capped(out_path),
@@ -523,18 +584,18 @@ class Executor:
         gap truncates the list, because scoring a test that never reported
         would be inventing a number.
         """
-        seen: dict[int, bool] = {}
+        seen: dict[int, str] = {}
         for line in raw.splitlines():
             if not line.startswith(OUTCOME_MARKER):
                 continue
             parts = line[len(OUTCOME_MARKER) :].split()
-            if len(parts) != 2:
+            if len(parts) != 2 or parts[1] not in _DECODE:
                 continue
             try:
-                seen[int(parts[0])] = bool(int(parts[1]))
+                seen[int(parts[0])] = _DECODE[parts[1]]
             except ValueError:
                 continue
-        outcomes: list[bool] = []
+        outcomes: list[str] = []
         index = 0
         while index in seen:
             outcomes.append(seen[index])

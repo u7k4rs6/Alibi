@@ -31,6 +31,19 @@ OUTCOMES = "__alibi_outcomes__"
 # still leaving these harnesses runnable on their own.
 KEEP_LIST = f"{OUTCOMES} = globals().get({OUTCOMES!r}, [])"
 
+# Preamble that makes the generated harnesses runnable outside the sandbox
+# runner too, for example in a unit test, where the runner's per test timer and
+# outcome constants are absent.
+PRELUDE = """__alibi_start_timer__ = globals().get('__alibi_start_timer__', lambda: None)
+__alibi_stop_timer__ = globals().get('__alibi_stop_timer__', lambda: None)
+class __alibi_NoTimeout__(BaseException):
+    pass
+__alibi_Timeout__ = globals().get('__alibi_Timeout__', __alibi_NoTimeout__)
+__alibi_PASS__ = globals().get('__alibi_PASS__', 'pass')
+__alibi_FAIL__ = globals().get('__alibi_FAIL__', 'fail')
+__alibi_INDETERMINATE__ = globals().get('__alibi_INDETERMINATE__', 'indeterminate')
+"""
+
 
 class HarnessError(ValueError):
     """The MBPP+ harness for this problem does not have the expected shape."""
@@ -191,14 +204,21 @@ def visible_harness(visible_asserts: list[str]) -> str:
     """
     body = ",\n    ".join(repr(src) for src in visible_asserts)
     return (
+        f"{PRELUDE}"
         f"{KEEP_LIST}\n"
         f"__alibi_visible__ = [\n    {body}\n]\n"
         f"for __alibi_src in __alibi_visible__:\n"
+        f"    __alibi_start_timer__()\n"
         f"    try:\n"
         f"        exec(compile(__alibi_src, '<visible>', 'exec'), globals())\n"
-        f"        {OUTCOMES}.append(True)\n"
+        f"        __alibi_o = __alibi_PASS__\n"
+        f"    except __alibi_Timeout__:\n"
+        f"        __alibi_o = __alibi_INDETERMINATE__\n"
         f"    except BaseException:\n"
-        f"        {OUTCOMES}.append(False)\n"
+        f"        __alibi_o = __alibi_FAIL__\n"
+        f"    finally:\n"
+        f"        __alibi_stop_timer__()\n"
+        f"    {OUTCOMES}.append(__alibi_o)\n"
     )
 
 
@@ -220,21 +240,33 @@ def held_out_harness(plus_test_src: str, keep_indices: list[int]) -> str:
     outcomes_init = ast.parse(KEEP_LIST).body[0]
 
     guard = ast.parse(f"if {index_name} not in __alibi_keep__:\n    continue").body[0]
+    arm = ast.parse("__alibi_start_timer__()").body[0]
+    # A timeout is indeterminate, an assertion is a fail, and the two are never
+    # collapsed. The finally clause disarms the timer so a slow test cannot
+    # leak its alarm into the next one.
     scored = ast.parse(
-        f"try:\n    pass\nexcept BaseException:\n    {OUTCOMES}.append(False)\nelse:\n    {OUTCOMES}.append(True)"
+        "try:\n    pass\n"
+        "except __alibi_Timeout__:\n"
+        f"    {OUTCOMES}.append(__alibi_INDETERMINATE__)\n"
+        "except BaseException:\n"
+        f"    {OUTCOMES}.append(__alibi_FAIL__)\n"
+        "else:\n"
+        f"    {OUTCOMES}.append(__alibi_PASS__)\n"
+        "finally:\n"
+        "    __alibi_stop_timer__()"
     ).body[0]
     scored.body = list(loop.body)
 
     new_loop = ast.For(
         target=loop.target,
         iter=loop.iter,
-        body=[guard, scored],
+        body=[guard, arm, scored],
         orelse=[],
         type_comment=None,
     )
     driver = ast.Module(body=[outcomes_init, keep_literal, new_loop], type_ignores=[])
     ast.fix_missing_locations(driver)
-    return prefix + "\n" + ast.unparse(driver) + "\n"
+    return prefix + "\n" + PRELUDE + ast.unparse(driver) + "\n"
 
 
 def program(preamble: list[str], code: str) -> str:

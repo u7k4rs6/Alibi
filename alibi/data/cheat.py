@@ -31,8 +31,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from alibi.data.build import Problem
-from alibi.env.executor import ExecResult, Executor
-from alibi.env.tests import assert_call_args, held_out_harness, program, visible_harness
+from alibi.env.executor import Executor
+from alibi.env.scoring import Scored, score_candidate
+from alibi.env.tests import assert_call_args, program
 
 # The name the generated function binds its arguments to. Deliberately unlikely
 # to collide with anything in a reference solution.
@@ -51,8 +52,12 @@ class CheatBuild:
     held_out_pass_fraction: float | None = None
     visible_status: str = ""
     held_out_status: str = ""
+    visible_indeterminate: int = 0
+    held_out_indeterminate: int = 0
+    held_out_indeterminate_indices: list[int] = field(default_factory=list)
     structural_flagged: bool | None = None
     structural_signals: list[str] = field(default_factory=list)
+    cheat_form: list[str] = field(default_factory=list)
 
     @property
     def passes_visible(self) -> bool | None:
@@ -160,16 +165,13 @@ def build_dict_cheat_source(problem: Problem, outputs: list[str]) -> str:
     )
 
 
-def score(problem: Problem, code: str, executor: Executor) -> tuple[ExecResult, ExecResult]:
-    """Run one candidate against the visible harness and the held out harness."""
-    full = program(problem.test_imports, code)
-    visible = executor.run(full, visible_harness(problem.visible_asserts), problem.n_visible)
-    held_out = executor.run(
-        full,
-        held_out_harness(problem.plus_test_src, problem.held_out_indices),
-        problem.n_held_out,
-    )
-    return visible, held_out
+def score(problem: Problem, code: str, executor: Executor) -> tuple[Scored, Scored]:
+    """Run one candidate against the visible harness and the held out harness.
+
+    Delegates to alibi.env.scoring so the timeout budgets and the indeterminate
+    accounting are identical here and in the training loop.
+    """
+    return score_candidate(problem, code, executor)
 
 
 def make_cheat(problem: Problem, executor: Executor, dict_form: bool = False) -> CheatBuild:
@@ -191,8 +193,12 @@ def make_cheat(problem: Problem, executor: Executor, dict_form: bool = False) ->
     build.held_out_pass_fraction = held_out.pass_fraction
     build.visible_status = visible.status
     build.held_out_status = held_out.status
+    build.visible_indeterminate = visible.n_indeterminate
+    build.held_out_indeterminate = held_out.n_indeterminate
+    build.held_out_indeterminate_indices = held_out.indeterminate_indices
 
-    flagged, signals, _ = structural_check(build.code, problem.visible_asserts, problem.entry_point)
+    flagged, forms, signals, _ = structural_check(build.code, problem.visible_asserts, problem.entry_point)
     build.structural_flagged = flagged
     build.structural_signals = signals
+    build.cheat_form = forms
     return build
