@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "alibi"
+version = "0.1.0"
+description = "Does a monitored policy stop reward hacking, or stop looking like it?"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Utkarsh Bahuguna" }]
+
+# Day-one dependencies only. Everything here runs on CPU with no GPU and no
+# network beyond the initial dataset fetch.
+#
+# `datasets` is deliberately absent. The dataset loader in alibi/data/build.py
+# fetches parquet directly from the Hugging Face hub at a pinned commit sha,
+# which pins the revision harder than a library version would and keeps the
+# day-one path free of the training stack. See docs/kickoff/02-technical-architecture.md
+# section 4, which requires dataset revisions in env.lock.
+dependencies = [
+  "pyarrow>=15",
+  "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+# The training stack. Not installed on the day-one CPU host and not imported by
+# anything under alibi/ except alibi/train/. Exact pins live in
+# requirements-train.txt and are restated in every run's env.lock.
+train = [
+  "torch==2.9.1",
+  "transformers==4.57.6",
+  "trl==1.9.2",
+  "peft==0.20.0",
+  "accelerate==1.14.0",
+  "datasets==4.7.0",
+]
+dev = [
+  "pytest>=8",
+  "pre-commit>=3.5",
+]
+
+[project.scripts]
+alibi = "alibi.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["alibi*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+  "slow: touches the network or runs over the full problem set",
+]

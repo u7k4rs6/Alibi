@@ -1,0 +1,30 @@
+# Exact pins for the training stack, frozen on day 1 (11 Aug 2026) per
+# docs/kickoff/02-technical-architecture.md section 11. Do not upgrade mid-week.
+#
+# Status of each pin, stated honestly because a pin nobody resolved is a wish:
+#
+#   transformers==4.57.6   RESOLVED. Imported and version-checked on the day-one
+#                          CPU host (Python 3.14.4, Linux).
+#   torch==2.9.1           DECLARED. The day-one host carries torch 2.12.0+cu130,
+#                          which is not the build the training host will use. 2.9.1
+#                          is the pin targeted at the CUDA 12.x Kaggle T4 image.
+#                          Resolve on the training host on day 2 and record the
+#                          resolved build string in that run's env.lock.
+#   trl==1.9.2             DECLARED. Requires transformers>=4.56.2 and datasets>=4.7.0,
+#                          both satisfied by these pins. Not importable on the day-one
+#                          host and deliberately not installed there.
+#   peft==0.20.0           DECLARED.
+#   accelerate==1.14.0     DECLARED. Required by trl>=1.4.0.
+#   datasets==4.7.0        DECLARED. Required by trl only. The day-one data path does
+#                          not use it, see the note in pyproject.toml.
+#
+# env.lock records what actually resolved on the host that produced a run. A
+# declared pin that never resolved is visible as such rather than implied to be
+# verified.
+
+torch==2.9.1
+transformers==4.57.6
+trl==1.9.2
+peft==0.20.0
+accelerate==1.14.0
+datasets==4.7.0

@@ -1,0 +1,39 @@
+# Secrets. This entry exists before the first commit, per docs/kickoff/03-security-and-access.md section 3.
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Raw monitor responses may echo account identifiers or key fragments.
+artifacts/**/raw_responses/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Model and training scratch
+*.pt
+*.bin
+*.safetensors
+wandb/
+runs/
+checkpoints/
+
+# Local scratch. Anything here is never published.
+scratch/
+tmp/
+.DS_Store
+
+# Dataset cache. Rebuildable from the pinned revisions in alibi/data/manifest.json,
+# so it is not committed. The manifest is.
+data/cache/

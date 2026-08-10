@@ -1,0 +1,73 @@
+name: ci
+
+# Written on day 1, per docs/kickoff/02-technical-architecture.md section 10.
+# Everything here runs on CPU with no GPU and no model download.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: report sandbox controls available on this host
+        # The runner is a container. Some controls named in
+        # docs/kickoff/03-security-and-access.md section 2 may be unavailable here.
+        # Print which, so a CI pass is not read as a claim of full isolation.
+        run: python -m alibi.env.probe
+
+      - name: tests
+        # Network-touching and full-set tests are excluded. CI proves the
+        # instrument, not the dataset fetch.
+        run: python -m pytest -q -m "not slow"
+
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: secret scan
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "detect-secrets==1.5.0"
+          detect-secrets scan --baseline .secrets.baseline
+          git diff --exit-code .secrets.baseline
+
+  hooks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: pre-commit
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "pre-commit>=3.5"
+          pre-commit run --all-files

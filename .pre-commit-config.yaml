@@ -1,0 +1,37 @@
+# Secret scanning is the day-one control named in docs/kickoff/03-security-and-access.md section 3.
+# Verified on day 1 by attempting to commit a fake key and confirming the commit was blocked.
+repos:
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+        exclude: ^(\.secrets\.baseline|docs/kickoff/.*)$
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=2048"]
+      - id: check-merge-conflict
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: detect-private-key
+
+  - repo: local
+    hooks:
+      # detect-secrets scans content. This blocks whole paths that must never be
+      # staged regardless of content.
+      - id: forbid-secret-paths
+        name: forbid secret paths
+        entry: python3 tools/forbid_secret_paths.py
+        language: system
+        pass_filenames: true
+
+      # Working agreement for this project: no em dashes anywhere, code and docs included.
+      - id: no-em-dash
+        name: no em dashes
+        entry: python3 tools/no_em_dash.py
+        language: system
+        pass_filenames: true
+        exclude: ^(docs/kickoff/.*|\.secrets\.baseline)$
