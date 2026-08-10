@@ -1,0 +1,3429 @@
+{
+  "datasets": {
+    "mbpp": {
+      "files": [
+        "full/train-00000-of-00001.parquet",
+        "full/test-00000-of-00001.parquet",
+        "full/validation-00000-of-00001.parquet",
+        "full/prompt-00000-of-00001.parquet"
+      ],
+      "repo": "google-research-datasets/mbpp",
+      "revision": "4bb6404fdc6cacfda99d4ac4205087b89d32030c"
+    },
+    "mbpp_plus": {
+      "files": [
+        "data/test-00000-of-00001-d5781c9c51e02795.parquet"
+      ],
+      "repo": "evalplus/mbppplus",
+      "revision": "b2d74c91837c3f2a20c1299ae98133cbe7cfa077"
+    }
+  },
+  "excluded": [
+    {
+      "reason": "HarnessError: inputs list is not a literal: malformed node or string on line 24: Name(id='inf', ctx=Load())",
+      "task_id": 404
+    },
+    {
+      "reason": "HarnessError: cannot read literal arguments from visible assert: assert is_perfect_square(14*14)",
+      "task_id": 803
+    }
+  ],
+  "file_digests": {
+    "evalplus/mbppplus@b2d74c91837c3f2a20c1299ae98133cbe7cfa077/data/test-00000-of-00001-d5781c9c51e02795.parquet": "dc20030b3788fccf617444edcb34138ef13d7e4fafd17bfcb8c1279dbb12399b",
+    "google-research-datasets/mbpp@4bb6404fdc6cacfda99d4ac4205087b89d32030c/full/prompt-00000-of-00001.parquet": "a053e4bb85ceb77430ae80592addb4ca4dc6ba087592f9e04537800ee88b7431",
+    "google-research-datasets/mbpp@4bb6404fdc6cacfda99d4ac4205087b89d32030c/full/test-00000-of-00001.parquet": "566fd53060ffba5766dace1d1e2f4c38906781526de222b0dfbdbc325b696c77",
+    "google-research-datasets/mbpp@4bb6404fdc6cacfda99d4ac4205087b89d32030c/full/train-00000-of-00001.parquet": "09d125ca31edacb7800be8c67c45abff618faf0214ff551291817d06bdb914ae",
+    "google-research-datasets/mbpp@4bb6404fdc6cacfda99d4ac4205087b89d32030c/full/validation-00000-of-00001.parquet": "3f0ec060987432d99fe8fb409d31e6c67445b208a01741c5583517c80a10fe80"
+  },
+  "held_out_source": "MBPP+ expanded harness, restricted to inputs that do not appear in any visible assert. Disjointness is established per problem by comparing input values.",
+  "n_excluded": 2,
+  "n_problems": 376,
+  "problems": [
+    {
+      "entry_point": "similar_elements",
+      "held_out_indices_sha256": "422112fe684112d8c3f9466c722d25cfe780c5eecbf5bace0a285924fbedeceb",
+      "n_held_out": 108,
+      "n_visible": 3,
+      "task_id": 2,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "bbeaaceee68c3cf79e26581140875458704aed10b36a5b6b43acb92c79eb0f7b"
+    },
+    {
+      "entry_point": "is_not_prime",
+      "held_out_indices_sha256": "fa23775faa34c8233c9df975f0fd163d96bf7351f05975e4848005a511f3510a",
+      "n_held_out": 104,
+      "n_visible": 4,
+      "task_id": 3,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "5f8cc562fa94764c0ce08d026c96f7cd40a880756ed8674ed68042ddc405227f"
+    },
+    {
+      "entry_point": "heap_queue_largest",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 4,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "efcb9361c5968ded602bbff4a03cf59801085fd5f3fe28ebcd7c9ea307390c57"
+    },
+    {
+      "entry_point": "differ_At_One_Bit_Pos",
+      "held_out_indices_sha256": "fe3135719d114c0e558bc3627ddb0ab395f2f34c75b55495e549c7129c74ef14",
+      "n_held_out": 108,
+      "n_visible": 6,
+      "task_id": 6,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "2f4ae7e42678f844bc3c81d3949eda79cfbaf147a8627a859584932d37b875d2"
+    },
+    {
+      "entry_point": "find_char_long",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 7,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "72cb73c15af0e44ba60330f6eb517eb9627c1b33fb7b11e2f6e826f9732f07f5"
+    },
+    {
+      "entry_point": "square_nums",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 8,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "cd866b9492987afb38860e9249be156e725dc9009b3b9755e7fef81dcf52a340"
+    },
+    {
+      "entry_point": "find_Rotations",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 9,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "de6cd5aad207933cd79cd04fdaeb584e397873ff13c81a80bf8b252138e2f915"
+    },
+    {
+      "entry_point": "remove_Occ",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 11,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "f52e618c332c72ceb95f39ea720c88645f0d30bba2afbe66fca5ee67502ba631"
+    },
+    {
+      "entry_point": "sort_matrix",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 12,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "ad34ed8c69ad3de29433edbec5f7946d95cfe2cfab613278825aac85bd9a268a"
+    },
+    {
+      "entry_point": "find_Volume",
+      "held_out_indices_sha256": "422112fe684112d8c3f9466c722d25cfe780c5eecbf5bace0a285924fbedeceb",
+      "n_held_out": 108,
+      "n_visible": 3,
+      "task_id": 14,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "b5526208098c558ea08e84c0e6427518055234991ba613bffffb64e289007f02"
+    },
+    {
+      "entry_point": "text_lowercase_underscore",
+      "held_out_indices_sha256": "7e8796bb7f179a17acda5c5d3638f3e8c9c2236b1c87ce6b50c7aa4b445f4db7",
+      "n_held_out": 113,
+      "n_visible": 3,
+      "task_id": 16,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "6963fda170cb40bae3eade25fd4f2ff2d08ff84c9b2c4c7367233dc9e975ea94"
+    },
+    {
+      "entry_point": "square_perimeter",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 17,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "9ebbefdbc542871d7de9505793c9c99c3368d12deeda96473450773b2dfa9d90"
+    },
+    {
+      "entry_point": "remove_dirty_chars",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 18,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "194d4b75ec5dc60d773bad03cc73af886031b9d1ab636f043392cbf58b4a2ac0"
+    },
+    {
+      "entry_point": "test_duplicate",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 19,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "1b4f33e5b6a2f573e10c1c338e275fd4d14a1f7ae7f43804623c2be2e80bd584"
+    },
+    {
+      "entry_point": "is_woodall",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 20,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "2a144921f4243406a4fb7a778fd7e78b9508ee61496b09937a3194e43aa0eb21"
+    },
+    {
+      "entry_point": "check",
+      "held_out_indices_sha256": "80dfcf5ddf14812687d5d16bdbe696fbdeaa9f45ea2f934b9b5afdef666ce6c6",
+      "n_held_out": 122,
+      "n_visible": 3,
+      "task_id": 56,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "fe95246e82de8bcd22d66d532d25def1dc123f50a48fc39ce43b3598ef17fc3f"
+    },
+    {
+      "entry_point": "find_Max_Num",
+      "held_out_indices_sha256": "13983630498268c5d57f32b41c0ed2a5600b54e3932dc1b6ddd99aa3049c0620",
+      "n_held_out": 92,
+      "n_visible": 3,
+      "task_id": 57,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "f378cb6c735f1fa562c51c06d5b889d0cc8678107ca58065a5f220c215e8e899"
+    },
+    {
+      "entry_point": "opposite_Signs",
+      "held_out_indices_sha256": "be27b3a989f56c1db1ad2a50d8335ed39667a01bd26545c87fdc7209517d914a",
+      "n_held_out": 105,
+      "n_visible": 4,
+      "task_id": 58,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "c6c5acaf92c275ad5140814df7ebef62092e817a2196e0690d05194d07d337ba"
+    },
+    {
+      "entry_point": "is_octagonal",
+      "held_out_indices_sha256": "37f21e01e497c4aa50d3df37f035383e264c22ebd75dd6aaa74690a76a6dbd5c",
+      "n_held_out": 98,
+      "n_visible": 3,
+      "task_id": 59,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "4684b086976abd1e90b7478ec041cdda1f67c391f7a29cb0cd38a862e10a3b11"
+    },
+    {
+      "entry_point": "count_Substrings",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 61,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "1167f9c0cbfd1624a094285728281be39bd423a70c9f0ffa8796c9eb0585cd64"
+    },
+    {
+      "entry_point": "smallest_num",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 62,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "ed093a4baa4f1e8abb653e8a5fa3f642b0300966230a1a36408b6b3f2544166f"
+    },
+    {
+      "entry_point": "max_difference",
+      "held_out_indices_sha256": "2d588fbe78e8826a32168a0d9577c7848b7a8bd57102f6de18a7a98185eae510",
+      "n_held_out": 121,
+      "n_visible": 3,
+      "task_id": 63,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "7fd3daf57683a68ca9b72f3a7d8cdacdce4b9d7b166d8206d669c6486e964e76"
+    },
+    {
+      "entry_point": "subject_marks",
+      "held_out_indices_sha256": "6a39c3d713ad89ded008f8b9350d7eeab910e962d9b18e01695c4f5938291c47",
+      "n_held_out": 116,
+      "n_visible": 3,
+      "task_id": 64,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "c711ea73a9f341c2d781ec1ea8748cc61a754494aae9dd0d9008b50e35bf7cc0"
+    },
+    {
+      "entry_point": "recursive_list_sum",
+      "held_out_indices_sha256": "3b0aa31462ef894a6e6e1145429dae2104d03e74c5cc4a6074d5ebe768a92cd6",
+      "n_held_out": 112,
+      "n_visible": 3,
+      "task_id": 65,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "98d17ece494e77612e8a19a2fbbd234c2921f5391373be2cebb059fb0dcc5fce"
+    },
+    {
+      "entry_point": "pos_count",
+      "held_out_indices_sha256": "7148d9968b4b745a704b42f76395480c599a0a828b6d54938254337c66eed20f",
+      "n_held_out": 107,
+      "n_visible": 3,
+      "task_id": 66,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "818178a477ee1b95c9994352e520faae6a26beaa39972b78c7bf1967fe37c33e"
+    },
+    {
+      "entry_point": "bell_number",
+      "held_out_indices_sha256": "dbd2943e2681983c52c55a49511afc7a2e2b759ef172df26d0ef68df972f031b",
+      "n_held_out": 99,
+      "n_visible": 3,
+      "task_id": 67,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "6d61155d1a67ebb9377211da91e1be032dd16fb635100b6d9e0923af7a838f91"
+    },
+    {
+      "entry_point": "is_Monotonic",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 68,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "d4e184e84e7b9550c355ad3c0fce58285f628598705c783841f2ef6725ef959f"
+    },
+    {
+      "entry_point": "is_sublist",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 69,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "af8b6cea6b1db5ef5adc6c7cb5a25cc797f2b10bb65292899e73859975ceec32"
+    },
+    {
+      "entry_point": "get_equal",
+      "held_out_indices_sha256": "89b540bf9338e5579144c385017731e18fbf72457f7cee2caca2128bf89bd8bf",
+      "n_held_out": 118,
+      "n_visible": 3,
+      "task_id": 70,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "1195398d39ae80027913b278e493f2e2963a27714dd439be0b9ec665590fa6c3"
+    },
+    {
+      "entry_point": "comb_sort",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 71,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "bc9b19fb84578b50eb5944bc82ac65bc3d21cd4af1ac7370eaeef3e351a70a2f"
+    },
+    {
+      "entry_point": "dif_Square",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 72,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "b397599448ae9212a321640c2f9524a39f1dd878aa00203b03edd3e4b4c33d3e"
+    },
+    {
+      "entry_point": "is_samepatterns",
+      "held_out_indices_sha256": "12e8b65312efba4a93f3d61ed63e7217cd65747b47279920aea7c727fb008060",
+      "n_held_out": 117,
+      "n_visible": 3,
+      "task_id": 74,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "a4591da933465c0084271830ff4754fa793e2ef8674436b3e43aaf73b723dfa6"
+    },
+    {
+      "entry_point": "find_tuples",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 75,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "04e3b5d927234854702edece96fce8a5d7f087032e16366949d167f58f0e4ffb"
+    },
+    {
+      "entry_point": "is_Diff",
+      "held_out_indices_sha256": "6a39c3d713ad89ded008f8b9350d7eeab910e962d9b18e01695c4f5938291c47",
+      "n_held_out": 116,
+      "n_visible": 3,
+      "task_id": 77,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "9cbe39719ea584aa5e3d1b7f251b0c116c3f4cee872662c91533dab0dceed8ea"
+    },
+    {
+      "entry_point": "word_len",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 79,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "89d9ae4a8ce40cc38f0cdba69b280e876db87f1079cef1586401c966ea821bea"
+    },
+    {
+      "entry_point": "tetrahedral_number",
+      "held_out_indices_sha256": "37f21e01e497c4aa50d3df37f035383e264c22ebd75dd6aaa74690a76a6dbd5c",
+      "n_held_out": 98,
+      "n_visible": 3,
+      "task_id": 80,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "9b2fab1e4e0b8bfcca9532f8def3ee0ab441ecbee83881a7bf82396c4b4b664e"
+    },
+    {
+      "entry_point": "volume_sphere",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 82,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "6f71c2f02932661887075c03802421165830e37d234feef1e86637daf718d720"
+    },
+    {
+      "entry_point": "sequence",
+      "held_out_indices_sha256": "7148d9968b4b745a704b42f76395480c599a0a828b6d54938254337c66eed20f",
+      "n_held_out": 107,
+      "n_visible": 3,
+      "task_id": 84,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "5def902bfcb82db7939c5d1b4ce2057c88ccaa5bae091d49ebbb9003103c5f61"
+    },
+    {
+      "entry_point": "surfacearea_sphere",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 85,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "86b56f2364a6adaae1f84aa09747509778a1f594a56392cd53572d0d1015167a"
+    },
+    {
+      "entry_point": "centered_hexagonal_number",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 86,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "6559bd4a3497d8662da3f5224f03531eb91b7cd3c99a6c94629d3a494dbee6a7"
+    },
+    {
+      "entry_point": "merge_dictionaries_three",
+      "held_out_indices_sha256": "293104bd40f6a98301f0eeb845e41a679c505caefbe576781701ecc3dffa56b8",
+      "n_held_out": 110,
+      "n_visible": 3,
+      "task_id": 87,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "f726633e4d80e2b29f28a0c5216d9bf03a85dbbed636a54d4273552737956674"
+    },
+    {
+      "entry_point": "freq_count",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 88,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "1975b2f14bf9bbb288bc2e87c52d7c84841342f7bc8252f0be7d592e702ee1db"
+    },
+    {
+      "entry_point": "closest_num",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 89,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "f4f0aaff8f8a4fba50258bfcc6e6018fabdc8eed44eea95bea268ad8645bcfa0"
+    },
+    {
+      "entry_point": "len_log",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 90,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "5eba53d51f47dc2d8797f4c6b0771f9b155637c86b3d83302e817aa0b232af4c"
+    },
+    {
+      "entry_point": "find_substring",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 91,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "1441b3223b90fc1c0f5af8ffe67206447bd6dbdfe40a8b377aab85cb369c83fc"
+    },
+    {
+      "entry_point": "is_undulating",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 92,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "375f828b0934b1724c530db72fa948e0a527edd74f1d899147a69887822ff251"
+    },
+    {
+      "entry_point": "power",
+      "held_out_indices_sha256": "422112fe684112d8c3f9466c722d25cfe780c5eecbf5bace0a285924fbedeceb",
+      "n_held_out": 108,
+      "n_visible": 3,
+      "task_id": 93,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "99f8345546495025f96f2562849f03d3515f8291f899821554b26615cf7c73f9"
+    },
+    {
+      "entry_point": "index_minimum",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 94,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "3bf57c36626f52116fff8a8b0d26d67cc0951c99045ca0a6f51ee1b2a8426f45"
+    },
+    {
+      "entry_point": "Find_Min_Length",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 95,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "ccfbfd2005cad952adbb6bd3ead506268dcfa059d92fbd721ee0fe47db8b4f1b"
+    },
+    {
+      "entry_point": "divisor",
+      "held_out_indices_sha256": "a77f3786b1ebff322743292e021590a98daae95313e6e8ce8b0a4f104f4ea21a",
+      "n_held_out": 100,
+      "n_visible": 3,
+      "task_id": 96,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "540433ccc09386ef29ad6a78a96ef6faaa0954bc91c0fea61564730842fcd61e"
+    },
+    {
+      "entry_point": "frequency_lists",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 97,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "e9b280076283248d5631eb3130f453d683aa0d8a213b55b66586bc0b5d8c3159"
+    },
+    {
+      "entry_point": "multiply_num",
+      "held_out_indices_sha256": "ea79a0b1dbebf49d66b2b46815a34c7e5ab7980d5b75f7e9479b9a9f6699d418",
+      "n_held_out": 110,
+      "n_visible": 3,
+      "task_id": 98,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "a7f40e3a2d87630233bb744d304efced89ce3552e17480e72941500e48dd25aa"
+    },
+    {
+      "entry_point": "decimal_to_binary",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 99,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "c1d84923fea961d0bceee02c41e5fd4f43031734f3bac28f07b3effead8ed27e"
+    },
+    {
+      "entry_point": "next_smallest_palindrome",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 100,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "556406cd2ce4229cb78dc6954ef2805634d4317b75f53b69ba42621fec9b2bf9"
+    },
+    {
+      "entry_point": "kth_element",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 101,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "f158104e93d391a01c810fcd5332f9908f79ceb2783a5b788a74967dda4fe6ce"
+    },
+    {
+      "entry_point": "snake_to_camel",
+      "held_out_indices_sha256": "ea79a0b1dbebf49d66b2b46815a34c7e5ab7980d5b75f7e9479b9a9f6699d418",
+      "n_held_out": 110,
+      "n_visible": 3,
+      "task_id": 102,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "1c9e05b0453ca6610a0cab6540dd417ee999cc5f2ad9e7807d56c228d2ce05cc"
+    },
+    {
+      "entry_point": "eulerian_num",
+      "held_out_indices_sha256": "37f21e01e497c4aa50d3df37f035383e264c22ebd75dd6aaa74690a76a6dbd5c",
+      "n_held_out": 98,
+      "n_visible": 3,
+      "task_id": 103,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "79bcce6132bd86756a56d938a918e019b05e53dec3d1e4eb7a90a0ea3396c8c5"
+    },
+    {
+      "entry_point": "sort_sublists",
+      "held_out_indices_sha256": "2d588fbe78e8826a32168a0d9577c7848b7a8bd57102f6de18a7a98185eae510",
+      "n_held_out": 121,
+      "n_visible": 3,
+      "task_id": 104,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "9da13f6eba403427255ee167ce0d36bab48967eeafe927d92de4c4c09dcb1717"
+    },
+    {
+      "entry_point": "count",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 105,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "644cad67edc0507a79d64299916beb60535afcd66fd8e71888dfbf6c0c31bf9f"
+    },
+    {
+      "entry_point": "add_lists",
+      "held_out_indices_sha256": "3ac2d057f6f6edc6c1a8259f86dfa0866790e767f3486093d6601661bf13d224",
+      "n_held_out": 115,
+      "n_visible": 3,
+      "task_id": 106,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "aae69daf059289d89732bb96ae1c161c476f4daf694340510d25e34421dc8db4"
+    },
+    {
+      "entry_point": "merge_sorted_list",
+      "held_out_indices_sha256": "89b540bf9338e5579144c385017731e18fbf72457f7cee2caca2128bf89bd8bf",
+      "n_held_out": 118,
+      "n_visible": 3,
+      "task_id": 108,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "d1ab39dc6f57573022d8493a0abe72a85cb588cef75d48be8e754cbef490db90"
+    },
+    {
+      "entry_point": "odd_Equivalent",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 109,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "9f2e74726d0eb6e91b8640ee92067137490041afc66506e2c37ef7554f352659"
+    },
+    {
+      "entry_point": "common_in_nested_lists",
+      "held_out_indices_sha256": "ea79a0b1dbebf49d66b2b46815a34c7e5ab7980d5b75f7e9479b9a9f6699d418",
+      "n_held_out": 110,
+      "n_visible": 3,
+      "task_id": 111,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "58e9bf816ef006250f7c0487e38fcd901421e5b78314c25362129b09f6a03842"
+    },
+    {
+      "entry_point": "check_integer",
+      "held_out_indices_sha256": "2d588fbe78e8826a32168a0d9577c7848b7a8bd57102f6de18a7a98185eae510",
+      "n_held_out": 121,
+      "n_visible": 3,
+      "task_id": 113,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "7c6439b98811628886ab1833d5a2d7f801ad71f1fde4a887465b4677c7fdca5e"
+    },
+    {
+      "entry_point": "tuple_to_int",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 116,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "608f81b688e0d03a21b378362cd3437b7cd1b7bb55dc4f29bcf94bef4b21dbea"
+    },
+    {
+      "entry_point": "string_to_list",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 118,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "1f43aa6a5095a16d783e83d37bcbf958fcbf341ba094df109a28353a5e3ca400"
+    },
+    {
+      "entry_point": "search",
+      "held_out_indices_sha256": "7148d9968b4b745a704b42f76395480c599a0a828b6d54938254337c66eed20f",
+      "n_held_out": 107,
+      "n_visible": 3,
+      "task_id": 119,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "166a2b07b9c91eb18a703ebe5a51e936d2501e6cb1fcbd9e3b539f0bae9fec41"
+    },
+    {
+      "entry_point": "max_product_tuple",
+      "held_out_indices_sha256": "7e8796bb7f179a17acda5c5d3638f3e8c9c2236b1c87ce6b50c7aa4b445f4db7",
+      "n_held_out": 113,
+      "n_visible": 3,
+      "task_id": 120,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "2526548ba2e5bd219e9b21e23818b548011ffd9f13e4b75d3c2eedceeb34f35d"
+    },
+    {
+      "entry_point": "amicable_numbers_sum",
+      "held_out_indices_sha256": "a77f3786b1ebff322743292e021590a98daae95313e6e8ce8b0a4f104f4ea21a",
+      "n_held_out": 100,
+      "n_visible": 3,
+      "task_id": 123,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "f7924285289651a6473a4d84f635c8ac5c3bc05b0c6ec1939c1621defca60b1a"
+    },
+    {
+      "entry_point": "angle_complex",
+      "held_out_indices_sha256": "98365a13e964a16ba2b6c7002cf280a2e53f26a57e426731ed38cff311d6ccbf",
+      "n_held_out": 112,
+      "n_visible": 3,
+      "task_id": 124,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "7e6c0ba304df5d77e119e2735a4cb3cfa9b536082a184c6b71ddc3b09096055e"
+    },
+    {
+      "entry_point": "find_length",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 125,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "02f93ba2cf975ace2be432e326bc88680ab78f21fb2124eaaabfe669bc218358"
+    },
+    {
+      "entry_point": "sum",
+      "held_out_indices_sha256": "7148d9968b4b745a704b42f76395480c599a0a828b6d54938254337c66eed20f",
+      "n_held_out": 107,
+      "n_visible": 3,
+      "task_id": 126,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "50dd0b15023059dbdefddcdca1f30852940587d9b5d70c0a7a6903b19afcf710"
+    },
+    {
+      "entry_point": "multiply_int",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 127,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "2637aae510874bfd675dc44ead0a5a32be888c5cba13ae2be06ab0fe792459b6"
+    },
+    {
+      "entry_point": "long_words",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 128,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "ef441326afe7e8580a694480fa0df2b14fccd72fb0b8170ad9b0dd48892551a9"
+    },
+    {
+      "entry_point": "magic_square_test",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 129,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "959d4e0bbfd06183b2c0fc2b7fdd2f8e59374ff58164e49230a4fd8a7390992c"
+    },
+    {
+      "entry_point": "max_occurrences",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 130,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "ed2632b919ea66855f7c0492629843b8e0e8e0c0cea41155ec67b1ad54dbfd7f"
+    },
+    {
+      "entry_point": "reverse_vowels",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 131,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "b9deed4d78938dca41a2ab5a4237fcdae8fca2f58aa32638bbf2ff847b076c8d"
+    },
+    {
+      "entry_point": "tup_string",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 132,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "07647ced303f326cc55e63d690605420ebbe401e1c0d20a5d76b1086562774f2"
+    },
+    {
+      "entry_point": "sum_negativenum",
+      "held_out_indices_sha256": "422112fe684112d8c3f9466c722d25cfe780c5eecbf5bace0a285924fbedeceb",
+      "n_held_out": 108,
+      "n_visible": 3,
+      "task_id": 133,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "be05a9a62b9650050f475fe1c7c79a2951b6aac6171272587fe2e4901d8b3226"
+    },
+    {
+      "entry_point": "hexagonal_num",
+      "held_out_indices_sha256": "a77f3786b1ebff322743292e021590a98daae95313e6e8ce8b0a4f104f4ea21a",
+      "n_held_out": 100,
+      "n_visible": 3,
+      "task_id": 135,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "3d38741f31e77479b12e9dd59d7c2adb9bd0bab2a87fafdb3c0f3315e789b73f"
+    },
+    {
+      "entry_point": "zero_count",
+      "held_out_indices_sha256": "86b1c4dce7d4c86178bc729238cddb2a077c7cdf784bd247dc79b979f13cd553",
+      "n_held_out": 111,
+      "n_visible": 3,
+      "task_id": 137,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "7237e15d41957f085c405ca3ab1470f4b7aaca360581b225b3c964bbdd4434a3"
+    },
+    {
+      "entry_point": "is_Sum_Of_Powers_Of_Two",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 138,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "994af868abbf54be09fa616a33d90fd3863d1c6b6ef7280914e87dd9d60ae102"
+    },
+    {
+      "entry_point": "circle_circumference",
+      "held_out_indices_sha256": "a77f3786b1ebff322743292e021590a98daae95313e6e8ce8b0a4f104f4ea21a",
+      "n_held_out": 100,
+      "n_visible": 3,
+      "task_id": 139,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "f925a4c6d8d83ec4c8b25ef59a61bfd673200a4ecc9395dbe0b158e5dd98625f"
+    },
+    {
+      "entry_point": "extract_singly",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 140,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "9b395067b1a7d66b18b902bab61d26c5ae4309dad92665e960c0251b87812ee6"
+    },
+    {
+      "entry_point": "pancake_sort",
+      "held_out_indices_sha256": "422112fe684112d8c3f9466c722d25cfe780c5eecbf5bace0a285924fbedeceb",
+      "n_held_out": 108,
+      "n_visible": 3,
+      "task_id": 141,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "324cf06b9e7c5b1cc7c1fd8428625fe75cdeadd47864e515d6c3adb50341503b"
+    },
+    {
+      "entry_point": "count_samepair",
+      "held_out_indices_sha256": "ea79a0b1dbebf49d66b2b46815a34c7e5ab7980d5b75f7e9479b9a9f6699d418",
+      "n_held_out": 110,
+      "n_visible": 3,
+      "task_id": 142,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "e7af80a748c64a70b0056ad204ff491d6cd6fc4116d8d19a716dfbf704dcd0ab"
+    },
+    {
+      "entry_point": "max_Abs_Diff",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 145,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "4744a37356db8ac33696e6243c3017c8272058dc11aa002db98ea822c0d173c5"
+    },
+    {
+      "entry_point": "find_solution",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 160,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "5c5e222f35bd99c0fbfcfa05993db16e62e33966239fe3663e1044fc5e3ace9f"
+    },
+    {
+      "entry_point": "remove_elements",
+      "held_out_indices_sha256": "3ac2d057f6f6edc6c1a8259f86dfa0866790e767f3486093d6601661bf13d224",
+      "n_held_out": 115,
+      "n_visible": 3,
+      "task_id": 161,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "8d284bc60c50c1820689b88530743843c45edfbbe47db787481a292f9c33627d"
+    },
+    {
+      "entry_point": "sum_series",
+      "held_out_indices_sha256": "5f5083e84cf0cdfce996bdfae7fba3862a052597e1e656fe86ae42de2728cc25",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 162,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "899de55631f5dc10bbd6ed44b328c0ace55e161c097fbf8c9e55fdaf98e3315b"
+    },
+    {
+      "entry_point": "count_char_position",
+      "held_out_indices_sha256": "7148d9968b4b745a704b42f76395480c599a0a828b6d54938254337c66eed20f",
+      "n_held_out": 107,
+      "n_visible": 3,
+      "task_id": 165,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "14bc53d3a98eddd1b918b204b386647d511071cf6183643d8990233b18a40e53"
+    },
+    {
+      "entry_point": "find_even_pair",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 166,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "0c5ec48d942aba4770821dca823ab9b7b89e09ed5cb9974afabf0c34f41a1f73"
+    },
+    {
+      "entry_point": "next_power_of_2",
+      "held_out_indices_sha256": "ea79a0b1dbebf49d66b2b46815a34c7e5ab7980d5b75f7e9479b9a9f6699d418",
+      "n_held_out": 110,
+      "n_visible": 3,
+      "task_id": 167,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "6a37169303bae5d8f838ef3d4bafe76b7ec5f4beec0841f644d99c98273f6b82"
+    },
+    {
+      "entry_point": "frequency",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 168,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "adc0d5dfa347f6e581ff0fcfdc3b598fed2f73580533243be38c6daf9fc1767b"
+    },
+    {
+      "entry_point": "sum_range_list",
+      "held_out_indices_sha256": "7148d9968b4b745a704b42f76395480c599a0a828b6d54938254337c66eed20f",
+      "n_held_out": 107,
+      "n_visible": 3,
+      "task_id": 170,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "bd2491eade5cdf6f363b67e48b3447cb5c82653e140d00eabd54154fe0a2b09a"
+    },
+    {
+      "entry_point": "perimeter_pentagon",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 171,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "34ade8e8351495296a04ccb7f9c0512dca647f1a6d6018988975f4712f3b6f2d"
+    },
+    {
+      "entry_point": "count_occurance",
+      "held_out_indices_sha256": "6916f0511940709152c7a3abd1bea0e7df13b1f801447e28fa73e3d31c25adb2",
+      "n_held_out": 101,
+      "n_visible": 5,
+      "task_id": 172,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "e61dd44992086dab02808144365ee468d00a2483bcf199f75f09384315b809a3"
+    },
+    {
+      "entry_point": "check_type",
+      "held_out_indices_sha256": "1ed057210e8bd65aa384baa0e0bdd18e735a2c2731b9a4072d14608471b7dacb",
+      "n_held_out": 127,
+      "n_visible": 3,
+      "task_id": 222,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "09291ccd024f505824241a961e0a217c2a29993dd54e1dce5f0e5c29b5852598"
+    },
+    {
+      "entry_point": "is_majority",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 4,
+      "task_id": 223,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "f9b5189c22c63850dcee4aee3459b506ec9c3019a6a1637003921e5ffab8d238"
+    },
+    {
+      "entry_point": "count_Set_Bits",
+      "held_out_indices_sha256": "dbd2943e2681983c52c55a49511afc7a2e2b759ef172df26d0ef68df972f031b",
+      "n_held_out": 99,
+      "n_visible": 3,
+      "task_id": 224,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "45e363b1448b3d405bd04785776de8ff47ba91057a1b18cd6b209f9faa7814a5"
+    },
+    {
+      "entry_point": "odd_values_string",
+      "held_out_indices_sha256": "42f03194bfb4f3d9624b309138363e8b3f5dd168e8c56cd92359a6dd8a3124e9",
+      "n_held_out": 103,
+      "n_visible": 4,
+      "task_id": 226,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "73cf50f2665689eef404e14c70f525690f6b5be4557e75d68c336fbb32ec7d6f"
+    },
+    {
+      "entry_point": "min_of_three",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 227,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "e479f6bcfb134a53d19522e3ffebfd31d0ca0f72bd5403edc264824e850f0633"
+    },
+    {
+      "entry_point": "replace_blank",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 230,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "5b8f076aa0397707269d16a7458d7182f68a22b4de50859bb56f3a53fb46a4fe"
+    },
+    {
+      "entry_point": "larg_nnum",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 232,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "8e143a17cf6e0a404f34cc4a73279437f4552b0e1acbc43b2920eb496d736cd6"
+    },
+    {
+      "entry_point": "lateralsuface_cylinder",
+      "held_out_indices_sha256": "a77f3786b1ebff322743292e021590a98daae95313e6e8ce8b0a4f104f4ea21a",
+      "n_held_out": 100,
+      "n_visible": 3,
+      "task_id": 233,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "a4f635745131964634a28b3fa3e72a159609412111ab9dc732d6f46f13422404"
+    },
+    {
+      "entry_point": "volume_cube",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 234,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "7b0a017acaa36a5a93c47cef2be55a169ff3da379f9f14c89067ba4e204ffb47"
+    },
+    {
+      "entry_point": "even_bit_set_number",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 235,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "23c01740bfd5c2e7d9e4e50f2d35d7f50f02f9b062cbe187394a4f55eb7f8c97"
+    },
+    {
+      "entry_point": "check_occurences",
+      "held_out_indices_sha256": "86b1c4dce7d4c86178bc729238cddb2a077c7cdf784bd247dc79b979f13cd553",
+      "n_held_out": 111,
+      "n_visible": 3,
+      "task_id": 237,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "21d5cd73c651410e49cc36074696280013d9ec2d9707867334ca3a0764ffafca"
+    },
+    {
+      "entry_point": "number_of_substrings",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 238,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "243f0670714b5da5ee3e616be2677a3b4592b1a2ecba943515ad09224a1bf15f"
+    },
+    {
+      "entry_point": "get_total_number_of_sequences",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 239,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "36ee138d9355d488c2cd029d1249f336cdf859153544587b088148cf2ab5bf4b"
+    },
+    {
+      "entry_point": "replace_list",
+      "held_out_indices_sha256": "3ac2d057f6f6edc6c1a8259f86dfa0866790e767f3486093d6601661bf13d224",
+      "n_held_out": 115,
+      "n_visible": 3,
+      "task_id": 240,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "5d1ad114be5cf531412d9e672cf9c7ca1d6e29f8c03f858d8d29b10da7958ee1"
+    },
+    {
+      "entry_point": "count_charac",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 242,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "c47187edeeebf5961bc9b634057cdc9e0c10f49375338591cb6d60072b81cb2e"
+    },
+    {
+      "entry_point": "next_Perfect_Square",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 244,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "1df69c4c315d8a72f61a656b6534b4f012433eb9b3f38e06fd46597e0b88af8a"
+    },
+    {
+      "entry_point": "max_sum",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 245,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "23969161470459d482caf1305e53ebf6eb537b66167ccd46272d75fc92765c1c"
+    },
+    {
+      "entry_point": "lps",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 247,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "287ad22cc5e1ad6130473512543537ca3b3b55ed6a1e85328181923bb47535ab"
+    },
+    {
+      "entry_point": "count_X",
+      "held_out_indices_sha256": "3b0aa31462ef894a6e6e1145429dae2104d03e74c5cc4a6074d5ebe768a92cd6",
+      "n_held_out": 112,
+      "n_visible": 3,
+      "task_id": 250,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "3dda84f73c6a8c6110386ed518b536562c088a014d432108a72562f54de732b3"
+    },
+    {
+      "entry_point": "insert_element",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 251,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "644c3467d5dff65d4b7e2f0ef803231d7a9bb15f057ca16f9a0456daba88ce42"
+    },
+    {
+      "entry_point": "convert",
+      "held_out_indices_sha256": "fff96a045c0948943a4b2f08c9971fdc886d5fb925b715be97fba53208eac56f",
+      "n_held_out": 123,
+      "n_visible": 3,
+      "task_id": 252,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "c5b691a7ff4630a2529b68d5522cdfb838ce8bfb5d9472ecb7e38e1ba97ed1d4"
+    },
+    {
+      "entry_point": "count_integer",
+      "held_out_indices_sha256": "742e659dfe46ab647a3828c82440328ee91b2e9990affcde3cb8157bf9ae406f",
+      "n_held_out": 114,
+      "n_visible": 3,
+      "task_id": 253,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "f5d52ed52d1a19c771307d2d6a629d3531e75f31346640a358d463d15b0b0eb6"
+    },
+    {
+      "entry_point": "combinations_colors",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 255,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "2bfdcbf3e12ca942b80af49570bdc0cba565210dddcdfd8bde5b359e984387f0"
+    },
+    {
+      "entry_point": "count_Primes_nums",
+      "held_out_indices_sha256": "dbd2943e2681983c52c55a49511afc7a2e2b759ef172df26d0ef68df972f031b",
+      "n_held_out": 99,
+      "n_visible": 3,
+      "task_id": 256,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "8f26e42b122133ac8aec2a48d802c4ff24a792613a12f93b4117914f228e7003"
+    },
+    {
+      "entry_point": "swap_numbers",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 257,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "e79453bd1db7c1e592908029eece29868790ff66cfca272e0c5a2fe38cc9e807"
+    },
+    {
+      "entry_point": "maximize_elements",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 259,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "9cdc4f2ad7837fc3d8d1a77534a384560a2f3309aa2878e68d577391d23d8a82"
+    },
+    {
+      "entry_point": "newman_prime",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 260,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "129e4e409ff51f9ed07d23f2dc86ff9f22a73aae81823a4e80137e1bc52d3e24"
+    },
+    {
+      "entry_point": "division_elements",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 261,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "05762b4bea2654b56942178a6b48bdd2959d039cdd7a3a4e9e063a0b40dc70db"
+    },
+    {
+      "entry_point": "split_two_parts",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 262,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "5df29a038f7b31d77f9520315a6fce3914df940566fa279fa468b8a45aa04e36"
+    },
+    {
+      "entry_point": "dog_age",
+      "held_out_indices_sha256": "a77f3786b1ebff322743292e021590a98daae95313e6e8ce8b0a4f104f4ea21a",
+      "n_held_out": 100,
+      "n_visible": 3,
+      "task_id": 264,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "a6923fe53330b51d475bc6ac16a101e7582b8c1a38d181254795ec73ccbee80c"
+    },
+    {
+      "entry_point": "list_split",
+      "held_out_indices_sha256": "86b1c4dce7d4c86178bc729238cddb2a077c7cdf784bd247dc79b979f13cd553",
+      "n_held_out": 111,
+      "n_visible": 3,
+      "task_id": 265,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "a07dca583ac483b1416d58dbca405ccd2ae7a4a1ff219ee3053337af32470b8d"
+    },
+    {
+      "entry_point": "lateralsurface_cube",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 266,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "537e85b503348dca50d126b957e1b99620a54e250d77796a1a0f71db36f662f7"
+    },
+    {
+      "entry_point": "square_Sum",
+      "held_out_indices_sha256": "742e659dfe46ab647a3828c82440328ee91b2e9990affcde3cb8157bf9ae406f",
+      "n_held_out": 114,
+      "n_visible": 3,
+      "task_id": 267,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "90dd1cc983253203c33bc3f76c75e12f45c367e4e4dd772d858f2add7257c6f8"
+    },
+    {
+      "entry_point": "find_star_num",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 268,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "15dce9bc347ca4dff8527a357c47174d618da32760dc50529fdfbe7b90adb99e"
+    },
+    {
+      "entry_point": "ascii_value",
+      "held_out_indices_sha256": "39672f9e4c6ef2f980fde680bba83f856bbeab398169f417580589962ef25a62",
+      "n_held_out": 79,
+      "n_visible": 3,
+      "task_id": 269,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "e078b41821e95165dd454df67d533064e5708a103b77973380dd81053f9a6222"
+    },
+    {
+      "entry_point": "sum_even_and_even_index",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 270,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "20ff046667e522a0d8c764edbe0beb0ad1abb50368fbeeaa57c41ae3bff15792"
+    },
+    {
+      "entry_point": "even_Power_Sum",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 271,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "db5143a2da14471ed5b1c329216a82144bf70738a2551a4f327d112aba667c72"
+    },
+    {
+      "entry_point": "rear_extract",
+      "held_out_indices_sha256": "3ac2d057f6f6edc6c1a8259f86dfa0866790e767f3486093d6601661bf13d224",
+      "n_held_out": 115,
+      "n_visible": 3,
+      "task_id": 272,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "0ae25ebfedd33b2a7768b31a531ab3be1fec2506328c2de6130aa37273d1a2d6"
+    },
+    {
+      "entry_point": "substract_elements",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 273,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "b0d6933648a16755a0af49c2d8659ede08761d9e4fa38313b6509408e43fcf12"
+    },
+    {
+      "entry_point": "even_binomial_Coeff_Sum",
+      "held_out_indices_sha256": "a77f3786b1ebff322743292e021590a98daae95313e6e8ce8b0a4f104f4ea21a",
+      "n_held_out": 100,
+      "n_visible": 3,
+      "task_id": 274,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "5deb05e1f59d3a4779da4d12cd745666fb9091ade4a6d3e647a50214d0951279"
+    },
+    {
+      "entry_point": "volume_cylinder",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 276,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "455576351d5deafa436fb076148425e284c075ecb1e42a20094b7cf18ccc1194"
+    },
+    {
+      "entry_point": "dict_filter",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 277,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "a1b88ea4d38364491e486eef6fed57c861d55af83734def87c6624a15a4763f8"
+    },
+    {
+      "entry_point": "count_first_elements",
+      "held_out_indices_sha256": "2d588fbe78e8826a32168a0d9577c7848b7a8bd57102f6de18a7a98185eae510",
+      "n_held_out": 121,
+      "n_visible": 3,
+      "task_id": 278,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "18f09e608ff8aa79baeafe2fc3634c4a11e66bd4fa7d24c928d7da9cb36357af"
+    },
+    {
+      "entry_point": "is_num_decagonal",
+      "held_out_indices_sha256": "ea79a0b1dbebf49d66b2b46815a34c7e5ab7980d5b75f7e9479b9a9f6699d418",
+      "n_held_out": 110,
+      "n_visible": 3,
+      "task_id": 279,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "34a5a2d9019010a883022818b686e5d797e934509366893001d5915a9d54b652"
+    },
+    {
+      "entry_point": "sequential_search",
+      "held_out_indices_sha256": "422112fe684112d8c3f9466c722d25cfe780c5eecbf5bace0a285924fbedeceb",
+      "n_held_out": 108,
+      "n_visible": 3,
+      "task_id": 280,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "93a3ab4ec82186e8c55ad31e27801e8cf2d1bc99494caff3d967322f5a75175a"
+    },
+    {
+      "entry_point": "all_unique",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 281,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "91a6ba8dd5aadeb6c7731685d658ed78864451f9ee87dbdec89134c97e556fcc"
+    },
+    {
+      "entry_point": "sub_list",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 282,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "e3c36397102a32be433386b9eab41fbf22c3336d248ce86ac374261ba8dde4ac"
+    },
+    {
+      "entry_point": "validate",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 283,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "eb4f3760fa58c22bf8047f1c971eef71e4f206cd829565016f4ae33c26dd7be4"
+    },
+    {
+      "entry_point": "check_element",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 284,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "183a8ceb6ac5c964a873eb0ef898480f317cd17519c974b33cda0de665cb283f"
+    },
+    {
+      "entry_point": "text_match_two_three",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 285,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "e66cd8c41e342b2e037e4d09a7a4a765200fb33314ce2b3aee3c80b0b6da9b02"
+    },
+    {
+      "entry_point": "max_sub_array_sum_repeated",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 286,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "5307bfe34b5766d176b0b70358f959572e9e7af20e24176887ef54f981a007e0"
+    },
+    {
+      "entry_point": "square_Sum",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 287,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "e4ae67f2864e4f63ee27ad208e4813eba2b017f4df3d111454029bc64bb3e1a6"
+    },
+    {
+      "entry_point": "max_length",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 290,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "2941594eb8befe4ccefc5b0ab49dc1953506a8c6f2a6e5186138ee6669556272"
+    },
+    {
+      "entry_point": "find",
+      "held_out_indices_sha256": "a77f3786b1ebff322743292e021590a98daae95313e6e8ce8b0a4f104f4ea21a",
+      "n_held_out": 100,
+      "n_visible": 3,
+      "task_id": 292,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "d5f597e2fa1c051b8368ee794792ca58847e7ee37c34e26e318e7d2b583edb8a"
+    },
+    {
+      "entry_point": "otherside_rightangle",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 293,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "972b620e3d2a2ab3a5037a2daf1b1e9531efffb3471ea93a01a66a048353b3a3"
+    },
+    {
+      "entry_point": "max_val",
+      "held_out_indices_sha256": "422112fe684112d8c3f9466c722d25cfe780c5eecbf5bace0a285924fbedeceb",
+      "n_held_out": 108,
+      "n_visible": 3,
+      "task_id": 294,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "4c0406af1ba64514666e2edebd96bf3d7286f02035c51d010ba6a4ff2e88e0ee"
+    },
+    {
+      "entry_point": "get_Inv_Count",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 296,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "b20a97de9e66d4e730b4df8e11e9d6f33baa8ed652726b78e8b9e4b3c5796362"
+    },
+    {
+      "entry_point": "flatten_list",
+      "held_out_indices_sha256": "12e8b65312efba4a93f3d61ed63e7217cd65747b47279920aea7c727fb008060",
+      "n_held_out": 117,
+      "n_visible": 3,
+      "task_id": 297,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "37e5ad1332b3aba8824cacaf66c4ccc4e175ff6a6182c0d7354f447a03b9dfb4"
+    },
+    {
+      "entry_point": "max_aggregate",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 299,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "7d934e937a6b31c154494af4b28d37af8022cd24cb1f0bcb7140fbc56e88e4ad"
+    },
+    {
+      "entry_point": "count_binary_seq",
+      "held_out_indices_sha256": "86b1c4dce7d4c86178bc729238cddb2a077c7cdf784bd247dc79b979f13cd553",
+      "n_held_out": 111,
+      "n_visible": 3,
+      "task_id": 300,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "9dce94914d5effdd31363257867b1212f7a16c0b24c448cedbbe3febddcbde35"
+    },
+    {
+      "entry_point": "dict_depth",
+      "held_out_indices_sha256": "df15c5c6c21865e3dd78e8801a2ac33fdee04a08b93859730976745f2edeabe4",
+      "n_held_out": 111,
+      "n_visible": 3,
+      "task_id": 301,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "16a7f14490bdf08845e47ee912beb7d3071d0f1d81e2d62b7896ed403084830f"
+    },
+    {
+      "entry_point": "start_withp",
+      "held_out_indices_sha256": "7148d9968b4b745a704b42f76395480c599a0a828b6d54938254337c66eed20f",
+      "n_held_out": 107,
+      "n_visible": 3,
+      "task_id": 305,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "330b6f41e9fc322bf47b371c0dd4cba09e7e79da237f9695266a1b3e250c4bb5"
+    },
+    {
+      "entry_point": "max_sum_increasing_subseq",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 306,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "f606a10361e6b240b8e8de66ecab0c4727e2413a1f81037a4fe96d60d05061e9"
+    },
+    {
+      "entry_point": "large_product",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 308,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "d9234a6b94c9ae4b0ea2a1cb22f28ad049832b170000f71c35c63b713eabad67"
+    },
+    {
+      "entry_point": "maximum",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 309,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "a8d618e6722eda307115b93fb223cba3e444bd0c2fb94bf289df030a104adb17"
+    },
+    {
+      "entry_point": "string_to_tuple",
+      "held_out_indices_sha256": "3b0aa31462ef894a6e6e1145429dae2104d03e74c5cc4a6074d5ebe768a92cd6",
+      "n_held_out": 112,
+      "n_visible": 3,
+      "task_id": 310,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "805f1016be026cacd8dd813060fd8f70069e47784e880baedf11866a9473886b"
+    },
+    {
+      "entry_point": "set_left_most_unset_bit",
+      "held_out_indices_sha256": "7148d9968b4b745a704b42f76395480c599a0a828b6d54938254337c66eed20f",
+      "n_held_out": 107,
+      "n_visible": 3,
+      "task_id": 311,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "381f2ea5e126a6769be1b86067f8dba4fedd765e8f01198494a7bdfbe630604a"
+    },
+    {
+      "entry_point": "volume_cone",
+      "held_out_indices_sha256": "422112fe684112d8c3f9466c722d25cfe780c5eecbf5bace0a285924fbedeceb",
+      "n_held_out": 108,
+      "n_visible": 3,
+      "task_id": 312,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "ffe747d68bda31e50bc2ec4f8d136b0656e9063d82da3f845da8a9a818dc14fa"
+    },
+    {
+      "entry_point": "highest_Power_of_2",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 388,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "8e04b7be21a995d41e462f4eb341f8cb68d5794066872d4b21cf2f4370b512fe"
+    },
+    {
+      "entry_point": "find_lucas",
+      "held_out_indices_sha256": "9fc8e2665b51f13a776255a0f01b44a44b8e40e7dfe0af27fa383b6ea6a13247",
+      "n_held_out": 33,
+      "n_visible": 3,
+      "task_id": 389,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "760f9b4598feed32f767cb8080dda8b7ad593114941f81a75c330ec6cab8ff11"
+    },
+    {
+      "entry_point": "add_string",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 390,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "c550668967064acf26abbcf4e95b565e7f3acba4912de7e5c1d69e20fa0331bb"
+    },
+    {
+      "entry_point": "convert_list_dictionary",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 391,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "f0579573fa14231a59c976a02922c428224e88f747bf9e11d16558909895e6d2"
+    },
+    {
+      "entry_point": "get_max_sum",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 392,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "d0ffb4938c49f144d8eac6327bdf403cb115da8091a41dee5a113e81fe7ba1d6"
+    },
+    {
+      "entry_point": "check_distinct",
+      "held_out_indices_sha256": "ea4301f350d06c6909cbb7ffa470f5d5a40e48a1ad01b76f9e4c868702863ed1",
+      "n_held_out": 49,
+      "n_visible": 3,
+      "task_id": 394,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "a2dda423b85a80bb8f5a9ae2e126bcc8b0ddf291a81f8fd439098e5b5d11f9d9"
+    },
+    {
+      "entry_point": "first_non_repeating_character",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 395,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "e50bf962c0cab5665650c6ad622dacb7071a882981de416bc72c609122ae1836"
+    },
+    {
+      "entry_point": "median_numbers",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 397,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "e1473ef55073e6db078690f8b997dd9d57b64302c7294909030149bd200acb21"
+    },
+    {
+      "entry_point": "sum_of_digits",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 398,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "c4cfe36ace5e0df1f191a3078d23971e8d52c9907b40aeba394342b746064eee"
+    },
+    {
+      "entry_point": "check_tuplex",
+      "held_out_indices_sha256": "7148d9968b4b745a704b42f76395480c599a0a828b6d54938254337c66eed20f",
+      "n_held_out": 107,
+      "n_visible": 3,
+      "task_id": 405,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "ded5fa43f668f619b996aca39a08c0ab2a2bf57daa1485025dc4b9193f31bd98"
+    },
+    {
+      "entry_point": "find_Parity",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 406,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "d8aca138e8aefba46891d8613203b0ae0547cbbbfb28db419247bf14dd077d48"
+    },
+    {
+      "entry_point": "min_product_tuple",
+      "held_out_indices_sha256": "86b1c4dce7d4c86178bc729238cddb2a077c7cdf784bd247dc79b979f13cd553",
+      "n_held_out": 111,
+      "n_visible": 3,
+      "task_id": 409,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "3ae9cbb251594aa488e972da35b3686b046b1724e22f9fae368ed8b363ba69b2"
+    },
+    {
+      "entry_point": "min_val",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 410,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "1604095d7ed045499e2e0411cd0ffbfed9d999485d2ed821d6d2b2e3c7fe3e37"
+    },
+    {
+      "entry_point": "remove_odd",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 412,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "d84a1ac1f8d20a270544d24b4b0b010a963de09474218fe1dbf70b53ac3e5324"
+    },
+    {
+      "entry_point": "extract_nth_element",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 413,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "9a0c254a96dd30d4f0b08f53f34d29c7d73837ec8de8edb2baaff40552216e75"
+    },
+    {
+      "entry_point": "overlapping",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 414,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "700e97a500ef1ef169446a7b2cde6a0119cce6a4c64a2969f638a256916d1303"
+    },
+    {
+      "entry_point": "max_Product",
+      "held_out_indices_sha256": "7e8796bb7f179a17acda5c5d3638f3e8c9c2236b1c87ce6b50c7aa4b445f4db7",
+      "n_held_out": 113,
+      "n_visible": 3,
+      "task_id": 415,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "226f6cbc58c13414669d45d741c58fd13fa8553788f2320616ae243966afeda0"
+    },
+    {
+      "entry_point": "Find_Max",
+      "held_out_indices_sha256": "ea79a0b1dbebf49d66b2b46815a34c7e5ab7980d5b75f7e9479b9a9f6699d418",
+      "n_held_out": 110,
+      "n_visible": 3,
+      "task_id": 418,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "5fe3bfbdf9397d68b4f2cccd26052053b88e0eebf8008ebcffdf967a56dc3ebc"
+    },
+    {
+      "entry_point": "round_and_sum",
+      "held_out_indices_sha256": "7148d9968b4b745a704b42f76395480c599a0a828b6d54938254337c66eed20f",
+      "n_held_out": 107,
+      "n_visible": 3,
+      "task_id": 419,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "c1cf87c48f169b02ef86f6c235187fb533bef6dcba876457cb8b5e1febd3c006"
+    },
+    {
+      "entry_point": "cube_Sum",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 420,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "40d7323230243b4e56e9f2525a5510a7c1acda7bb5701c5a3105329bbcbca290"
+    },
+    {
+      "entry_point": "concatenate_tuple",
+      "held_out_indices_sha256": "3b0aa31462ef894a6e6e1145429dae2104d03e74c5cc4a6074d5ebe768a92cd6",
+      "n_held_out": 112,
+      "n_visible": 3,
+      "task_id": 421,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "4d96e7a21d69c35c76cf212cce4cdfc67c1f6a6441a972a1a5319d8b0b5eeadf"
+    },
+    {
+      "entry_point": "find_Average_Of_Cube",
+      "held_out_indices_sha256": "a77f3786b1ebff322743292e021590a98daae95313e6e8ce8b0a4f104f4ea21a",
+      "n_held_out": 100,
+      "n_visible": 3,
+      "task_id": 422,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "53d42f63426b90a1e78b6ed27af3549230808cdac2c10d83bfa15b3b5ff8cecf"
+    },
+    {
+      "entry_point": "extract_rear",
+      "held_out_indices_sha256": "e32e6620b583d185324cc2910943df6f3892bccd30f968fdeea40039bd0e1ce4",
+      "n_held_out": 120,
+      "n_visible": 3,
+      "task_id": 424,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "2d09477a00d34c6af8545008e1ad7f5f9dbeabeec9fa0b79680d7a333c054aef"
+    },
+    {
+      "entry_point": "count_element_in_list",
+      "held_out_indices_sha256": "422112fe684112d8c3f9466c722d25cfe780c5eecbf5bace0a285924fbedeceb",
+      "n_held_out": 108,
+      "n_visible": 3,
+      "task_id": 425,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "bec7e7a09dd82432aea1c5e7e3dddd359bd079db22f736cb46b8eca72cc60514"
+    },
+    {
+      "entry_point": "filter_oddnumbers",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 426,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "08d9ec4b550927aa85a5027db532728b113a1629ef60fc9a3c05cb8f6f011792"
+    },
+    {
+      "entry_point": "change_date_format",
+      "held_out_indices_sha256": "3b0aa31462ef894a6e6e1145429dae2104d03e74c5cc4a6074d5ebe768a92cd6",
+      "n_held_out": 112,
+      "n_visible": 3,
+      "task_id": 427,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "a07ceadabfccfdce71c3c187e2140a15aebe7419210d45d350156e2af426647a"
+    },
+    {
+      "entry_point": "shell_sort",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 428,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "89afcc6fa61beb573abf897872fc3b2e02b352dd6d628ad26e6e550fe936e33e"
+    },
+    {
+      "entry_point": "and_tuples",
+      "held_out_indices_sha256": "7e8796bb7f179a17acda5c5d3638f3e8c9c2236b1c87ce6b50c7aa4b445f4db7",
+      "n_held_out": 113,
+      "n_visible": 3,
+      "task_id": 429,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "ca2a91dfbe38a236585f408aa2a47323d3e6f099bb18de70a0422d605890a222"
+    },
+    {
+      "entry_point": "parabola_directrix",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 430,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "8e2f074b3d765f571bfd44d52e0650426012adb314df2ab283f0061b0ba921e2"
+    },
+    {
+      "entry_point": "median_trapezium",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 432,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "2c3b65cb5d29a23556468f4133a3bd365832d24a3de68b4b94ce3be44dad00a8"
+    },
+    {
+      "entry_point": "check_greater",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 433,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "d1b1b1b08fdfc1f47f918504d3b48ad97b77a5fe586444aa72467e928231d6cf"
+    },
+    {
+      "entry_point": "last_Digit",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 435,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "16b8c5fb38af34d65c6364b0fc493422e165162e7e9567e1f4fa483a70e11cac"
+    },
+    {
+      "entry_point": "neg_nos",
+      "held_out_indices_sha256": "86b1c4dce7d4c86178bc729238cddb2a077c7cdf784bd247dc79b979f13cd553",
+      "n_held_out": 111,
+      "n_visible": 3,
+      "task_id": 436,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "92d5cd9dd43ad1e70e61443bef1b9c24dc6812bb7a0daeb050213e208b48fec0"
+    },
+    {
+      "entry_point": "remove_odd",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 437,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "21bf473c2bbb17c4306a14fba7d946bd03a048cf602ad7f963bccf31e3ddb8fa"
+    },
+    {
+      "entry_point": "multiple_to_single",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 439,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "2ca034be9f9c9be606f24e453bbc0547d2ff28ab011dae9ba3b906c5fff8ee25"
+    },
+    {
+      "entry_point": "find_adverb_position",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 440,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "2f081a3b1feae6db305b516b28baeda4ce397eaadefebd61e029db454e99e485"
+    },
+    {
+      "entry_point": "surfacearea_cube",
+      "held_out_indices_sha256": "2d588fbe78e8826a32168a0d9577c7848b7a8bd57102f6de18a7a98185eae510",
+      "n_held_out": 121,
+      "n_visible": 3,
+      "task_id": 441,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "2aecd999b35b9549a49995231916bb674fddc53658ae0e558c2bc035bf7038cd"
+    },
+    {
+      "entry_point": "index_multiplication",
+      "held_out_indices_sha256": "7148d9968b4b745a704b42f76395480c599a0a828b6d54938254337c66eed20f",
+      "n_held_out": 107,
+      "n_visible": 3,
+      "task_id": 445,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "594f0894b9b2ed3a369726a85dabff9c479348f13ab2bb909eb71d9225d238d8"
+    },
+    {
+      "entry_point": "count_Occurrence",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 446,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "93e18e96ab0f6b5b61826d88589c2d0c63d1187dd6006a9f4c3de1276bd9aef5"
+    },
+    {
+      "entry_point": "cube_nums",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 447,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "7820d213cc041c68cc9652880fa491ab23b5f07b9a4f34a59b4a6ce03573cfd7"
+    },
+    {
+      "entry_point": "cal_sum",
+      "held_out_indices_sha256": "a77f3786b1ebff322743292e021590a98daae95313e6e8ce8b0a4f104f4ea21a",
+      "n_held_out": 100,
+      "n_visible": 3,
+      "task_id": 448,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "970f451cd535039d579585ca1a1ae5f1dc3761a6ca094b98e5d6a790dcf74e72"
+    },
+    {
+      "entry_point": "extract_string",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 450,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "f173c518fba46a8c97e0f802f0fede32a9abaae440a8b041fef077bc339ab9db"
+    },
+    {
+      "entry_point": "remove_whitespaces",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 451,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "698c6a058a2c8c6cae50125fd42803a4acdb27184094eed57675c5030b6d96a3"
+    },
+    {
+      "entry_point": "sumofFactors",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 453,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "c02a45498405bbf2a598f8f644896156fa747e43a6832792dce70761e797c4b1"
+    },
+    {
+      "entry_point": "text_match_wordz",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 454,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "540265ef9dbb2dd63740f576435159f1062241d73668adeec62f10b3b2fbc4b3"
+    },
+    {
+      "entry_point": "check_monthnumb_number",
+      "held_out_indices_sha256": "00fc7f0609a8c352a58ad0c640242bc25cd66543c1caad11f28790ade9e98ef4",
+      "n_held_out": 10,
+      "n_visible": 3,
+      "task_id": 455,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "a0457383a2bc6d4d1bf328b0fcc5096fad595fccbdac00fad06f775ce0ecbec0"
+    },
+    {
+      "entry_point": "reverse_string_list",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 456,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "f949e6cc78f6428eab665e6f4d3a609a386ee68ae72bfea65db933db82c1628a"
+    },
+    {
+      "entry_point": "Find_Min",
+      "held_out_indices_sha256": "2d588fbe78e8826a32168a0d9577c7848b7a8bd57102f6de18a7a98185eae510",
+      "n_held_out": 121,
+      "n_visible": 3,
+      "task_id": 457,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "49a95c51847076af0b638269e176fb60bf0fc3bb0f2d88e3804c37b428ca1373"
+    },
+    {
+      "entry_point": "rectangle_area",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 458,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "310475f183439d8135503d5ec3c6792cd1ac9b5b697270219c28a673afe1b1de"
+    },
+    {
+      "entry_point": "remove_uppercase",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 459,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "d80e9b4de488f5fc70ea5efe7688fcd52ff5f2aeb781c1244fe64bc6923802b8"
+    },
+    {
+      "entry_point": "Extract",
+      "held_out_indices_sha256": "e32e6620b583d185324cc2910943df6f3892bccd30f968fdeea40039bd0e1ce4",
+      "n_held_out": 120,
+      "n_visible": 3,
+      "task_id": 460,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "31a127a3f52024867706408508c8d5840d22ee110bf2f5dafabc64a2d8501582"
+    },
+    {
+      "entry_point": "combinations_list",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 462,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "4905a91cb00e95605c08f0ba5fa995d90b5a75efdf63e677f12718fe7472ba73"
+    },
+    {
+      "entry_point": "max_subarray_product",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 463,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "32a2dbeb536fc7fde53edca60e03b42e8fc4360dee04c468a94b4d1ea89c03a1"
+    },
+    {
+      "entry_point": "drop_empty",
+      "held_out_indices_sha256": "ea79a0b1dbebf49d66b2b46815a34c7e5ab7980d5b75f7e9479b9a9f6699d418",
+      "n_held_out": 110,
+      "n_visible": 3,
+      "task_id": 465,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "a9dcdae8d2110e61bafe2419ca6ae1fab99e2bdac079ba9f79dbc29aafbe31cb"
+    },
+    {
+      "entry_point": "max_product",
+      "held_out_indices_sha256": "ea79a0b1dbebf49d66b2b46815a34c7e5ab7980d5b75f7e9479b9a9f6699d418",
+      "n_held_out": 110,
+      "n_visible": 3,
+      "task_id": 468,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "3dbb4b5a6d1bbfc4732ab9d997b6dbf7100fccad451546555196422d31ad0b8f"
+    },
+    {
+      "entry_point": "add_pairwise",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 470,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "67a4b3cc71413a8e57e5666c7f30e9878ecf24d79aa14347ad5b47d19e956761"
+    },
+    {
+      "entry_point": "find_remainder",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 471,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "4680bff14b89e2b2692170ccd67e6edcab66ee6f140ab0c1f9103b619bd698b0"
+    },
+    {
+      "entry_point": "check_Consecutive",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 472,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "fc174b90fb337c7de7af41a9ea5fca508a8560f5184c3c882c49c2aec340cb44"
+    },
+    {
+      "entry_point": "tuple_intersection",
+      "held_out_indices_sha256": "422112fe684112d8c3f9466c722d25cfe780c5eecbf5bace0a285924fbedeceb",
+      "n_held_out": 108,
+      "n_visible": 3,
+      "task_id": 473,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "2f521008a0712fe16718733a7c438a7f6f7c89d90ad6b66d007fcf4e9e8a62ea"
+    },
+    {
+      "entry_point": "replace_char",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 474,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "40b85ad13ba1afccb5641d8c7afa9bd1eac6727b385d7233313b1df41fb97acb"
+    },
+    {
+      "entry_point": "sort_counter",
+      "held_out_indices_sha256": "86b1c4dce7d4c86178bc729238cddb2a077c7cdf784bd247dc79b979f13cd553",
+      "n_held_out": 111,
+      "n_visible": 3,
+      "task_id": 475,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "13e1480a1ffbb7c6adbe734de4001ee4d04c858765cb692c44d8f73827afebc7"
+    },
+    {
+      "entry_point": "big_sum",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 476,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "451f808aca2077ae6007b4edb5c44c6f09da9e79a49ccfbd7ace4defdd7b4088"
+    },
+    {
+      "entry_point": "is_lower",
+      "held_out_indices_sha256": "ea79a0b1dbebf49d66b2b46815a34c7e5ab7980d5b75f7e9479b9a9f6699d418",
+      "n_held_out": 110,
+      "n_visible": 3,
+      "task_id": 477,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "a76b0274138bc84ff3a05ddc973fede47564f004cc2d49fb7b945cf09f4a36dd"
+    },
+    {
+      "entry_point": "remove_lowercase",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 478,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "a5e248eeca708391008b38bb3c82e6b3d8191c48e72cc2c94fbeeb0a9d71752d"
+    },
+    {
+      "entry_point": "first_Digit",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 479,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "ca5ed738d6bdfd797bbfc854d6655851abda1ede3741efde918d7d82dbd610cd"
+    },
+    {
+      "entry_point": "Split",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 554,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "95b42bba7781b67088294cb7b303d158d24c18f0af66a2eb36dcfbd74f6bef9e"
+    },
+    {
+      "entry_point": "difference",
+      "held_out_indices_sha256": "a77f3786b1ebff322743292e021590a98daae95313e6e8ce8b0a4f104f4ea21a",
+      "n_held_out": 100,
+      "n_visible": 3,
+      "task_id": 555,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "e74f2eae729381868aee0b54d34de338b73e612c0ad3de49f9da84a8491400a8"
+    },
+    {
+      "entry_point": "find_Odd_Pair",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 556,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "d237f7446fa6281c0660f98e2ecd3e40c6dda1bb933867d078a99a50252fe8d9"
+    },
+    {
+      "entry_point": "toggle_string",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 557,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "779dd8b4ea0896d1c7faea34c48c93026d64b8eddcbd52ad0ebd8944c8149b0b"
+    },
+    {
+      "entry_point": "digit_distance_nums",
+      "held_out_indices_sha256": "3ca4aa9390014b8b116f7c119f0a9eb643c33c07af9b422b825c7dc7fd2a0889",
+      "n_held_out": 137,
+      "n_visible": 3,
+      "task_id": 558,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "54101108b87831ba4e17cf095dabd56dd08abcc65e0fe91f48ac02206f854340"
+    },
+    {
+      "entry_point": "max_sub_array_sum",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 559,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "6269e33b0c3003c7860e35604c6f1c86ad01d9ac997bcf5ef96d4bef73ebdb22"
+    },
+    {
+      "entry_point": "union_elements",
+      "held_out_indices_sha256": "9d3de83886612c00dfdc25b2acda52fbb3c9b926b3987a1ce07d6a3053a6f5c7",
+      "n_held_out": 129,
+      "n_visible": 3,
+      "task_id": 560,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "755476365bb89caddaa96623aea4714f6d6665ffcc2c4c8e4a162045d32a3ece"
+    },
+    {
+      "entry_point": "Find_Max_Length",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 562,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "ec112fff82899a7833695c6ea09cfbcd2ca1c8103b47e04f8cf7536c3d76f6e8"
+    },
+    {
+      "entry_point": "extract_values",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 563,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "1d504add10b02ce122f4b9db658d053da4e260394a8ab57d1cd24bf565d6c7ca"
+    },
+    {
+      "entry_point": "count_Pairs",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 564,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "6fbf4b3fbc23bb17f63f269d868d2be4ffd7245db17283d2b24715a62b419122"
+    },
+    {
+      "entry_point": "split",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 565,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "fab06e39e28e4811327523f7717d6340e81cab916df07a157a811690a6bc3f34"
+    },
+    {
+      "entry_point": "sum_digits",
+      "held_out_indices_sha256": "7e8796bb7f179a17acda5c5d3638f3e8c9c2236b1c87ce6b50c7aa4b445f4db7",
+      "n_held_out": 113,
+      "n_visible": 3,
+      "task_id": 566,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "8829fd643a568cb7b312fd2907fb80574499d56e2e59f30771044cf97388bff4"
+    },
+    {
+      "entry_point": "issort_list",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 567,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "a79bcfb0f05d3ce1248a950871972c3b9774c356115b4afc45b5a1d779187b66"
+    },
+    {
+      "entry_point": "empty_list",
+      "held_out_indices_sha256": "37f21e01e497c4aa50d3df37f035383e264c22ebd75dd6aaa74690a76a6dbd5c",
+      "n_held_out": 98,
+      "n_visible": 3,
+      "task_id": 568,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "4fdf3170d24375d535c31094c61e9dc1ab1295a51f1ac4b5980b99a17689c1ed"
+    },
+    {
+      "entry_point": "sort_sublists",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 569,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "8b1c83d0e5029133411cb1ee825980c94c0122bf7166254f8b8d3ae9610df3d1"
+    },
+    {
+      "entry_point": "two_unique_nums",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 572,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "63bf8ceadf8433345ea70e32fabc4eab6427b19790565fb939bf693325ef3094"
+    },
+    {
+      "entry_point": "unique_product",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 573,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "2e8a7655b77ba2ff0d4d87cf727aab02aa2dbd8d11f50e0027c501cf6d54b0da"
+    },
+    {
+      "entry_point": "is_Sub_Array",
+      "held_out_indices_sha256": "ea79a0b1dbebf49d66b2b46815a34c7e5ab7980d5b75f7e9479b9a9f6699d418",
+      "n_held_out": 110,
+      "n_visible": 3,
+      "task_id": 576,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "ede60940c40254afd8181cbb191158fac6ff77f402cedc56046308fec5f9d56d"
+    },
+    {
+      "entry_point": "last_Digit_Factorial",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 577,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "d3e14c965ed6fecfe0741b54937732eff6839851ca8091d78dd1e25be7fbb24c"
+    },
+    {
+      "entry_point": "interleave_lists",
+      "held_out_indices_sha256": "ea79a0b1dbebf49d66b2b46815a34c7e5ab7980d5b75f7e9479b9a9f6699d418",
+      "n_held_out": 110,
+      "n_visible": 3,
+      "task_id": 578,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "cc12524c789168302c51fddc0f847529e27f9263557c75ac979a940f362f7c18"
+    },
+    {
+      "entry_point": "find_dissimilar",
+      "held_out_indices_sha256": "9d3de83886612c00dfdc25b2acda52fbb3c9b926b3987a1ce07d6a3053a6f5c7",
+      "n_held_out": 129,
+      "n_visible": 3,
+      "task_id": 579,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "eadc396aae46a6f97137e81a59324d59d1194e51f24a445b624ea75ab0df2f44"
+    },
+    {
+      "entry_point": "extract_even",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 580,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "b5d83085e812ae926f8b63b4d651453373b73f3726bb0238dea44cb2d60db01e"
+    },
+    {
+      "entry_point": "surface_Area",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 581,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "90c88da9e28c21a53a70d86b841b5b16fbff74904a2595490d6798b640cde790"
+    },
+    {
+      "entry_point": "catalan_number",
+      "held_out_indices_sha256": "4dc85150f8ed66543950479fe7d11ba468e4f8f89977f9da3e5c056458ab88fa",
+      "n_held_out": 15,
+      "n_visible": 3,
+      "task_id": 583,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "2f316d2e4a35c8ba9ba4c53acecba3bc5d889e3b6ede05e189612277ebd2ff34"
+    },
+    {
+      "entry_point": "expensive_items",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 585,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "a249d29fec31db4f2ca44f4b0eb618b3ad8aa96552e8b290a39ae3d7f945d9fb"
+    },
+    {
+      "entry_point": "split_Arr",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 586,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "800d9fb20e14663f6c8c955bcaf70d88be4329bb4aaa8cde89ca7e60df7825ce"
+    },
+    {
+      "entry_point": "list_tuple",
+      "held_out_indices_sha256": "3b0aa31462ef894a6e6e1145429dae2104d03e74c5cc4a6074d5ebe768a92cd6",
+      "n_held_out": 112,
+      "n_visible": 3,
+      "task_id": 587,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "44c46a39de19b1a64e163839163b05cf2ca1f8b5ee59f800a2513fdcce42c2ef"
+    },
+    {
+      "entry_point": "big_diff",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 588,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "de807b9c31cf8cec20e0dc5b5c7ba3de3b092a142eea1abc21827186ad027468"
+    },
+    {
+      "entry_point": "perfect_squares",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 589,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "0d28709df7824af635a823be8637a2275f794474d2d4d2401a10502bcb64fd07"
+    },
+    {
+      "entry_point": "polar_rect",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 590,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "9e412e0d34a17556e0ce99b71602861aab850fc16f3fb3bc5917179b79494df1"
+    },
+    {
+      "entry_point": "swap_List",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 591,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "c18f76f89288c09f17dca4b6726b2505c9fd00adf99d2709ebc64a330060cc1f"
+    },
+    {
+      "entry_point": "sum_Of_product",
+      "held_out_indices_sha256": "a77f3786b1ebff322743292e021590a98daae95313e6e8ce8b0a4f104f4ea21a",
+      "n_held_out": 100,
+      "n_visible": 3,
+      "task_id": 592,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "24d93ffada2d427b61a4442a203fbc44a61870c31622bdd8f4fab9527cb8cfc9"
+    },
+    {
+      "entry_point": "removezero_ip",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 593,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "86938f43dce7241f8b3c5e0770cc0e5dec0437525ce372db18e4d0da90252f5f"
+    },
+    {
+      "entry_point": "diff_even_odd",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 594,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "3173e3992649aa23db31c049e911aef0997df506a33ce424c22208b8fd078003"
+    },
+    {
+      "entry_point": "tuple_size",
+      "held_out_indices_sha256": "2d588fbe78e8826a32168a0d9577c7848b7a8bd57102f6de18a7a98185eae510",
+      "n_held_out": 121,
+      "n_visible": 3,
+      "task_id": 596,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "bccb4eb982baf77e82b946028ccf2093b2728106ae40006815e40c2b64249af4"
+    },
+    {
+      "entry_point": "find_kth",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 597,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "5fbacd994d872975ecddc0655dfca81d0e8ca869c78e48ba308183598ec9644e"
+    },
+    {
+      "entry_point": "armstrong_number",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 598,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "ffb3c46b3e7bfb4593145b432fba37d5396bd8d3f101bbd0306fb22043ad77f0"
+    },
+    {
+      "entry_point": "sum_average",
+      "held_out_indices_sha256": "5a835ca3c2ae160da6a49fc9d0100dcac8f6ccdab9d6e99c09fdce3c6ed87f36",
+      "n_held_out": 87,
+      "n_visible": 3,
+      "task_id": 599,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "49a6cf8e897874e37483366ef3bcf6fd9080d524b81151913e643db54bc0c6bc"
+    },
+    {
+      "entry_point": "is_Even",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 600,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "edf895c675855f7bcbde391d0a05c9459f6d291edc418d9a4f6be3c3f57c4b23"
+    },
+    {
+      "entry_point": "first_repeated_char",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 602,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "52c1851fcbfdf1a016a89638ff396d9cfbae7a23c41ee2f761543742d23bfa10"
+    },
+    {
+      "entry_point": "get_ludic",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 603,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "67001cacd9e83623a0b837544003822c0fcfb5cc97c6cdad032dbcd9f3f8f8fd"
+    },
+    {
+      "entry_point": "reverse_words",
+      "held_out_indices_sha256": "7e8796bb7f179a17acda5c5d3638f3e8c9c2236b1c87ce6b50c7aa4b445f4db7",
+      "n_held_out": 113,
+      "n_visible": 3,
+      "task_id": 604,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "c6adbab5e63c8c57fc17e2aebabe43d5ad646c60f699d07d6a4aaa308c854080"
+    },
+    {
+      "entry_point": "prime_num",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 605,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "0b9105e76dcf6db676c9b11869a810e165f811814eccca5b415415be67eaac87"
+    },
+    {
+      "entry_point": "radian_degree",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 606,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "d35f366487cf39dac5393ba1edaaff42fe8983c022153e2410d4fc4ddfb0af14"
+    },
+    {
+      "entry_point": "find_literals",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 607,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "a0897f766b24ca3f47a7ecdd780b93d68faa803378bd1272e3983efd05305015"
+    },
+    {
+      "entry_point": "bell_Number",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 608,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "1b1e2a327bf80c68d1839707aa94c6aaeefae8cc03b28636aab85c1257511636"
+    },
+    {
+      "entry_point": "remove_kth_element",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 610,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "229a4f9c2e0c1e83b342d7c19c9edf00fd3e6e51e703687e703e2e0e8074f230"
+    },
+    {
+      "entry_point": "max_of_nth",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 611,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "11c60aaded213b909ddaafb65815e7b863061e9733c6dd2dc23838fb70fcdf63"
+    },
+    {
+      "entry_point": "merge",
+      "held_out_indices_sha256": "ff77dc60e95d6307c970b9d6f975a57ea770f44389f64c507c6aefef07161054",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 612,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "2f8c9f41f884398194e892f5201030fe72e4ad10663422650e644bd60815064e"
+    },
+    {
+      "entry_point": "cummulative_sum",
+      "held_out_indices_sha256": "ea79a0b1dbebf49d66b2b46815a34c7e5ab7980d5b75f7e9479b9a9f6699d418",
+      "n_held_out": 110,
+      "n_visible": 3,
+      "task_id": 614,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "1ad72a9409b7bc5cb07eca3f6ad90e5ac13f7238a482d977769cee9ac8e5075f"
+    },
+    {
+      "entry_point": "average_tuple",
+      "held_out_indices_sha256": "78871f28854e24d8a595d490cc391c77fcf781fdad358950753f99d25abdbe51",
+      "n_held_out": 147,
+      "n_visible": 3,
+      "task_id": 615,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "7634afecd46bace8031997fd934ae30fba5dcb8ce426943149274443de4019fe"
+    },
+    {
+      "entry_point": "tuple_modulo",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 616,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "9fe7b92b0c5ed439ccf86e970080ff39c706fb7aed08a2567f1f21d3144825f2"
+    },
+    {
+      "entry_point": "div_list",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 618,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "6087492c6b231d498a37e069e3ae704f898147b6291283d1323805b645a8ac81"
+    },
+    {
+      "entry_point": "move_num",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 619,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "e88f1e63f5fe4bb3c27938ca548097075ef6f5fa9a040152b3cf6fec7c792730"
+    },
+    {
+      "entry_point": "largest_subset",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 620,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "a7926ca169fd62d04fb02e11a281f0dab46fd436590f7f0ef4615434fabd00b0"
+    },
+    {
+      "entry_point": "get_median",
+      "held_out_indices_sha256": "86b1c4dce7d4c86178bc729238cddb2a077c7cdf784bd247dc79b979f13cd553",
+      "n_held_out": 111,
+      "n_visible": 3,
+      "task_id": 622,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "b603cfe1c5e0bac192f7a9b3c0af820a5f022c30839c0a7eaa8378d962552036"
+    },
+    {
+      "entry_point": "nth_nums",
+      "held_out_indices_sha256": "7148d9968b4b745a704b42f76395480c599a0a828b6d54938254337c66eed20f",
+      "n_held_out": 107,
+      "n_visible": 3,
+      "task_id": 623,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "0cfcad56cf5cfe8b966cada59849dc1225376f5e798e63ec46b81dfed96a9875"
+    },
+    {
+      "entry_point": "is_upper",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 624,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "6260ea31e4d34c52ee50d8516a61c5d4dcc9cc69c85ae732891bbbaed5f7c317"
+    },
+    {
+      "entry_point": "triangle_area",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 626,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "981989da0a8ab71fd5822e85574b58a2a1ebb995972dc2503e59acf22bf32c50"
+    },
+    {
+      "entry_point": "replace_spaces",
+      "held_out_indices_sha256": "12e8b65312efba4a93f3d61ed63e7217cd65747b47279920aea7c727fb008060",
+      "n_held_out": 117,
+      "n_visible": 3,
+      "task_id": 628,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "eedec18d87b28bac52a394b35744207770153fe4591d9a8348cadcd807189cfa"
+    },
+    {
+      "entry_point": "Split",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 629,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "7deb619601d5140f67fd31d042a9c04fedbeb52ef47e16b7decf936c18b9de65"
+    },
+    {
+      "entry_point": "get_coordinates",
+      "held_out_indices_sha256": "e32e6620b583d185324cc2910943df6f3892bccd30f968fdeea40039bd0e1ce4",
+      "n_held_out": 120,
+      "n_visible": 3,
+      "task_id": 630,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "bca0770f0eed833933d373fa86e03b49fdc4753387de0da78b781aa901440647"
+    },
+    {
+      "entry_point": "replace_spaces",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 631,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "2a776b5df69aa0fd30a161599f970316a60e1bef2989745f98648f8cf018e47c"
+    },
+    {
+      "entry_point": "move_zero",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 632,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "b5abd08e99000ffae7e9ab20a64387abec7761830527472a08acd95778ab8d3c"
+    },
+    {
+      "entry_point": "pair_xor_Sum",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 633,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "0fc1dc1951d961a7b0c3a779428a80a2058c2528110042c26f4d1684598c858d"
+    },
+    {
+      "entry_point": "heap_sort",
+      "held_out_indices_sha256": "06d033ece6645de592db973644cf7357255f24536ff7b03c3b2ace10736f7636",
+      "n_held_out": 1,
+      "n_visible": 3,
+      "task_id": 635,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "75a0e0f6b2ec0c0e404bc49692937017f3ab59a6be47b1c333e6c95ac11a93bf"
+    },
+    {
+      "entry_point": "noprofit_noloss",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 637,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "66ab3ba3b639c35adceb67e18383327744456b7d6636086b8e154dbd109b285d"
+    },
+    {
+      "entry_point": "wind_chill",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 638,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "183390c72040b2766f5b11be8e94ed55ffc39599e8d9c33912967b4f8244e804"
+    },
+    {
+      "entry_point": "sample_nam",
+      "held_out_indices_sha256": "86b1c4dce7d4c86178bc729238cddb2a077c7cdf784bd247dc79b979f13cd553",
+      "n_held_out": 111,
+      "n_visible": 3,
+      "task_id": 639,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "7cf5b3ca00036688beeca04756610057a71dcff43ff9961769b7a3a1693c49bf"
+    },
+    {
+      "entry_point": "is_nonagonal",
+      "held_out_indices_sha256": "a77f3786b1ebff322743292e021590a98daae95313e6e8ce8b0a4f104f4ea21a",
+      "n_held_out": 100,
+      "n_visible": 3,
+      "task_id": 641,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "ecedd498f47fd24ab7375758f31f89d5318fb9c1df06f4e91ba79aca3ddaef3d"
+    },
+    {
+      "entry_point": "text_match_wordz_middle",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 643,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "df4fd1b2459062cfb6c34507d3e86f9580a3273ca340604b8efb5a625f6b5615"
+    },
+    {
+      "entry_point": "reverse_Array_Upto_K",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 644,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "42711289fdb51432bf82ab20cab661b2cd783420512dd17e865a6af9b08515e9"
+    },
+    {
+      "entry_point": "add_dict_to_tuple",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 720,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "82ffa5909893ff9c8d11debdf29e75d3e10496efe52f173503c1b113f85689f4"
+    },
+    {
+      "entry_point": "maxAverageOfPath",
+      "held_out_indices_sha256": "de9736233e3902f16d0b347efbf5a510be5c3554d2fd87101822b3e0fe6deb82",
+      "n_held_out": 101,
+      "n_visible": 4,
+      "task_id": 721,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "c38aec336232b280de7718c2fd6bd20bfc3fb8d6b93b812756ec28540a543d1f"
+    },
+    {
+      "entry_point": "filter_data",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 722,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "a2fa8900dfd724893e113fef5d9d3b7ffd43b3a29dacaaf8da86951a7eedd425"
+    },
+    {
+      "entry_point": "count_same_pair",
+      "held_out_indices_sha256": "e78c60b0bf7de27d036c2001ed5d855027a1738a1e134d1c55ca915b904877f4",
+      "n_held_out": 110,
+      "n_visible": 4,
+      "task_id": 723,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "cdfaf6fe0d710b3c5dcacfd8e7db7910a2851d46e318e3029d2eccd02ed94992"
+    },
+    {
+      "entry_point": "power_base_sum",
+      "held_out_indices_sha256": "be27b3a989f56c1db1ad2a50d8335ed39667a01bd26545c87fdc7209517d914a",
+      "n_held_out": 105,
+      "n_visible": 4,
+      "task_id": 724,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "b1052f7293ac5f48e34a33ebaa2ac3569a804208698d236033daf4de9fc916d1"
+    },
+    {
+      "entry_point": "extract_quotation",
+      "held_out_indices_sha256": "8f2ce7a562066562f37249e0804431f7f9409cf0c8a7867600e4894bd0e2aec4",
+      "n_held_out": 112,
+      "n_visible": 4,
+      "task_id": 725,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "9b4992855479f1d3ca6d87ee1ab6013373fb31e6b061095342ddde44e98a861a"
+    },
+    {
+      "entry_point": "multiply_elements",
+      "held_out_indices_sha256": "ff9219eac5fd70b90a0e0192b2727a9684fb78e6ea5ca6059f135c67afe6eb43",
+      "n_held_out": 106,
+      "n_visible": 4,
+      "task_id": 726,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "ac165dd2df87f34bc5886f490c1395b15bce0d3f284a75392485fa6b6518dd2f"
+    },
+    {
+      "entry_point": "sum_list",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 728,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "59d664098361410e0ba83e81dde18538dbb1b0363ee0d21fef53bcca83a0a7ce"
+    },
+    {
+      "entry_point": "consecutive_duplicates",
+      "held_out_indices_sha256": "adbb0b845acec0b43055d9462ad001713dd64dd5eefc8a4c0f90d9f2f2bf79df",
+      "n_held_out": 108,
+      "n_visible": 4,
+      "task_id": 730,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "6f2c293c6c2cb9df385d3fa335378768fc735fbfbba5157de39e982e38730ffa"
+    },
+    {
+      "entry_point": "lateralsurface_cone",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 731,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "05111e15aade199bad625ca76f9c6bf7dde9f183c51486d46f0bcf568153ed13"
+    },
+    {
+      "entry_point": "replace_specialchar",
+      "held_out_indices_sha256": "3b0aa31462ef894a6e6e1145429dae2104d03e74c5cc4a6074d5ebe768a92cd6",
+      "n_held_out": 112,
+      "n_visible": 3,
+      "task_id": 732,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "ac6d925c96817c08136a2854f755c321cdf52ff954ec1acdb8c942455315c066"
+    },
+    {
+      "entry_point": "find_first_occurrence",
+      "held_out_indices_sha256": "3c2a43684bf8dbaae30b45e68df16db4da9de940e36935cd1b2def5d7f77b795",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 733,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "1b30c7cf116ca86873f2b356e93ee1b684958d9a19c5cccaedbc70a7398dda8d"
+    },
+    {
+      "entry_point": "sum_Of_Subarray_Prod",
+      "held_out_indices_sha256": "06d033ece6645de592db973644cf7357255f24536ff7b03c3b2ace10736f7636",
+      "n_held_out": 1,
+      "n_visible": 3,
+      "task_id": 734,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "a1689ad71dd13f51d4bb64bf6f566be6d5d0b5a5469d98062bf0448d25b498c3"
+    },
+    {
+      "entry_point": "toggle_middle_bits",
+      "held_out_indices_sha256": "13d76203f43347f74b91500995d681dcff15313889457c656793a8d1ef7e9e8e",
+      "n_held_out": 106,
+      "n_visible": 5,
+      "task_id": 735,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "6204a0d4624b1eaa1811e083cdefc4795ba80a17e06be1e7eeeb475642715c86"
+    },
+    {
+      "entry_point": "left_insertion",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 736,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "40a834789e9df469535047e4e5f70f147efa3a33ecdac205fd873a687c30a680"
+    },
+    {
+      "entry_point": "check_str",
+      "held_out_indices_sha256": "7148d9968b4b745a704b42f76395480c599a0a828b6d54938254337c66eed20f",
+      "n_held_out": 107,
+      "n_visible": 3,
+      "task_id": 737,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "9390419e2a75538c8ef589c665197b03689519aeac36d023563947a3e84d155f"
+    },
+    {
+      "entry_point": "find_Index",
+      "held_out_indices_sha256": "a77f3786b1ebff322743292e021590a98daae95313e6e8ce8b0a4f104f4ea21a",
+      "n_held_out": 100,
+      "n_visible": 3,
+      "task_id": 739,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "f27b373d7587429764177e93c526bf419c9229bee50ba3e3829ade32c2987b1b"
+    },
+    {
+      "entry_point": "tuple_to_dict",
+      "held_out_indices_sha256": "5453a8935a77f112653a46509f798adc6dc37add1611344abee5011c6ed66f80",
+      "n_held_out": 66,
+      "n_visible": 3,
+      "task_id": 740,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "f83387a6b25cd49125def734fe7e219fb0cef5132a928b3a6c12e0e98f92419c"
+    },
+    {
+      "entry_point": "all_Characters_Same",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 741,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "b786fc227179a477bc5b50759fad02900806824ddec9182d07ce157215a59113"
+    },
+    {
+      "entry_point": "area_tetrahedron",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 742,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "16fd458a0310dfb306690cb379d6b1d75e6842835083d5ef72f13f6986f2fea1"
+    },
+    {
+      "entry_point": "rotate_right",
+      "held_out_indices_sha256": "3ac2d057f6f6edc6c1a8259f86dfa0866790e767f3486093d6601661bf13d224",
+      "n_held_out": 115,
+      "n_visible": 3,
+      "task_id": 743,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "82fa45420aebd83d0176dbb611964a287de04e9cfd432dc07538525b35b41b62"
+    },
+    {
+      "entry_point": "check_none",
+      "held_out_indices_sha256": "ba1685b3bb203241ffffa2352aed0082c6ac3945c2bea4c076e326b035279e6c",
+      "n_held_out": 128,
+      "n_visible": 3,
+      "task_id": 744,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "be1de58b15022d81facf88e0f58a81f544de374477ef5382b240ad0451206877"
+    },
+    {
+      "entry_point": "divisible_by_digits",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 745,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "e36ce6316ca374bde9a7ff2c0d5fe57a34f8e3be84c8ce192dd3212a385ed179"
+    },
+    {
+      "entry_point": "capital_words_spaces",
+      "held_out_indices_sha256": "ea79a0b1dbebf49d66b2b46815a34c7e5ab7980d5b75f7e9479b9a9f6699d418",
+      "n_held_out": 110,
+      "n_visible": 3,
+      "task_id": 748,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "32cc0aa42137b08d0da0da6e85868083adc4831f92dea31e55f9e8263e55a044"
+    },
+    {
+      "entry_point": "sort_numeric_strings",
+      "held_out_indices_sha256": "d4c3bb70e43eae50faa5dd7f2c09cda0a3e602c7aa981f82e7223600ac6bda77",
+      "n_held_out": 104,
+      "n_visible": 3,
+      "task_id": 749,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "a07b9ea365e0a07266cf4c9b5da01ed363d4b265f309012340185d4aeaf8b0c8"
+    },
+    {
+      "entry_point": "add_tuple",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 750,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "430c6645b242e13b4049896de38fed0a933e04a6757b8910be21908965093b2a"
+    },
+    {
+      "entry_point": "check_min_heap",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 751,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "666dc0a9d637954192fac9683c65ce0f40797886cc03479163810b2e77a0c2d6"
+    },
+    {
+      "entry_point": "jacobsthal_num",
+      "held_out_indices_sha256": "de9736233e3902f16d0b347efbf5a510be5c3554d2fd87101822b3e0fe6deb82",
+      "n_held_out": 101,
+      "n_visible": 4,
+      "task_id": 752,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "a6a8e352d733fcf7cb58e69bd8786e6bdc5de05f89bbecb18afad0f716cc8eae"
+    },
+    {
+      "entry_point": "min_k",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 753,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "67cd4258baa8de5f22542e263bdf3bbc5e4f789e2f854491e6783494c2a5eada"
+    },
+    {
+      "entry_point": "extract_index_list",
+      "held_out_indices_sha256": "c709429590edb6cb1df596391a7c6b5d34eed07b9de15f6b5ac592cf3b9b8a60",
+      "n_held_out": 115,
+      "n_visible": 4,
+      "task_id": 754,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "f7ff010341d91021bca564ad371cc8c752087dfecca5f3b5ec25a7fa1833b743"
+    },
+    {
+      "entry_point": "second_smallest",
+      "held_out_indices_sha256": "42f03194bfb4f3d9624b309138363e8b3f5dd168e8c56cd92359a6dd8a3124e9",
+      "n_held_out": 103,
+      "n_visible": 4,
+      "task_id": 755,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "f129b112791297abe0af5345d55d967a470cdaba553fe225031c3a1307431102"
+    },
+    {
+      "entry_point": "count_reverse_pairs",
+      "held_out_indices_sha256": "ea79a0b1dbebf49d66b2b46815a34c7e5ab7980d5b75f7e9479b9a9f6699d418",
+      "n_held_out": 110,
+      "n_visible": 3,
+      "task_id": 757,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "95266ab8a8a99dcec3b0ee6507a255fa84da20fbd52ddfd64e07d05c8f53fe31"
+    },
+    {
+      "entry_point": "unique_sublists",
+      "held_out_indices_sha256": "8f2ce7a562066562f37249e0804431f7f9409cf0c8a7867600e4894bd0e2aec4",
+      "n_held_out": 112,
+      "n_visible": 4,
+      "task_id": 758,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "302e51bd035c9334e2ea27cf398a23ccb2c484f90a45cf0375513fb44c97468f"
+    },
+    {
+      "entry_point": "is_decimal",
+      "held_out_indices_sha256": "f5defc490ac09de5363f2993bc572371fe60b5ddb633ddb234f0cf5aa159caa2",
+      "n_held_out": 109,
+      "n_visible": 5,
+      "task_id": 759,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "c7ed00ab3b3ecb7efece29efbf5adeb4e026b03dbe2a6dabb9193dc830aa4af4"
+    },
+    {
+      "entry_point": "unique_Element",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 760,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "b42f093b10d4fd9663ed8bec030b5bddc52e809e0169b964d9acca2473e7ab92"
+    },
+    {
+      "entry_point": "check_monthnumber_number",
+      "held_out_indices_sha256": "00fc7f0609a8c352a58ad0c640242bc25cd66543c1caad11f28790ade9e98ef4",
+      "n_held_out": 10,
+      "n_visible": 3,
+      "task_id": 762,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "c6bd2d05a6dc685a9ac686924e2b8d1edc20227590323da30064275e1430a678"
+    },
+    {
+      "entry_point": "find_min_diff",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 763,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "86f4af9c0500005443254ce31a945e1a2cc0230046d35aadaff3518a25e849a1"
+    },
+    {
+      "entry_point": "number_ctr",
+      "held_out_indices_sha256": "bf44027602402a2770842b167ed32d12751688ffba5e317a4dc1df9fe0c7263b",
+      "n_held_out": 104,
+      "n_visible": 4,
+      "task_id": 764,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "bd8cf1e40e81e6555c44e26fb536ea14bf0bb409ab2759bf89ed222554464e33"
+    },
+    {
+      "entry_point": "is_polite",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 765,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "8e88d7076dc96c865e8780de997dc9a80c8e012164216a1a5c6a3e356e88d53f"
+    },
+    {
+      "entry_point": "pair_wise",
+      "held_out_indices_sha256": "325ca2597a6947a307cf5e8ac0411a2d962f29ab88401b77ce57b8b16ced7e57",
+      "n_held_out": 111,
+      "n_visible": 4,
+      "task_id": 766,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "42ceee1dd031ed5cfbcdccc8215e9538cb21b52f8db91eafdb915e192606ea0c"
+    },
+    {
+      "entry_point": "get_pairs_count",
+      "held_out_indices_sha256": "42f03194bfb4f3d9624b309138363e8b3f5dd168e8c56cd92359a6dd8a3124e9",
+      "n_held_out": 103,
+      "n_visible": 4,
+      "task_id": 767,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "7fee2416bfae7f5b1584c621ddd8a4031598c97f6e7bbe7c5af96733ce418ff7"
+    },
+    {
+      "entry_point": "Diff",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 769,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "f4676058496c7d8515b1a22d071f9614a3219bfdc7098f761ca649ee4e82551b"
+    },
+    {
+      "entry_point": "odd_num_sum",
+      "held_out_indices_sha256": "37f21e01e497c4aa50d3df37f035383e264c22ebd75dd6aaa74690a76a6dbd5c",
+      "n_held_out": 98,
+      "n_visible": 3,
+      "task_id": 770,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "8074d1f7b7cd43082e084f1be39abad3a441a9060d3ce91f4254b72e5195afcf"
+    },
+    {
+      "entry_point": "check_expression",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 771,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "a6d10e41947d6fe64bffa4c56a3003586084153ad0a8365efdf36cd7b07b9904"
+    },
+    {
+      "entry_point": "remove_length",
+      "held_out_indices_sha256": "1525c7fd0b980fc4517e99a6c6b3945a59e6a904349e0620f9e12b54fd33fa67",
+      "n_held_out": 106,
+      "n_visible": 3,
+      "task_id": 772,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "b007bad319379c1567b952c26eab86ed2a3d90b118ab1d73f0fdef06a38d5337"
+    },
+    {
+      "entry_point": "occurance_substring",
+      "held_out_indices_sha256": "de9736233e3902f16d0b347efbf5a510be5c3554d2fd87101822b3e0fe6deb82",
+      "n_held_out": 101,
+      "n_visible": 4,
+      "task_id": 773,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "45d1f8714cb1983e513ebf93b7664291f8f28a3babffed61c3eb1e771da4d110"
+    },
+    {
+      "entry_point": "odd_position",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 775,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "d93e46d177a0f736d4f749a58e31a592abd6d43cf8823f14bd92fdd36e80e1d3"
+    },
+    {
+      "entry_point": "find_sum",
+      "held_out_indices_sha256": "ea79a0b1dbebf49d66b2b46815a34c7e5ab7980d5b75f7e9479b9a9f6699d418",
+      "n_held_out": 110,
+      "n_visible": 3,
+      "task_id": 777,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "c18b2644adeedd2b3e21a660df917400d33a90c8d49eb340d5d7e5d97f65478d"
+    },
+    {
+      "entry_point": "pack_consecutive_duplicates",
+      "held_out_indices_sha256": "7148d9968b4b745a704b42f76395480c599a0a828b6d54938254337c66eed20f",
+      "n_held_out": 107,
+      "n_visible": 3,
+      "task_id": 778,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "1c796491b3f3d39ed3bf15363205320fd12b37137bf40081f0f51601faed1f34"
+    },
+    {
+      "entry_point": "find_combinations",
+      "held_out_indices_sha256": "c97c992211671d13eca7b8f1580e2787335af4da1cc5740feb1d2a08806c5d76",
+      "n_held_out": 120,
+      "n_visible": 3,
+      "task_id": 780,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "8326a216f53bec00274f10de2efdb4a6f55c3166f2a9d4048e827e2b5d2eb327"
+    },
+    {
+      "entry_point": "count_divisors",
+      "held_out_indices_sha256": "3b0aa31462ef894a6e6e1145429dae2104d03e74c5cc4a6074d5ebe768a92cd6",
+      "n_held_out": 112,
+      "n_visible": 3,
+      "task_id": 781,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "bab6f07447e13f0bd066a4053eaba522c0a591a587193348ae2b8e8eb807aa0b"
+    },
+    {
+      "entry_point": "odd_length_sum",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 782,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "fa6171ae8e565bb8500d2410fee10e099a567d725eab27ed1e2c4a39651241d5"
+    },
+    {
+      "entry_point": "mul_even_odd",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 784,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "b0c473c24d060a8256bfabcb1480727efd3b9fabc4331a68d1968b2906e1a901"
+    },
+    {
+      "entry_point": "tuple_str_int",
+      "held_out_indices_sha256": "166a4479c6e5bcfc9a5d7f5f0a8f87d060a1de60f39d97ce33da072eee83e90c",
+      "n_held_out": 117,
+      "n_visible": 4,
+      "task_id": 785,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "3fc2925c6063e17f835c3769d4247edd5d6a24111d0a25bd54ec4ab9c4faa050"
+    },
+    {
+      "entry_point": "right_insertion",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 786,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "542db4de6415a81ce00887509c771ec8b4926a928cf5c164b3c7e5d98e952eb4"
+    },
+    {
+      "entry_point": "text_match_three",
+      "held_out_indices_sha256": "de9736233e3902f16d0b347efbf5a510be5c3554d2fd87101822b3e0fe6deb82",
+      "n_held_out": 101,
+      "n_visible": 4,
+      "task_id": 787,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "fb2dfbe781d8db91d0f970fc50fa8e4c3299809535f92d0f764d7b8303e3b158"
+    },
+    {
+      "entry_point": "new_tuple",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 788,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "cbffbd09867f8826deb77815ae781992e30f41d22ca26486d32d76a30834ea6b"
+    },
+    {
+      "entry_point": "even_position",
+      "held_out_indices_sha256": "86b1c4dce7d4c86178bc729238cddb2a077c7cdf784bd247dc79b979f13cd553",
+      "n_held_out": 111,
+      "n_visible": 3,
+      "task_id": 790,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "fb98bb9d855e35e184b7d359bdf1293ce27bb8c74258b5ec1491feedf308e903"
+    },
+    {
+      "entry_point": "remove_nested",
+      "held_out_indices_sha256": "adbb0b845acec0b43055d9462ad001713dd64dd5eefc8a4c0f90d9f2f2bf79df",
+      "n_held_out": 108,
+      "n_visible": 4,
+      "task_id": 791,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "b99cb637537038f3d766ba500a408f9a5a07732888991e51880d46e7cfb6d09e"
+    },
+    {
+      "entry_point": "count_list",
+      "held_out_indices_sha256": "3ac2d057f6f6edc6c1a8259f86dfa0866790e767f3486093d6601661bf13d224",
+      "n_held_out": 115,
+      "n_visible": 3,
+      "task_id": 792,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "f943bc9bcb128aec8288f4f7908ff5beefce98fa078e162930c802732debcf72"
+    },
+    {
+      "entry_point": "last",
+      "held_out_indices_sha256": "038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b",
+      "n_held_out": 1,
+      "n_visible": 3,
+      "task_id": 793,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "a12daca41f81f03eae80082112f5a30158276bc3e4b1ae7e9ae71b8dbccc774f"
+    },
+    {
+      "entry_point": "text_starta_endb",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 794,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "5af1cc48f1e67450208695547a33c2d08ee8b02816516ba6efbae1f196cbd210"
+    },
+    {
+      "entry_point": "return_sum",
+      "held_out_indices_sha256": "bae0701bc6bea18d08280f520aecfc466cf2aec1a1097b6060566d3177198c76",
+      "n_held_out": 103,
+      "n_visible": 3,
+      "task_id": 796,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "bf3af20b78b648dfbf5684f8dc1161a1641ee2d4d702747447fa305e198e9f5b"
+    },
+    {
+      "entry_point": "sum_in_range",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 797,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "978ba53e70a36e266bfac67ada71540959823aac0b45d99625d080361d4387d7"
+    },
+    {
+      "entry_point": "_sum",
+      "held_out_indices_sha256": "8c54daa67f632e26f531f3a902d1d6a48bbfe6a4f725694b4e25dad27fec8415",
+      "n_held_out": 101,
+      "n_visible": 3,
+      "task_id": 798,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "df83be331b85690e8b51b321163380ed1a5a2a7e86bd11a86f36db7d7711f095"
+    },
+    {
+      "entry_point": "left_rotate",
+      "held_out_indices_sha256": "62d7fdd70e50d9a2d7801859b9aa98d3920079ac3dafabf3348c9f962a18cf43",
+      "n_held_out": 99,
+      "n_visible": 7,
+      "task_id": 799,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "bb560d6fc861addb12b7ab7f34845edf224d849d8b936f9c5df9c90105f2ba89"
+    },
+    {
+      "entry_point": "remove_all_spaces",
+      "held_out_indices_sha256": "593d2ece2c95e502ab1d2752bf4506ed4a5c02dc3c2ccf2f3e39f22ad5bece32",
+      "n_held_out": 120,
+      "n_visible": 4,
+      "task_id": 800,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "ca4f48e6f52854682e6471504f9fb6879b65c015d687906a6e96909b2aaf6762"
+    },
+    {
+      "entry_point": "test_three_equal",
+      "held_out_indices_sha256": "ea79a0b1dbebf49d66b2b46815a34c7e5ab7980d5b75f7e9479b9a9f6699d418",
+      "n_held_out": 110,
+      "n_visible": 3,
+      "task_id": 801,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "f568a7532bec143045aefe3ee1090d6c936336d163df9d73c2fe02688771eb16"
+    },
+    {
+      "entry_point": "is_product_even",
+      "held_out_indices_sha256": "40efc0fa1bcbd29476701efb43ae7e6a89f0d76459ba55ba1efe8880d7d08d68",
+      "n_held_out": 109,
+      "n_visible": 3,
+      "task_id": 804,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "2ad6bb189883c21f1dd1634360789485ccdc91e90fc17e991e35b219b4f5dbf0"
+    },
+    {
+      "entry_point": "max_sum_list",
+      "held_out_indices_sha256": "e6b667286d1d88613c1c388f4e609ee8e4c5bd995b35fce04ff3d2aec9384e5d",
+      "n_held_out": 125,
+      "n_visible": 3,
+      "task_id": 805,
+      "visible_differs_from_mbpp": true,
+      "visible_sha256": "5e73349ea1709c47de16b3daa0af2e84c95c4ef942fb9d4489fcb0864ac9292c"
+    },
+    {
+      "entry_point": "max_run_uppercase",
+      "held_out_indices_sha256": "efb95831c4c51291428ccd662698d23d0815008c2c73512eba5bbe1f8e3a907b",
+      "n_held_out": 102,
+      "n_visible": 3,
+      "task_id": 806,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "fbe7bbf3a345e22e298d536d79cc7db428213038117137a1848cca07fbb96466"
+    },
+    {
+      "entry_point": "first_odd",
+      "held_out_indices_sha256": "f9b3e2951a9b28ac11aba9278e967e7db71ff9fb982ed38d83f7b3beacd06b8e",
+      "n_held_out": 105,
+      "n_visible": 3,
+      "task_id": 807,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "f1c302f609bbbf47f45a01ab20ad3065bd972f0bea35a91383ca5e6caf7d4fe4"
+    },
+    {
+      "entry_point": "check_K",
+      "held_out_indices_sha256": "2d588fbe78e8826a32168a0d9577c7848b7a8bd57102f6de18a7a98185eae510",
+      "n_held_out": 121,
+      "n_visible": 3,
+      "task_id": 808,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "c2bbbece411d431f7ce1d843cc2d2871795df72274a4557499d7b7f4b0f25a5c"
+    },
+    {
+      "entry_point": "check_smaller",
+      "held_out_indices_sha256": "80dfcf5ddf14812687d5d16bdbe696fbdeaa9f45ea2f934b9b5afdef666ce6c6",
+      "n_held_out": 122,
+      "n_visible": 3,
+      "task_id": 809,
+      "visible_differs_from_mbpp": false,
+      "visible_sha256": "0e3452d6ac828d4ab22eddc1c25e8a1d0350b433c77cc303cc2900d5d51f8b55"
+    }
+  ],
+  "split_sha256": "264d20b24bfc19c1c07cd6fe605701c72adef12fd7b23373489c1b6623f19959",
+  "visible_source": "MBPP+ test_list. See docs/kickoff/01-prd.md section 3, which says the original MBPP asserts. MBPP+ rewrote 112 of the 378 joined problems' asserts to match its own reference solutions, so MBPP's raw asserts are not all satisfiable by the reference the held out harness scores against. The count of rewritten problems is recorded per problem as visible_differs_from_mbpp."
+}
