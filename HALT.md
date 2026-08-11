@@ -2,9 +2,9 @@
 
 **Reason:** `dirty_git_tree`
 
-**Run:** `memcheck-v2`  **Step:** not started
+**Run:** `timing-v2`  **Step:** not started
 
-**Written:** 2026-08-11T21:18:52.210419+00:00
+**Written:** 2026-08-11T23:10:27.738631+00:00
 
 the working tree has uncommitted changes at run start.
 
@@ -14,7 +14,7 @@ the working tree has uncommitted changes at run start.
 {
   "git": {
     "dirty": true,
-    "revision": "3213cbbea612f150fdf55f8b7ff8eff752cb5a6d",
+    "revision": "82e59a568cfe16fe15b76a7fe9775b3a97884703",
     "revision_absent_reason": null
   }
 }
@@ -37,7 +37,7 @@ the working tree has uncommitted changes at run start.
 ```json
 {
   "dirty": true,
-  "revision": "3213cbbea612f150fdf55f8b7ff8eff752cb5a6d",
+  "revision": "82e59a568cfe16fe15b76a7fe9775b3a97884703",
   "revision_absent_reason": null
 }
 ```

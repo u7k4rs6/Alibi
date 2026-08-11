@@ -488,6 +488,16 @@ def _load_trainer(config: ArmConfig):
         task_type="CAUSAL_LM",
     )
     model = get_peft_model(model, lora)
+    # Gradient checkpointing. Backpropagating through a 3072-token sequence with
+    # a 151936-token vocabulary does not fit in 8 GB otherwise: the logits alone
+    # are about 1 GB and the retained activations across 28 layers are several
+    # more. Checkpointing recomputes activations during the backward pass, which
+    # trades wall clock for memory and is the standard trade at this scale. v1
+    # never needed it at 256 tokens.
+    if config.max_new_tokens > 512:
+        model.config.use_cache = False
+        model.gradient_checkpointing_enable()
+        model.enable_input_require_grads()
     optimiser = torch.optim.AdamW(
         [p for p in model.parameters() if p.requires_grad], lr=config.learning_rate
     )
