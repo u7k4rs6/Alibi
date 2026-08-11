@@ -48,11 +48,11 @@
     },
     {
       "arm": "a2",
-      "detail": "",
-      "halt_reason": null,
-      "run_id": null,
+      "detail": "see queue.log",
+      "halt_reason": "exception",
+      "run_id": "a2-seed2-05101024",
       "seed": 2,
-      "status": "running",
+      "status": "failed",
       "steps": 80
     },
     {
@@ -88,9 +88,10 @@
     null,
     "indeterminate_held_out_rate",
     null,
-    null
+    null,
+    "exception"
   ],
   "stopped": false,
   "stopped_reason": "",
-  "updated_utc": "2026-08-11T20:51:10.600632+00:00"
+  "updated_utc": "2026-08-11T20:55:28.068598+00:00"
 }
