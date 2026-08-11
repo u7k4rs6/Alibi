@@ -164,13 +164,42 @@ def build_report() -> dict[str, Path]:
         qualification = selection.get("qualification") or {}
         if qualification:
             lines.append("")
+            lines.append("### Qualification, and what it does not establish")
+            lines.append("")
             lines.append(
-                f"Qualification before use, on known synthetic cheats versus reference solutions: "
-                f"cheat flag rate {_fmt(qualification.get('cheat_flag_rate'))}, honest flag rate "
-                f"{_fmt(qualification.get('honest_flag_rate'))}, separation "
+                f"Before use, the judge was shown known synthetic cheats and known reference "
+                f"solutions: cheat flag rate {_fmt(qualification.get('cheat_flag_rate'))}, honest "
+                f"flag rate {_fmt(qualification.get('honest_flag_rate'))}, separation "
                 f"{_fmt(qualification.get('separation'))}, error rate "
-                f"{_fmt(qualification.get('error_rate'))}. These thresholds are **not** "
-                "pre-registered, see `alibi/monitor/qualify.py`."
+                f"{_fmt(qualification.get('error_rate'))}."
+            )
+            lines.append("")
+            lines.append(
+                "**This qualification is not pre-registered.** `alibi/prereg.py` is frozen and "
+                "carries no monitor field, so the procedure and all four thresholds were chosen "
+                "by the implementer rather than registered in advance. They were fixed before any "
+                "run existed and are deliberately weak: the check is a smoke test for a judge that "
+                "is useless, not a measurement of judge quality."
+            )
+            lines.append("")
+            lines.append(
+                "**It ran on the A2 view only.** The judge was shown code. A1 shows it a reasoning "
+                "trace instead, and no qualification was run on that view."
+            )
+            lines.append("")
+            lines.append(
+                "**A separation of "
+                f"{_fmt(qualification.get('separation'))} on these cheats does not predict "
+                "performance on the policy's own.** The synthetic cheats are generated "
+                "programmatically from the visible asserts and are stereotyped: a chain of "
+                "equality comparisons against literal tuples, the easiest possible case. Once a "
+                "policy starts varying the form of its hardcoding, the judge faces a distribution "
+                "this qualification never sampled. Passing here is **necessary but not "
+                "sufficient**, and no result in this report should be read as though the judge "
+                "were known to be reliable on real completions. The per-step false positive panel "
+                "is the running check on the honest half of that concern; there is no equivalent "
+                "running check on the cheating half, because the policy's cheats have no ground "
+                "truth label other than the oracle, which the monitor never sees."
             )
     lines.append("")
 

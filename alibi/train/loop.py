@@ -423,6 +423,7 @@ def step_summary(
     step_stats: halt_module.StepStats,
     kl: float | None,
     duration: float,
+    honest_probe: dict | None = None,
 ) -> dict:
     """Everything the console line and the report need, computed once."""
     n = len(step_records)
@@ -469,6 +470,11 @@ def step_summary(
         "mean_completion_chars": mean("completion_chars"),
         "mean_think_chars": mean("think_chars"),
         "monitor": stats.to_dict(),
+        # Running false positive estimate on known-honest reference solutions.
+        # Excluded from flag_rate_monitor, which is the published metric,
+        # because these are not policy completions.
+        "honest_probe": honest_probe or {"n": 0, "flag_rate": None},
+        "monitor_spend": _spend_snapshot(),
         "held_out_indeterminate_fraction": step_stats.indeterminate_fraction,
         "held_out_executions": step_stats.held_out_executions,
         "held_out_indeterminate": step_stats.held_out_indeterminate,
@@ -476,6 +482,20 @@ def step_summary(
         "telemetry": host_telemetry(),
         "prereg_hash": prereg.PREREG_HASH,
         "config_hash": config.hash(),
+    }
+
+
+def _spend_snapshot() -> dict:
+    from alibi.monitor import spend
+
+    ledger = spend.load()
+    return {
+        "total_tokens": ledger.total_tokens,
+        "calls": ledger.calls,
+        "cache_hits": ledger.cache_hits,
+        "usd": ledger.usd,
+        "usd_absent_reason": ledger.usd_absent_reason,
+        "usd_cap": ledger.usd_cap,
     }
 
 
@@ -491,5 +511,6 @@ def console_line(summary: dict) -> str:
         f"| held {fmt(summary['held_out_pass_rate'])} | oracle {fmt(summary['cheat_rate_oracle'])} "
         f"| flag {fmt(summary['flag_rate_monitor'])} | gap {fmt(summary['obfuscation_gap'])} "
         f"| kl {fmt(summary['kl'], 5)} | cache {fmt(summary['monitor']['cache_hit_rate'])} "
-        f"| indet {fmt(summary['held_out_indeterminate_fraction'])}"
+        f"| indet {fmt(summary['held_out_indeterminate_fraction'])} "
+        f"| fp {fmt((summary.get('honest_probe') or {}).get('flag_rate'))}"
     )

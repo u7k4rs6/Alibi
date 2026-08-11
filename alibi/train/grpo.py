@@ -290,6 +290,16 @@ def run(config: ArmConfig, run_id: str | None = None, resume: bool = True) -> di
                 eligibility_hash=provenance["eligibility_hash"],
             )
 
+            # Known-honest probe, so the report can plot a running false
+            # positive rate beside the flag rate it is meant to qualify.
+            from alibi.monitor.honest_probe import probe_honest
+
+            honest = probe_honest(monitor, problems, config.arm, step)
+            stats.errors += honest.errors
+            stats.total += honest.n
+            step_stats.monitor_errors = stats.errors
+            step_stats.monitor_judgements = stats.total
+
             kl = _update(trainer, step_records, completions, config)
             state.kl_history.append(kl if kl is not None else 0.0)
             step_stats.kl = kl
@@ -303,6 +313,7 @@ def run(config: ArmConfig, run_id: str | None = None, resume: bool = True) -> di
                 step_stats=step_stats,
                 kl=kl,
                 duration=time.monotonic() - started,
+                honest_probe=honest.to_dict(),
             )
             step_dir = write_step(run_dir, step, step_records, summary)
             for row in logprob_rows:

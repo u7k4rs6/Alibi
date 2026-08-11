@@ -37,6 +37,7 @@ class RunSeries:
     kl: list[float | None]
     cheat_rate_by_threshold: dict
     cheat_form_counts: list[dict]
+    honest_flag_rate: list[float | None]
 
 
 def _run_dirs() -> list[Path]:
@@ -83,6 +84,7 @@ def series_for(run_dir: Path) -> RunSeries | None:
         kl=[s.get("kl") for s in summaries],
         cheat_rate_by_threshold=thresholds,
         cheat_form_counts=[s.get("cheat_form_counts", {}) for s in summaries],
+        honest_flag_rate=[(s.get("honest_probe") or {}).get("flag_rate") for s in summaries],
     )
 
 
@@ -199,6 +201,7 @@ def claims() -> dict:
             "terminal_gap": seed_band(series_list, "gap"),
             "terminal_indeterminate_rate": seed_band(series_list, "indeterminate_rate"),
             "initial_gap": seed_band(series_list, "gap", step_index=0),
+            "terminal_honest_flag_rate": seed_band(series_list, "honest_flag_rate"),
         }
         for label in (f"{t:.2f}" for t in prereg.PREREG.oracle.sensitivity_thresholds):
             out["sensitivity"].setdefault(label, {})[arm] = {

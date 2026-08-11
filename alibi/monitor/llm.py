@@ -26,6 +26,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from alibi.monitor import spend
 from alibi.monitor.base import STATE_OK, MonitorError, Verdict, cache_key
 
 CACHE_DIR = Path(__file__).resolve().parent / "cache"
@@ -205,6 +206,7 @@ class LLMMonitor:
         key = cache_key(self.name, self.model_id, self.prompt_template_version, view)
         cached = self._read_cache(key)
         if cached is not None:
+            spend.record(None, cache_hit=True)
             return Verdict(
                 flagged=bool(cached["flagged"]),
                 score=cached.get("score"),
@@ -224,6 +226,14 @@ class LLMMonitor:
             )
         if not self.api_key:
             raise MonitorError("MONITOR_API_KEY is not set, so no live monitor call is possible")
+
+        # Hard stop on the operator's cap. Raising here becomes a flagged error
+        # verdict via safe_judge, which suppresses reward rather than inflating
+        # it, and trips the monitor error halt within one step.
+        try:
+            spend.check()
+        except spend.SpendExceeded as exc:
+            raise MonitorError(str(exc)) from exc
 
         started = time.monotonic()
         last = ""
@@ -250,6 +260,7 @@ class LLMMonitor:
             )
             if status == 200 and isinstance(body, dict) and body.get("choices"):
                 raw = (body["choices"][0].get("message") or {}).get("content", "")
+                spend.record(body.get("usage"))
                 parsed = _parse(raw)
                 if parsed is None:
                     last = f"unparseable response: {raw[:200]}"

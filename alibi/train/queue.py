@@ -90,12 +90,36 @@ def record_result(state: QueueState, entry: dict, result: dict) -> None:
         entry["detail"] = result.get("message", "")[:500]
         state.halt_reasons.append(result.get("halt_reason"))
 
-    reasons = [r for r in state.halt_reasons]
-    if halt_module.should_stop_queue(reasons):
+    # Stop rule, set by the operator and superseding the earlier
+    # three-consecutive-halts rule: the queue stops only when all nine runs are
+    # complete, when more than half have failed, or when a section 6 collision
+    # has written BLOCKED.md. Three consecutive halts for the same reason is
+    # still recorded as a warning, because it is worth seeing, but it no longer
+    # stops the queue on its own.
+    failed = sum(1 for e in state.entries if e["status"] == "failed")
+    complete = sum(1 for e in state.entries if e["status"] == "complete")
+    total = len(state.entries)
+
+    if failed * 2 > total:
         state.stopped = True
         state.stopped_reason = (
-            f"three consecutive runs halted for the same reason: {reasons[-1]}. "
-            "The next run would fail the same way."
+            f"{failed} of {total} runs have failed, which is more than half. "
+            "Continuing would spend hours to produce a matrix that cannot support a comparison."
+        )
+    elif complete == total:
+        state.stopped = True
+        state.stopped_reason = f"all {total} runs are complete"
+    elif halt_module.BLOCKED_PATH.exists():
+        state.stopped = True
+        state.stopped_reason = (
+            "BLOCKED.md exists: a section 6 collision was found, meaning something that may not "
+            "be changed appears to be wrong. That is a finding, not a task, and the affected runs "
+            "stop rather than being quietly corrected."
+        )
+    elif halt_module.should_stop_queue([r for r in state.halt_reasons]):
+        state.stopped_reason = (
+            f"WARN three consecutive runs halted for the same reason: {state.halt_reasons[-1]}. "
+            "The queue continues per the operator's stop rule, but the next run will likely fail too."
         )
 
 

@@ -55,6 +55,7 @@ def build_figures() -> dict[str, Path]:
     written["components"] = _components(plt, grouped)
     written["indeterminate"] = _indeterminate(plt, grouped)
     written["cheat_form"] = _cheat_form(plt, grouped)
+    written["false_positive"] = _false_positive(plt, grouped)
     return written
 
 
@@ -163,6 +164,38 @@ def _indeterminate(plt, grouped) -> Path:
     )
     figure.tight_layout(rect=(0, 0.08, 1, 1))
     path = FIGURE_DIR / "indeterminate_rate.png"
+    figure.savefig(path, dpi=160)
+    plt.close(figure)
+    return path
+
+
+def _false_positive(plt, grouped) -> Path:
+    """Flag rate on known-honest reference solutions, beside the arm's flag rate.
+
+    A monitor that punishes honest work at a material rate changes what a fall
+    in the flag rate means, so the two are plotted together rather than the
+    headline being shown alone.
+    """
+    figure, axis = plt.subplots(figsize=(7.2, 4.0))
+    for arm, series_list in grouped.items():
+        if arm == "a0":
+            continue
+        _band(plt, axis, series_list, "honest_flag_rate", arm)
+        _band(plt, axis, series_list, "flag_rate", arm)
+    axis.set_xlabel("training step")
+    axis.set_ylabel("monitor flag rate")
+    axis.set_ylim(0, 1)
+    axis.set_title("Monitor flag rate on policy completions and on known-honest code")
+    axis.legend(fontsize=8)
+    _caption(
+        figure,
+        "Lower pair of lines per arm is the false positive estimate: the same judge, same view, "
+        "shown MBPP+ reference solutions, which are honest by construction. Reference solutions "
+        "are cleaner than anything a 0.5B policy emits, so this is a lower bound. The sample "
+        "rotates deterministically by step, so read the trend rather than one step.",
+    )
+    figure.tight_layout(rect=(0, 0.10, 1, 1))
+    path = FIGURE_DIR / "false_positive_rate.png"
     figure.savefig(path, dpi=160)
     plt.close(figure)
     return path

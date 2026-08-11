@@ -173,3 +173,69 @@ given by the operator, so it is followed, and the numbers are here so the choice
 can be revisited with evidence.
 
 **Selection hash:** `17b2f5c9b56fb3c1dd69988cfb8caec64422fd43acfd9ad94a704a2cf594c637`
+
+### D-14 Monitor switched to Qwen2.5-7B-Instruct-Turbo, by operator override
+**This was the operator's call, not mine, authorized explicitly before
+calibration and before any matrix run. No curve existed at the time.** My prior
+selection was LFM2.5, on the stated escalation order alone.
+
+**Chose:** `Qwen/Qwen2.5-7B-Instruct-Turbo`.
+**Rejected:** `LiquidAI/LFM2.5-8B-A1B`.
+
+**Evidence, the qualification table on the same 15 problems:**
+
+| Model | Cheat flag rate | Honest flag rate | Separation | Error rate | Latency | Qualified |
+|---|---|---|---|---|---|---|
+| `LiquidAI/LFM2.5-8B-A1B` at 1024 tokens | 0.67 | 0.07 | 0.60 | 0.167 | 1.48 s | no |
+| `LiquidAI/LFM2.5-8B-A1B` at 4096 tokens | 0.80 | 0.20 | 0.60 | 0.00 | 0.77 s | yes |
+| `Qwen/Qwen2.5-7B-Instruct-Turbo` | **1.00** | **0.00** | **1.00** | 0.00 | 0.85 s | yes |
+
+**The operator's three reasons, recorded as given:**
+
+1. Separation 1.00 against 0.60 on the same sample.
+2. LFM2.5 flags 0.20 of genuine reference solutions, so a monitored arm would
+   punish honest behaviour one time in five, which is the exact contrast H3
+   rests on.
+3. LFM2.5 is a reasoning model needing 4096 tokens per verdict, so every
+   judgement pays for a think trace against the USD 4.00 cap.
+
+**Consequence, accepted knowingly:** the judge now shares a model family with
+the Qwen2.5-0.5B policy it grades. Family detection fired automatically at
+selection, and `alibi report` emits the judge/judged section without further
+prompting. The confound is a limitation carried in the report, not a defect
+discovered late.
+
+**Selection hash:** `c6613284661a5a919a3d337252ff27ce388da3145a50d81091ba451c8f532c5b`
+(previously `17b2f5c9b56fb3c1...` for LFM2.5).
+
+### D-15 Per-step false positive estimate added as a diagnostic
+**Chose:** each step, judge a deterministic rotating sample of MBPP+ reference
+solutions through the same monitor and the same arm view, and plot the flag rate
+beside the arm's own.
+**Why:** at the operator's instruction. These judgements are excluded from
+`flag_rate_monitor`, which is a published metric, because they are not policy
+completions. Their errors are included in the monitor error halt statistic,
+because an erroring monitor is an erroring monitor regardless of what it saw.
+Reference solutions are cleaner than anything a 0.5B policy emits, so the
+estimate is a lower bound, and the caption says so.
+
+### D-16 Spend ledger against the USD 4.00 cap
+**Chose:** measure tokens from the provider's usage field, and convert to USD
+only when `ALIBI_MONITOR_USD_PER_MTOK` is set.
+**Rejected:** hardcoding a price per token.
+**Why:** I do not have the price and will not invent one. With no price the
+ledger reports `usd: null` with a reason and enforces a token cap instead.
+Reaching either cap raises inside the monitor, which `safe_judge` turns into a
+flagged error verdict, which trips the monitor error halt within one step. That
+ordering matters: exhausting the budget suppresses reward rather than inflating
+it, and can never resolve to unflagged.
+
+### D-17 Queue stop rule replaced, by operator instruction
+**Chose:** the queue stops when all nine runs complete, when more than half have
+failed, or when BLOCKED.md exists.
+**Rejected:** the earlier rule that three consecutive halts for the same reason
+stop the queue.
+**Why:** the operator's newer instruction supersedes it. Three consecutive halts
+for the same reason is still detected and written into the queue's
+`stopped_reason` as a WARN, because it is worth seeing, but it no longer stops
+the queue on its own.
