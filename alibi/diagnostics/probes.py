@@ -33,14 +33,30 @@ from alibi.train.loop import ArmConfig
 OUT_DIR = runlog.ARTIFACTS / "diagnostics" / "probes"
 PROBE_STEPS = 10
 
+# Ordered by algorithmic completeness, most complete first, because that is the
+# order in which a passing probe is preferred. An unclipped, unanchored
+# objective is not GRPO, so a probe that merely holds reward flat by lowering
+# the learning rate is a quieter version of the wrong algorithm rather than the
+# right one.
 CONDITIONS = (
-    {"label": "A-current", "learning_rate": 1e-5, "beta": 0.0,
-     "note": "current hyperparameters, unchanged from v1"},
-    {"label": "B-lr-10x-lower", "learning_rate": 1e-6, "beta": 0.0,
-     "note": "learning rate reduced tenfold"},
+    {"label": "D-anchor-and-clip", "learning_rate": 1e-5, "beta": 0.02,
+     "clip_epsilon": 0.2, "inner_epochs": 2,
+     "note": "KL anchor plus ratio clipping over two inner epochs. This is the "
+             "GRPO objective. Clipping cannot bind at one inner epoch, because "
+             "the ratio is then identically one."},
     {"label": "C-kl-anchor", "learning_rate": 1e-5, "beta": 0.02,
+     "clip_epsilon": 0.0, "inner_epochs": 1,
      "note": "non-zero KL anchor against the base policy, which v1 never had"},
+    {"label": "B-lr-10x-lower", "learning_rate": 1e-6, "beta": 0.0,
+     "clip_epsilon": 0.0, "inner_epochs": 1,
+     "note": "learning rate reduced tenfold, still the unanchored objective"},
+    {"label": "A-current", "learning_rate": 1e-5, "beta": 0.0,
+     "clip_epsilon": 0.0, "inner_epochs": 1,
+     "note": "current hyperparameters, unchanged from v1"},
 )
+
+# A probe is preferred in this order when more than one holds reward flat.
+PREFERENCE = ("D-anchor-and-clip", "C-kl-anchor", "B-lr-10x-lower", "A-current")
 
 
 def build_config(condition: dict) -> ArmConfig:
@@ -58,6 +74,8 @@ def build_config(condition: dict) -> ArmConfig:
         apply_chat_template=policy.apply_chat_template,
         learning_rate=condition["learning_rate"],
         beta=condition["beta"],
+        clip_epsilon=condition.get("clip_epsilon", 0.0),
+        inner_epochs=condition.get("inner_epochs", 1),
         label=condition["label"],
     )
 
@@ -160,6 +178,8 @@ def main() -> dict:
                 "note": condition["note"],
                 "learning_rate": condition["learning_rate"],
                 "beta": condition["beta"],
+                "clip_epsilon": condition.get("clip_epsilon", 0.0),
+                "inner_epochs": condition.get("inner_epochs", 1),
                 "status": outcome.get("status"),
                 "halt_reason": outcome.get("halt_reason"),
                 "advantage_direction": advantage_direction_check(run_id),
@@ -172,8 +192,10 @@ def main() -> dict:
             f"holds={summary.get('holds_or_rises')}"
         )
 
-    passing = [r for r in results if r.get("measured") and r.get("holds_or_rises")]
-    chosen = passing[0] if passing else None
+    passing = {r["label"]: r for r in results if r.get("measured") and r.get("holds_or_rises")}
+    # Preference, not order of completion: prefer the algorithmically complete
+    # objective over a quieter version of the wrong one.
+    chosen = next((passing[label] for label in PREFERENCE if label in passing), None)
     document = {
         "diagnostic": "hyperparameter_probes",
         "declared": "Probes, never evidence. Excluded from the evidence index by run-id prefix and by policy.",
@@ -181,9 +203,14 @@ def main() -> dict:
         "policy": prereg_v2.POLICY_MODEL,
         "conditions": results,
         "chosen": chosen["label"] if chosen else None,
+        "preference_order": list(PREFERENCE),
+        "all_passing": sorted(passing),
         "chosen_reason": (
-            f"first condition whose mean reward held or rose: {chosen['reward_step0']:.4f} to "
-            f"{chosen['reward_last3']:.4f}"
+            f"{chosen['label']} held reward flat or rising, {chosen['reward_step0']:.4f} to "
+            f"{chosen['reward_last3']:.4f}, and is the most algorithmically complete of the "
+            f"{len(passing)} passing condition(s) {sorted(passing)}. An unclipped, unanchored "
+            "objective is not GRPO, so a low learning rate that merely holds reward flat is "
+            "preferred only when nothing more complete passes."
             if chosen
             else "no condition held reward flat or rising, so the stage was not launched"
         ),
@@ -201,8 +228,8 @@ def write_markdown(document: dict) -> None:
         f"Ten steps each on `{document['policy']}` with the chat template, arm a0 only. "
         "**Probes, never evidence.** Excluded from the evidence index by run-id prefix and by policy.",
         "",
-        "| Probe | lr | beta | Reward step 0 to last 3 | Holds or rises | Entropy first3 to last3 | Capped | KL mean | Status |",
-        "|---|---|---|---|---|---|---|---|---|",
+        "| Probe | lr | beta | clip | inner epochs | Reward step 0 to last 3 | Holds or rises | Entropy first3 to last3 | Capped | KL mean |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
 
     def fmt(value, digits=4):
@@ -217,10 +244,11 @@ def write_markdown(document: dict) -> None:
             continue
         lines.append(
             f"| {entry['label']} | {entry['learning_rate']} | {entry['beta']} "
+            f"| {entry.get('clip_epsilon', 0.0)} | {entry.get('inner_epochs', 1)} "
             f"| {fmt(entry['reward_step0'])} to {fmt(entry['reward_last3'])} "
             f"| **{entry['holds_or_rises']}** "
             f"| {fmt(entry['entropy_first3'])} to {fmt(entry['entropy_last3'])} "
-            f"| {fmt(entry['capped_mean'])} | {fmt(entry['kl_mean'])} | {entry.get('status')} |"
+            f"| {fmt(entry['capped_mean'])} | {fmt(entry['kl_mean'])} |"
         )
     lines += ["", f"**Chosen: {document['chosen'] or 'none'}.** {document['chosen_reason']}", ""]
 

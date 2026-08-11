@@ -880,3 +880,72 @@ necessary.
 The stage now reads its learning rate and beta from the probe result, and falls
 back to the registered default **with the fallback recorded** rather than
 silently.
+
+### D-33 trainer_logprob was still a copy, and fixing it exposed a fourth fault
+**Answer to the question asked: still a copy.** v2 inherited v1's sampler, which
+wrote `trainer_logprob` as the same value as `sampler_logprob`. Now fixed for the
+stage: it is written from the trainer's own forward pass over the completion.
+
+**Verified rather than asserted.** Before: 3430 of 3430 rows identical. After, on
+a self-test run: **0 of 96 identical, mean absolute difference 0.2150, maximum
+1.8477.** The pair now carries information.
+
+I have **not** diagnosed why the divergence is that large. It exceeds what bf16
+noise alone would explain, and the two paths differ in more than precision: the
+sampler reads `generate`'s scores with a KV cache, the trainer does a full
+forward. Which of those dominates is exactly the follow-on project's subject, so
+it is reported as measured and undiagnosed rather than explained away.
+
+**Fixing it exposed a fourth v1 fault.** To recompute a trainer logprob the
+prompt is needed, and checking the alignment showed that `_update` fed
+`completion.token_ids`, which is the generated tokens **with the prompt
+stripped**. So v1's policy gradient maximised the **unconditional** likelihood of
+completion text, not the likelihood of a solution given a problem. That is a
+different objective from the one the design assumes, and it is consistent with
+everything the retrospective measured: reward falling, entropy rising, a policy
+pushed off its pretrained distribution.
+
+v2 prepends the prompt and masks it out of the loss, which is what conditioning
+means. `Completion` now carries `prompt_token_ids`. Per-token log_softmax is
+taken in chunks over time, because the full float32 distribution for a
+3072-token sequence is about 2 GB at this vocabulary and does not fit beside the
+model and the backward graph on an 8 GB card.
+
+### D-34 Probe D added: an unclipped unanchored objective is not GRPO
+The operator's point stands: probe B could hold reward flat while still not being
+the algorithm. The grid is now four conditions, ordered by algorithmic
+completeness:
+
+| Probe | lr | beta | clip | inner epochs |
+|---|---|---|---|---|
+| D-anchor-and-clip | 1e-5 | 0.02 | 0.2 | 2 |
+| C-kl-anchor | 1e-5 | 0.02 | 0 | 1 |
+| B-lr-10x-lower | 1e-6 | 0 | 0 | 1 |
+| A-current | 1e-5 | 0 | 0 | 1 |
+
+**Selection is by preference, not by order of completion.** D is preferred over C
+over B over A, so if D holds reward flat it is chosen even when B also holds. The
+reason, recorded because it is a judgement: a low learning rate that merely holds
+reward flat is a quieter version of the wrong algorithm, whereas D is the
+objective the pre-registration names.
+
+**One subtlety worth stating, because it makes clipping honest.** With a single
+inner epoch the ratio pi_theta / pi_theta_old is identically one at the moment of
+the update, so a clipped surrogate cannot bind and reduces exactly to the plain
+policy gradient. Probe D therefore uses **two inner epochs**, so the ratio
+genuinely departs from one on the second pass and the clip can act. `clipped_fraction`
+is logged per step so a reader can see whether it ever did. Implementing clipping
+at one inner epoch would have been decoration.
+
+`clip_epsilon` defaults to 0.0 and `inner_epochs` to 1, so v1's remaining runs
+are unaffected.
+
+### D-35 The four faults are above the fold in REPORT.md and README
+Both now open, before any number, with: no GRPOTrainer was used, TRL is pinned
+but never instantiated, the update is a hand-written policy gradient, v1's
+objective was neither clipped nor anchored, v1's update did not condition on the
+prompt, and v1's `kl` and `trainer_logprob` columns do not mean what their names
+suggest. Stated in the repository's own words rather than by reference.
+
+None is fixed retroactively. v1's artifacts stand as measured, and REPORT.md says
+plainly that **v1's flat cheat rate is not evidence about the pre-registered H1**.

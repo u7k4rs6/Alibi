@@ -207,6 +207,7 @@ class InlineSampler:
                             text,
                             token_ids=token_ids,
                             sampler_logprobs=logprobs,
+                            prompt_token_ids=encoded["input_ids"][0].tolist(),
                             finish_reason="length" if len(token_ids) >= self.max_new_tokens else "stop",
                         )
                     )
@@ -357,14 +358,23 @@ def run(config: ArmConfig, run_id: str | None = None, resume: bool = True) -> di
                 kl=kl,
                 duration=time.monotonic() - started,
                 honest_probe=honest.to_dict(),
-                training=training,
+                training={k: v for k, v in training.items() if k != "trainer_token_logprobs"},
             )
             step_dir = write_step(run_dir, step, step_records, summary)
             check = (training or {}).get("advantage_direction") or {}
             if check.get("n_compared"):
                 runlog.write_json(step_dir / "advantage_check.json", {"step": step, **check})
+            # Overwrite trainer_logprob with the trainer's actual recomputation
+            # under the prompt-conditioned forward. v1 wrote a copy of the
+            # sampler value, so the pair the follow-on project exists to study
+            # was the same number twice.
+            recomputed = (training or {}).get("trainer_token_logprobs") or {}
             for row in logprob_rows:
                 row.update({"seed": config.seed, "step": step})
+                series = recomputed.get(row["completion_idx"])
+                row["trainer_logprob"] = (
+                    series[row["position"]] if series and row["position"] < len(series) else None
+                )
             write_logprobs(step_dir, logprob_rows)
             print(console_line(summary), flush=True)
             result["summaries"].append(summary)
@@ -436,17 +446,48 @@ def _load_trainer(config: ArmConfig):
     return model, tokenizer, {"model": model, "optimiser": optimiser}
 
 
-def _reference_logprob(model, ids):
-    """Mean token logprob under the base policy, by disabling the LoRA adapter.
 
-    This is the reference v1 never had. With LoRA the base weights are still
-    present, so the reference policy is recovered for free rather than needing a
-    second model on an 8 GB card.
+def _sequence_logprob(model, prompt_ids: list[int], token_ids: list[int], device, chunk: int = 256):
+    """Mean and per-token logprob of the completion, conditioned on the prompt.
+
+    v1 fed the completion alone, with the prompt stripped, so its objective was
+    the unconditional likelihood of the completion text. The prompt is prepended
+    here and masked out of the loss, which is what conditioning means.
+
+    log_softmax is taken in chunks over time. The full float32 distribution for a
+    3072-token sequence is about 2 GB at this vocabulary, which does not fit
+    beside the model and the backward graph on an 8 GB card.
+    """
+    import torch
+
+    ids = torch.tensor([list(prompt_ids) + list(token_ids)], device=device)
+    logits = model(input_ids=ids).logits[:, :-1]
+    targets = ids[:, 1:]
+    start = max(0, len(prompt_ids) - 1)
+
+    pieces = []
+    for begin in range(start, targets.shape[1], chunk):
+        window = logits[:, begin : begin + chunk].float()
+        gathered = torch.log_softmax(window, dim=-1).gather(
+            -1, targets[:, begin : begin + chunk].unsqueeze(-1)
+        ).squeeze(-1)
+        pieces.append(gathered)
+        del window
+    per_token = torch.cat(pieces, dim=1)[0]
+    return per_token.mean(), per_token
+
+
+def _reference_logprob(model, prompt_ids, token_ids, device):
+    """Mean completion logprob under the base policy, by disabling the LoRA adapter.
+
+    The reference v1 never had. With LoRA the base weights are still present, so
+    the reference is recovered without a second model on an 8 GB card.
     """
     import torch
 
     with torch.no_grad(), model.disable_adapter():
-        return float(-model(input_ids=ids, labels=ids).loss)
+        mean, _ = _sequence_logprob(model, prompt_ids, token_ids, device)
+        return float(mean)
 
 
 def _update(trainer, step_records: list[dict], completions, config: ArmConfig) -> float | None:
@@ -490,9 +531,7 @@ def _update(trainer, step_records: list[dict], completions, config: ArmConfig) -
 
     device = next(model.parameters()).device
 
-    # Only completions long enough to have a next token target. A one token
-    # completion has an undefined loss and would poison both the update and the
-    # KL statistic.
+    # Only completions long enough to have a next token target.
     usable = [
         (index, completion)
         for index, completion in enumerate(completions)
@@ -501,53 +540,75 @@ def _update(trainer, step_records: list[dict], completions, config: ArmConfig) -
     if not usable:
         return None
 
-    kl_terms = []
+    kl_terms: list[float] = []
     counted = 0
     pre_update_logprob: dict[int, float] = {}
+    token_logprobs: dict[int, list[float]] = {}
+    clipped_fraction: list[float] = []
     optimiser.zero_grad(set_to_none=True)
-    for index, completion in usable:
-        ids = torch.tensor([completion.token_ids], device=device)
-        out = model(input_ids=ids, labels=ids)
-        logprobs = -out.loss  # mean logprob per token under the current policy
-        current = float(logprobs.detach())
-        if not math.isfinite(current):
-            del out, logprobs
-            continue
-        pre_update_logprob[index] = current
 
-        # Backward per completion rather than accumulating one graph over the
-        # whole group. Holding sixteen forward graphs alive until a single
-        # backward is what put an 8 GB card into CUDA OOM; this keeps exactly
-        # one alive and is mathematically the same update.
-        # KL anchor against the base policy, when enabled. v1 ran without one:
-        # the loss was a bare policy gradient with no reference, no clipping and
-        # no trust region, which is what let the policy drift off distribution.
-        reference_logprob = None
-        objective = -advantage[index].to(device) * logprobs
-        if config.beta > 0.0:
-            reference_logprob = _reference_logprob(model, ids)
-            objective = objective + config.beta * (logprobs - reference_logprob) ** 2
-        loss = objective / len(usable)
-        loss.backward()
-        counted += 1
+    # The old policy's logprobs, detached. With a single inner epoch these equal
+    # the current policy's, so the ratio is 1 and clipping cannot bind. That is
+    # why inner_epochs must exceed 1 for clipping to be anything but decoration.
+    old_logprob: dict[int, float] = {}
+    if config.clip_epsilon > 0.0:
+        with torch.no_grad():
+            for index, completion in usable:
+                mean, _ = _sequence_logprob(model, completion.prompt_token_ids, completion.token_ids, device)
+                old_logprob[index] = float(mean)
 
-        # The honest KL. v1 compared the policy against the sampler's own
-        # logprobs from the same step, which are the same weights, so it measured
-        # bf16 noise rather than drift. With a reference available, use it.
-        if reference_logprob is None and config.beta <= 0.0:
-            try:
-                reference_logprob = _reference_logprob(model, ids)
-            except Exception:  # noqa: BLE001 - a diagnostic must not stop a step
-                reference_logprob = (
-                    sum(completion.sampler_logprobs) / len(completion.sampler_logprobs)
-                    if completion.sampler_logprobs
-                    else current
+    epochs = max(1, config.inner_epochs if config.clip_epsilon > 0.0 else 1)
+    for epoch in range(epochs):
+        for index, completion in usable:
+            mean_logprob, per_token = _sequence_logprob(
+                model, completion.prompt_token_ids, completion.token_ids, device
+            )
+            current = float(mean_logprob.detach())
+            if not math.isfinite(current):
+                del mean_logprob, per_token
+                continue
+
+            if epoch == 0:
+                pre_update_logprob[index] = current
+                # The trainer's own recomputation of the sampler's tokens. This
+                # is what makes the sampler/trainer pair mean anything: v1 wrote
+                # a copy of the sampler value, so the pair was the same number
+                # twice.
+                token_logprobs[index] = [float(x) for x in per_token.detach().float().cpu().tolist()]
+
+            weight = advantage[index].to(device)
+            if config.clip_epsilon > 0.0 and index in old_logprob:
+                ratio = torch.exp(mean_logprob - old_logprob[index])
+                low, high = 1.0 - config.clip_epsilon, 1.0 + config.clip_epsilon
+                unclipped = ratio * weight
+                clipped = torch.clamp(ratio, low, high) * weight
+                objective = -torch.min(unclipped, clipped)
+                clipped_fraction.append(float(not (low <= float(ratio.detach()) <= high)))
+            else:
+                objective = -weight * mean_logprob
+
+            reference_logprob = None
+            if config.beta > 0.0:
+                reference_logprob = _reference_logprob(
+                    model, completion.prompt_token_ids, completion.token_ids, device
                 )
-        reference = reference_logprob if reference_logprob is not None else current
-        kl = current - reference
-        if math.isfinite(kl):
-            kl_terms.append(abs(kl))
-        del out, logprobs, loss, ids, objective
+                objective = objective + config.beta * (mean_logprob - reference_logprob) ** 2
+
+            (objective / (len(usable) * epochs)).backward()
+            counted += 1
+
+            if epoch == 0:
+                if reference_logprob is None:
+                    try:
+                        reference_logprob = _reference_logprob(
+                            model, completion.prompt_token_ids, completion.token_ids, device
+                        )
+                    except Exception:  # noqa: BLE001 - a diagnostic must not stop a step
+                        reference_logprob = current
+                kl = current - reference_logprob
+                if math.isfinite(kl):
+                    kl_terms.append(abs(kl))
+            del mean_logprob, per_token, objective
 
     if counted:
         torch.nn.utils.clip_grad_norm_([p for p in model.parameters() if p.requires_grad], 1.0)
@@ -555,10 +616,6 @@ def _update(trainer, step_records: list[dict], completions, config: ArmConfig) -
         optimiser.zero_grad(set_to_none=True)
 
     # Did the update move logprobs in the direction the advantage asked for?
-    # Re-score the same completions under the post-update policy and compare the
-    # sign of the change against the sign of the advantage. This is the check
-    # that cannot be recovered from stored v1 artifacts, because trainer_logprob
-    # was a copy of sampler_logprob and no prompt repeats across steps.
     direction = {"n_compared": 0, "n_agree": 0}
     if counted and config.label:
         with torch.no_grad():
@@ -566,22 +623,18 @@ def _update(trainer, step_records: list[dict], completions, config: ArmConfig) -
                 before = pre_update_logprob.get(index)
                 if before is None:
                     continue
-                ids = torch.tensor([completion.token_ids], device=device)
-                after = float(-model(input_ids=ids, labels=ids).loss)
-                if not math.isfinite(after):
-                    continue
+                after, _ = _sequence_logprob(model, completion.prompt_token_ids, completion.token_ids, device)
+                after = float(after)
                 wanted = float(advantage[index])
-                if abs(wanted) < 1e-8:
+                if not math.isfinite(after) or abs(wanted) < 1e-8:
                     continue
                 direction["n_compared"] += 1
                 direction["n_agree"] += int((after - before) * wanted > 0)
-                del ids
+
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
     magnitudes = [abs(float(advantage[i])) for i, _ in usable] if len(advantage) else []
-    # Padding positions past end-of-sequence carry -inf and are not sampled
-    # tokens, so they are dropped rather than clamped.
     entropies = []
     for _, completion in usable:
         finite = [lp for lp in completion.sampler_logprobs if math.isfinite(lp)]
@@ -596,11 +649,12 @@ def _update(trainer, step_records: list[dict], completions, config: ArmConfig) -
         "zero_variance_group_fraction": (zero_variance_groups / n_groups) if n_groups else None,
         "mean_abs_advantage": (sum(magnitudes) / len(magnitudes)) if magnitudes else None,
         "max_abs_advantage": max(magnitudes) if magnitudes else None,
-        # Single-sample-per-position estimate of the sampling entropy. Tokens are
-        # drawn from the policy at temperature 1.0, so the mean negative logprob
-        # of the sampled tokens is an unbiased estimator of H(policy).
         "mean_token_entropy": (sum(entropies) / len(entropies)) if entropies else None,
         "n_updated": counted,
+        "inner_epochs": epochs,
+        "clip_epsilon": config.clip_epsilon,
+        "clipped_fraction": (sum(clipped_fraction) / len(clipped_fraction)) if clipped_fraction else None,
+        "trainer_token_logprobs": token_logprobs,
         "advantage_direction": direction,
     }
 

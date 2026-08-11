@@ -37,13 +37,17 @@ def chosen_hyperparameters() -> dict:
     training = prereg_v2.PREREG_V2.training
     if not path.exists():
         return {"learning_rate": training.learning_rate, "beta": training.beta_kl_anchor,
+                "clip_epsilon": 0.0, "inner_epochs": 1,
                 "source": "registered default, no probe result found"}
     document = json.loads(path.read_text(encoding="utf-8"))
     for entry in document.get("conditions", []):
         if entry.get("label") == document.get("chosen"):
             return {"learning_rate": entry["learning_rate"], "beta": entry["beta"],
+                    "clip_epsilon": entry.get("clip_epsilon", 0.0),
+                    "inner_epochs": entry.get("inner_epochs", 1),
                     "source": f"probe {entry['label']}"}
     return {"learning_rate": training.learning_rate, "beta": training.beta_kl_anchor,
+            "clip_epsilon": 0.0, "inner_epochs": 1,
             "source": "registered default, no probe was chosen"}
 
 
@@ -53,6 +57,8 @@ def build_config(arm: str, seed: int) -> ArmConfig:
     return ArmConfig(
         learning_rate=hyper["learning_rate"],
         beta=hyper["beta"],
+        clip_epsilon=hyper.get("clip_epsilon", 0.0),
+        inner_epochs=hyper.get("inner_epochs", 1),
         arm=arm,
         seed=seed,
         steps=policy.steps_per_run,

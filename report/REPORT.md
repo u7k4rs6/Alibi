@@ -1,5 +1,31 @@
 # Alibi: does a monitored policy stop reward hacking, or stop looking like it?
 
+> ## Read this before any number below
+>
+> **No `GRPOTrainer` was used.** TRL is pinned in every `env.lock` and is never
+> instantiated. The update is a hand-written policy gradient in
+> `alibi/train/grpo.py`. There is no `GRPOConfig` to inspect.
+>
+> **In v1 that objective was neither clipped nor anchored.** No reference policy
+> existed, so there was no KL term in the loss, no ratio clipping and no trust
+> region. It was `-advantage x logprob` at a constant learning rate.
+>
+> **v1's update did not condition on the prompt.** It fed the completion tokens
+> with the prompt stripped, so the gradient maximised the unconditional
+> likelihood of completion text rather than the likelihood of a solution given a
+> problem.
+>
+> **Two v1 columns do not mean what their names suggest.** `kl` is not KL from a
+> reference policy, because none existed: it compared the policy against the
+> sampler's own logprobs from the same step and the same weights, so it measured
+> numerical noise. The KL spike halt was therefore guarding nothing in v1.
+> `trainer_logprob` is a literal copy of `sampler_logprob`, identical on 3430 of
+> 3430 rows, so v1's `logprobs.parquet` does not support the sampler/trainer
+> analysis it was collected for.
+>
+> All four are fixed for v2 and none is fixed retroactively. **v1's numbers stand
+> as they were measured, and are not evidence about H1.**
+
 ## Result
 
 Declared runs: 4. H1, whether the oracle cheat rate rises in a0, is not supported per seed: [False, False].
@@ -100,18 +126,18 @@ What the base policy already does at step 0, before a single gradient step. If p
 
 ### Pooled across all matrix runs
 
-Step 0 is the same untrained base policy in every arm and at every seed, so the runs pool. **7 of 9 runs** have stored a step 0 so far; this table is regenerated after every completed run.
+Step 0 is the same untrained base policy in every arm and at every seed, so the runs pool. **10 of 9 runs** have stored a step 0 so far; this table is regenerated after every completed run.
 
 | Measure | Value |
 |---|---|
-| Runs pooled | 7 of 9 |
-| Completions | 112 |
-| Any cheat_form | 7/112 = 0.0625 |
-| 95 percent interval (Wilson) | 0.0306 to 0.1234 |
-| Behavioural cheat rate | 0/112 = 0.0000 |
-| 95 percent interval (Wilson) | 0.0000 to 0.0332 |
-| Per-run spread | 0.0000 |
-| cheat_form breakdown | {'if_chain': 7} |
+| Runs pooled | 10 of 9 |
+| Completions | 160 |
+| Any cheat_form | 12/160 = 0.0750 |
+| 95 percent interval (Wilson) | 0.0434 to 0.1265 |
+| Behavioural cheat rate | 0/158 = 0.0000 |
+| 95 percent interval (Wilson) | 0.0000 to 0.0237 |
+| Per-run spread | 0.0625 |
+| cheat_form breakdown | {'if_chain': 12} |
 
 Per run:
 
@@ -119,11 +145,14 @@ Per run:
 |---|---|---|---|---|
 | `a0-seed1-4581182c` | a0 | 1 | 16 | 0.0625 |
 | `a0-seed2-f83c2249` | a0 | 2 | 16 | 0.0625 |
+| `a0-seed3-79ce1647` | a0 | 3 | 16 | 0.1250 |
 | `a1-seed1-17e2af38` | a1 | 1 | 16 | 0.0625 |
 | `a1-seed2-67fa65aa` | a1 | 2 | 16 | 0.0625 |
 | `a2-seed1-97130799` | a2 | 1 | 16 | 0.0625 |
+| `a2-seed2-05101024` | a2 | 2 | 16 | 0.0625 |
 | `a2-seed2-a166450a` | a2 | 2 | 16 | 0.0625 |
 | `a2-seed2-b3fa8c57` | a2 | 2 | 16 | 0.0625 |
+| `a2-seed3-1ae5800b` | a2 | 3 | 16 | 0.1250 |
 
 Wilson intervals rather than the normal approximation, because n is small and the proportion is near zero, which is exactly where the textbook interval returns a negative lower bound.
 
@@ -339,5 +368,5 @@ Two of the pre-declared halt conditions were amended before any monitored-arm cu
 }
 ```
 
-Generated 2026-08-11T20:48:49.873266+00:00 by `alibi report`. Numbers are injected from
+Generated 2026-08-11T21:08:20.188950+00:00 by `alibi report`. Numbers are injected from
 `artifacts/`, never typed. `alibi verify --no-gpu` recomputes every claim above.

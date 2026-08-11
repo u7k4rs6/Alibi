@@ -72,6 +72,11 @@ class ArmConfig:
     # so the anchor costs no extra weights.
     beta: float = 0.0
     label: str = ""
+    # PPO/GRPO ratio clipping. 0.0 disables it, which is v1's behaviour. With a
+    # single inner epoch the ratio is identically 1 and clipping cannot bind, so
+    # inner_epochs must exceed 1 for it to mean anything.
+    clip_epsilon: float = 0.0
+    inner_epochs: int = 1
 
     def to_dict(self) -> dict:
         return asdict(self)

@@ -46,6 +46,10 @@ class Completion:
     answer: str
     token_ids: list[int] = field(default_factory=list)
     sampler_logprobs: list[float] = field(default_factory=list)
+    # The prompt's token ids. Without these the trainer cannot condition on the
+    # prompt, and v1's update did not: it maximised the unconditional likelihood
+    # of the completion text.
+    prompt_token_ids: list[int] = field(default_factory=list)
     finish_reason: str = "stop"
 
     @property
