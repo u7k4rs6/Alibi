@@ -66,11 +66,11 @@
     },
     {
       "arm": "a1",
-      "detail": "",
-      "halt_reason": null,
+      "detail": "arm a1 blocked by BLOCKED.md: its monitor view is empty, see BLOCKED.md",
+      "halt_reason": "section_6_collision",
       "run_id": null,
       "seed": 3,
-      "status": "pending",
+      "status": "failed",
       "steps": 80
     },
     {
@@ -90,7 +90,7 @@
     null,
     null
   ],
-  "stopped": true,
-  "stopped_reason": "BLOCKED.md exists, a section 6 collision was recorded",
+  "stopped": false,
+  "stopped_reason": "",
   "updated_utc": "2026-08-11T16:00:58.185110+00:00"
 }

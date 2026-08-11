@@ -287,9 +287,13 @@ def main() -> int:
             state.stopped_reason = "no pending entries remain"
             break
 
-        if halt_module.BLOCKED_PATH.exists():
+        # A collision that declares an arm scope blocks those arms only. The
+        # scope-aware skipping lives in queue_module.next_pending, which has
+        # already run above, so reaching here with an entry in hand means the
+        # entry is not blocked. Only an unscoped collision stops everything.
+        if halt_module.BLOCKED_PATH.exists() and not queue_module.blocked_arms():
             state.stopped = True
-            state.stopped_reason = "BLOCKED.md exists, a section 6 collision was recorded"
+            state.stopped_reason = "BLOCKED.md exists with no declared arm scope, so it is treated as global"
             break
 
         dirty = _git("status", "--porcelain")[1]
