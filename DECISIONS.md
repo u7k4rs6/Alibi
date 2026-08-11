@@ -308,3 +308,20 @@ A run's exception was logged as `format_exc()[:2000]`, which keeps the stack and
 discards the exception message, because the message is the last line. The first
 OOM therefore reported only "run raised" with a stack and no cause, and cost a
 diagnostic cycle. Now logs the tail.
+
+### D-21 Second OOM: one graph per group, fixed with gradient accumulation
+**Symptom:** OOM again after the generation fix, this time inside the update's
+`cross_entropy_loss`.
+
+**Cause:** `_update` accumulated `total_loss` across all sixteen completions and
+called `backward()` once. That keeps sixteen forward graphs, and all their
+activations, alive simultaneously.
+
+**Chose:** backward per completion, scaled by `1 / len(usable)`, freeing each
+graph as it goes. Mathematically the identical update; one graph alive instead
+of sixteen. Verified at the real production shape, group 8 by 2 prompts by 256
+tokens: two steps complete, KL finite, indeterminate 0.00.
+
+**Rejected: reducing group size or the number of prompts.** Group size is fixed
+by the PRD. Reducing prompts per step would have hidden the bug rather than
+fixed it, and would have cut the completions per step that H1 needs.

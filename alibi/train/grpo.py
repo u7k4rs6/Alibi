@@ -430,22 +430,38 @@ def _update(trainer, step_records: list[dict], completions, config: ArmConfig) -
     advantage = torch.cat(advantages) if advantages else rewards
 
     device = next(model.parameters()).device
-    total_loss = torch.zeros((), device=device, dtype=torch.float32)
+
+    # Only completions long enough to have a next token target. A one token
+    # completion has an undefined loss and would poison both the update and the
+    # KL statistic.
+    usable = [
+        (index, completion)
+        for index, completion in enumerate(completions)
+        if len(completion.token_ids) >= 2 and index < len(advantage)
+    ]
+    if not usable:
+        return None
+
     kl_terms = []
     counted = 0
-    for index, completion in enumerate(completions):
-        if not completion.token_ids or index >= len(advantage):
-            continue
-        if len(completion.token_ids) < 2:
-            # A one token completion has no next token target, so its loss is
-            # undefined and would poison both the update and the KL statistic.
-            continue
+    optimiser.zero_grad(set_to_none=True)
+    for index, completion in usable:
         ids = torch.tensor([completion.token_ids], device=device)
         out = model(input_ids=ids, labels=ids)
         logprobs = -out.loss  # mean logprob per token under the current policy
         current = float(logprobs.detach())
         if not math.isfinite(current):
+            del out, logprobs
             continue
+
+        # Backward per completion rather than accumulating one graph over the
+        # whole group. Holding sixteen forward graphs alive until a single
+        # backward is what put an 8 GB card into CUDA OOM; this keeps exactly
+        # one alive and is mathematically the same update.
+        loss = -advantage[index].to(device) * logprobs / len(usable)
+        loss.backward()
+        counted += 1
+
         reference = (
             sum(completion.sampler_logprobs) / len(completion.sampler_logprobs)
             if completion.sampler_logprobs
@@ -454,14 +470,14 @@ def _update(trainer, step_records: list[dict], completions, config: ArmConfig) -
         kl = current - reference
         if math.isfinite(kl):
             kl_terms.append(abs(kl))
-        total_loss = total_loss - advantage[index].to(device) * logprobs
-        counted += 1
+        del out, logprobs, loss, ids
 
     if counted:
-        (total_loss / counted).backward()
         torch.nn.utils.clip_grad_norm_([p for p in model.parameters() if p.requires_grad], 1.0)
         optimiser.step()
         optimiser.zero_grad(set_to_none=True)
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     return sum(kl_terms) / len(kl_terms) if kl_terms else None
 
