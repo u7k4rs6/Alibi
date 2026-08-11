@@ -90,7 +90,7 @@
     null,
     null
   ],
-  "stopped": false,
-  "stopped_reason": "",
-  "updated_utc": "2026-08-11T15:57:31.614922+00:00"
+  "stopped": true,
+  "stopped_reason": "BLOCKED.md exists, a section 6 collision was recorded",
+  "updated_utc": "2026-08-11T16:00:58.185110+00:00"
 }
