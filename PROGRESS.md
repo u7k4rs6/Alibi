@@ -1,16 +1,16 @@
 # PROGRESS
 
-Updated 2026-08-11T20:55:31.155832+00:00
+Updated 2026-08-11T20:58:03.087118+00:00
 
 | Field | Value |
 |---|---|
 | Phase | queue running |
 | Current run id | none |
-| Current entry | a0 seed 3 |
+| Current entry | none |
 | Runs complete | 4 of 9 |
-| Runs failed | 3 |
-| Wall clock elapsed | 0.07 h |
-| Projected remaining | 0.02 h |
+| Runs failed | 4 |
+| Wall clock elapsed | 0.11 h |
+| Projected remaining | 0.01 h |
 | Monitor tokens | 935318 |
 | Monitor USD | 0.2805954 |
 | Open blocker | BLOCKED.md exists |
@@ -25,7 +25,7 @@ Updated 2026-08-11T20:55:31.155832+00:00
 | a0 | 2 | complete | a0-seed2-f83c2249 | 80 steps |
 | a1 | 2 | complete | a1-seed2-67fa65aa | 80 steps |
 | a2 | 2 | failed | a2-seed2-05101024 | exception |
-| a0 | 3 | running |  |  |
+| a0 | 3 | failed | a0-seed3-79ce1647 | indeterminate_held_out_rate |
 | a1 | 3 | failed |  | section_6_collision |
 | a2 | 3 | pending |  |  |
 
