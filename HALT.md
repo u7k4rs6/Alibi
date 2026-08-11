@@ -2,9 +2,9 @@
 
 **Reason:** `indeterminate_held_out_rate`
 
-**Run:** `a0-seed3-79ce1647`  **Step:** 0
+**Run:** `a2-seed3-1ae5800b`  **Step:** 0
 
-**Written:** 2026-08-11T20:58:02.993935+00:00
+**Written:** 2026-08-11T21:00:51.271262+00:00
 
 indeterminate held out executions exceeded the limit over a lagging window, so the cheat rate is measuring the sandbox rather than the policy.
 
@@ -42,8 +42,8 @@ indeterminate held out executions exceeded the limit over a lagging window, so t
 
 ```json
 {
-  "dirty": false,
-  "revision": "4d5a9dae3c6829ab6877ec316e71bf51521ea0e3",
+  "dirty": true,
+  "revision": "82aec9ba8c84cc9d6779e04c94d3f2ad9391eb19",
   "revision_absent_reason": null
 }
 ```

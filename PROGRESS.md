@@ -1,18 +1,18 @@
 # PROGRESS
 
-Updated 2026-08-11T20:58:06.384926+00:00
+Updated 2026-08-11T21:00:51.320605+00:00
 
 | Field | Value |
 |---|---|
-| Phase | queue running |
+| Phase | queue stopped |
 | Current run id | none |
-| Current entry | a2 seed 3 |
+| Current entry | none |
 | Runs complete | 4 of 9 |
-| Runs failed | 4 |
-| Wall clock elapsed | 0.12 h |
-| Projected remaining | 0.01 h |
-| Monitor tokens | 935318 |
-| Monitor USD | 0.2805954 |
+| Runs failed | 5 |
+| Wall clock elapsed | 0.16 h |
+| Projected remaining | not yet estimable |
+| Monitor tokens | 940646 |
+| Monitor USD | 0.2821938 |
 | Open blocker | BLOCKED.md exists |
 
 ## Queue
@@ -27,9 +27,9 @@ Updated 2026-08-11T20:58:06.384926+00:00
 | a2 | 2 | failed | a2-seed2-05101024 | exception |
 | a0 | 3 | failed | a0-seed3-79ce1647 | indeterminate_held_out_rate |
 | a1 | 3 | failed |  | section_6_collision |
-| a2 | 3 | running |  |  |
+| a2 | 3 | failed | a2-seed3-1ae5800b | indeterminate_held_out_rate |
 
 Stop rule: all 9 complete, or more than half failed, or BLOCKED.md exists.
-Stopped: False. 
+Stopped: True. 5 of 9 runs have failed, which is more than half. Continuing would spend hours to produce a matrix that cannot support a comparison.
 
 Log: `queue.log`. Status: `python -m alibi.cli queue status`.

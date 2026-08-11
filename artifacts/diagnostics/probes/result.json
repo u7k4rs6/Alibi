@@ -1,0 +1,56 @@
+{
+  "chosen": null,
+  "chosen_reason": "no condition held reward flat or rising, so the stage was not launched",
+  "conditions": [
+    {
+      "absent_reason": "no steps were written",
+      "advantage_direction": {
+        "absent_reason": "no advantage checks were recorded",
+        "measured": false
+      },
+      "beta": 0.0,
+      "halt_reason": "subprocess_exit",
+      "label": "A-current",
+      "learning_rate": 1e-05,
+      "measured": false,
+      "note": "current hyperparameters, unchanged from v1",
+      "run_id": "probe-A-current-7a64dfd5",
+      "status": "failed"
+    },
+    {
+      "absent_reason": "no steps were written",
+      "advantage_direction": {
+        "absent_reason": "no advantage checks were recorded",
+        "measured": false
+      },
+      "beta": 0.0,
+      "halt_reason": "subprocess_exit",
+      "label": "B-lr-10x-lower",
+      "learning_rate": 1e-06,
+      "measured": false,
+      "note": "learning rate reduced tenfold",
+      "run_id": "probe-B-lr-10x-lower-0989dae5",
+      "status": "failed"
+    },
+    {
+      "absent_reason": "no steps were written",
+      "advantage_direction": {
+        "absent_reason": "no advantage checks were recorded",
+        "measured": false
+      },
+      "beta": 0.02,
+      "halt_reason": "dirty_git_tree",
+      "label": "C-kl-anchor",
+      "learning_rate": 1e-05,
+      "measured": false,
+      "note": "non-zero KL anchor against the base policy, which v1 never had",
+      "run_id": "probe-C-kl-anchor-5ef2453e",
+      "status": "failed"
+    }
+  ],
+  "declared": "Probes, never evidence. Excluded from the evidence index by run-id prefix and by policy.",
+  "diagnostic": "hyperparameter_probes",
+  "policy": "Qwen/Qwen3-0.6B",
+  "steps_per_probe": 10,
+  "wall_clock_seconds": 524.2
+}
