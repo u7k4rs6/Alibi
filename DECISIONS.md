@@ -673,3 +673,69 @@ unpriced because `ALIBI_MONITOR_USD_PER_MTOK` is unset.
 **Not done, and not doing without being asked:** no training block on Qwen3-0.6B
 has been started. That would be a new policy, a new prompt path and a new
 matrix, and it is the operator's call.
+
+### D-29 v2 matrix scoped, and the truncation question answered
+Operator-authorized. v1 is untouched and left to drain; every v1 artifact is
+kept as the declared control and as the evidence behind both faults.
+
+**The truncation question, and a correction I owe.** The premise was a gap
+between the diagnostic's Qwen2.5 visible pass of 0.422 and "a0/s1 step 0 at
+0.234". **Those are not the same quantity, and that is my error.** 0.234 was the
+mean over the first ten steps, which I put in a table that read as step-zero
+values. a0/s1 at step 0 alone is **0.6875**.
+
+The like-for-like comparison is diagnostic 0.4219 against a0/s1 step 0 0.6875,
+n=16 each. A bootstrap on the step-0 estimate gives 95 percent [0.438, 0.875],
+so the diagnostic sits just outside. At n=16 per side that is weak evidence and
+is consistent with sampling noise; the two also differ in seed path.
+
+**Is truncation a third fault? Partly, and not in the direction assumed.**
+Measured on a0/s1, 1280 completions: **44.8 percent hit the 256-token cap.**
+Their visible pass is 0.1053 against 0.2254 for completions that stopped
+naturally. So truncation is prevalent and is associated with worse outcomes over
+the run. It does **not** explain the 0.422 versus 0.234 gap, because that gap
+was an artefact of my mislabelling. Reported as a third fault on its own
+evidence: nearly half of v1's completions were cut off mid-generation, which
+bounds what the policy could express.
+
+**v2 budget sized from measurement, not extrapolation.** Qwen3-0.6B through its
+chat template, matrix step-zero prompts, 16 completions, budget 3072:
+
+| Quantity | Median | Mean | Max | Capped at budget |
+|---|---|---|---|---|
+| total tokens | 774 | 1400.5 | 3072 | 2 of 16 |
+| think tokens | 746 | 1343.4 | 3070 | |
+| answer tokens | 24 | 53.4 | 267 | |
+
+The answer is tiny and the think block is nearly all of it. **Truncation matters
+more here than in v1**: the answer follows the think block, so a completion cut
+off mid-thought yields no code at all rather than partial code. Chose
+**max_new_tokens 3072**, covering 87.5 percent measured. `finish_reason` is
+logged per completion so the report can state exactly how many produced no
+answer. Rejected 1024: the earlier diagnostic ran at 1024 and its think mean of
+2888 characters was itself against the cap, so 1024 would truncate the majority.
+
+**v2 registration.** `alibi/prereg_v2.py` **imports** v1's measurement objects
+rather than restating them, so "everything else carries over unchanged" is true
+by construction. `measurement_is_unchanged()` asserts it and
+`tests/test_prompt_contract.py` fails if it stops being true. Only three things
+differ: policy Qwen3-0.6B, chat template applied, max_new_tokens 3072.
+
+**The raw-string guard.** The sampler no longer accepts a string. It takes a
+`Prompt` that records whether the template was applied, and
+`RawStringPassedToSampler` fires otherwise. v1's rendering is unchanged, so v1's
+remaining runs stay byte-identical to the completed ones even though they load
+this newer code through the runner's subprocess.
+
+**Separation from v1 is structural.** v2 run ids are prefixed `v2-`, which does
+not match `matrix_run_dirs`'s v1-only pattern, so v2 cannot be pooled with v1 by
+accident. It has its own queue file.
+
+**Sequencing.** v2 waits for v1 to drain rather than running beside it. Two
+policies on one 8 GB card is the OOM that already cost two runs, and CPU
+contention is what raises v1's indeterminate rate into a halt.
+
+**Monitor price set.** `ALIBI_MONITOR_USD_PER_MTOK=0.30`, from Together's
+published pricing for Qwen2.5-7B-Instruct-Turbo, input and output priced
+identically. The cap is now enforced in dollars rather than through the token
+stand-in.

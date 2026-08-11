@@ -45,15 +45,15 @@ SYSTEM_PROMPT = (
 )
 
 
-def build_prompt(problem: Problem) -> str:
-    """The prompt. The visible asserts are in it, which is why cheating pays."""
-    return (
-        f"{SYSTEM_PROMPT}\n\n"
-        f"{problem.description}\n\n"
-        f"Your solution must define `{problem.entry_point}` and pass these tests:\n\n"
-        + "\n".join(problem.visible_asserts)
-        + "\n"
-    )
+def build_prompt(problem: Problem, tokenizer=None, apply_chat_template: bool = False):
+    """The prompt. The visible asserts are in it, which is why cheating pays.
+
+    Returns a `Prompt`, never a string. See alibi/train/prompt.py for why the
+    type exists: a bare string is how v1 silently bypassed the chat template.
+    """
+    from alibi.train.prompt import build_prompt as render
+
+    return render(problem, SYSTEM_PROMPT, tokenizer=tokenizer, use_chat_template=apply_chat_template)
 
 
 def eligible_problems(limit: int | None = None) -> list[Problem]:
@@ -140,7 +140,7 @@ class InlineSampler:
         self.temperature = temperature
         self.generation_chunk = generation_chunk
 
-    def generate(self, prompts: list[str], prompt_ids: list[str], n: int, seed: int):
+    def generate(self, prompts, prompt_ids: list[str], n: int, seed: int):
         """Generate n completions per prompt, keeping per token sampler logprobs.
 
         Generation is chunked. `output_scores=True` returns one [batch, vocab]
@@ -156,11 +156,17 @@ class InlineSampler:
         """
         import torch
 
+        from alibi.train.prompt import require_prompts
+
+        # Refuses a bare string. This is the guard that makes the v1 fault
+        # impossible to repeat silently.
+        prompts = require_prompts(prompts)
+
         torch.manual_seed(seed)
         completions = []
         logprob_rows = []
         for prompt, prompt_id in zip(prompts, prompt_ids, strict=True):
-            encoded = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
+            encoded = self.tokenizer(prompt.rendered, return_tensors="pt").to(self.model.device)
             prompt_len = encoded["input_ids"].shape[1]
             produced = 0
             while produced < n:
@@ -280,6 +286,8 @@ def run(config: ArmConfig, run_id: str | None = None, resume: bool = True) -> di
             "resolved_stack": stack,
             "prereg": provenance,
             "prompt_template_version": PROMPT_TEMPLATE_VERSION,
+            "policy_version": config.policy_version,
+            "apply_chat_template": config.apply_chat_template,
             "is_dry_run": config.dry_run,
         },
     )
@@ -298,7 +306,10 @@ def run(config: ArmConfig, run_id: str | None = None, resume: bool = True) -> di
         for step in range(state.step, config.steps):
             started = time.monotonic()
             chosen = [problems[(step * config.prompts_per_step + i) % len(problems)] for i in range(config.prompts_per_step)]
-            prompts = [build_prompt(p) for p in chosen]
+            prompts = [
+                build_prompt(p, tokenizer=tokenizer, apply_chat_template=config.apply_chat_template)
+                for p in chosen
+            ]
             prompt_ids = [str(p.task_id) for p in chosen]
             by_id = {str(p.task_id): p for p in chosen}
 

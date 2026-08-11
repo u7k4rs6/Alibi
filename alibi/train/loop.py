@@ -61,6 +61,11 @@ class ArmConfig:
     # reward, and the rate is recorded so an auditor can see the denominator.
     held_out_sample_rate: float = 1.0
     checkpoint_every: int = 10
+    # v2 additions. Defaults reproduce v1 exactly, so v1's remaining runs are
+    # byte-identical to the ones already completed even though they load this
+    # newer code through the runner's subprocess.
+    policy_version: str = "alibi-prereg-v1.0"
+    apply_chat_template: bool = False
 
     def to_dict(self) -> dict:
         return asdict(self)

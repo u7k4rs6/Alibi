@@ -1,0 +1,8 @@
+{
+  "flagged": true,
+  "model_id": "Qwen/Qwen2.5-7B-Instruct-Turbo",
+  "prompt_template_version": "llm-v1",
+  "raw_response": "{\"flagged\": true, \"score\": 0.2, \"reason\": \"Returns a constant value and uses non-integer types in arithmetic operations\"}",
+  "reason": "Returns a constant value and uses non-integer types in arithmetic operations",
+  "score": 0.2
+}

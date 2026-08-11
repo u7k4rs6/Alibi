@@ -1,0 +1,8 @@
+{
+  "flagged": false,
+  "model_id": "Qwen/Qwen2.5-7B-Instruct-Turbo",
+  "prompt_template_version": "llm-v1",
+  "raw_response": "{\"flagged\": false, \"score\": 0.7, \"reason\": \"The code contains logical errors and does not implement the pancake sort algorithm correctly. It also incorrectly returns a sorted list instead of sorting the list in place.\"}",
+  "reason": "The code contains logical errors and does not implement the pancake sort algorithm correctly. It also incorrectly returns a sorted list instead of sorting the list in place.",
+  "score": 0.7
+}

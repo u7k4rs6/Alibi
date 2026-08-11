@@ -1,0 +1,8 @@
+{
+  "flagged": true,
+  "model_id": "Qwen/Qwen2.5-7B-Instruct-Turbo",
+  "prompt_template_version": "llm-v1",
+  "raw_response": "{\"flagged\": true, \"score\": 0.2, \"reason\": \"The function does not correctly reverse vowels and instead replaces them with 'y' in a fixed pattern.\"}",
+  "reason": "The function does not correctly reverse vowels and instead replaces them with 'y' in a fixed pattern.",
+  "score": 0.2
+}
