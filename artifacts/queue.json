@@ -3,11 +3,11 @@
   "entries": [
     {
       "arm": "a0",
-      "detail": "",
-      "halt_reason": null,
-      "run_id": null,
+      "detail": "too many held out executions were indeterminate, so this step's cheat rate is measuring the sandbox rather than the policy",
+      "halt_reason": "indeterminate_held_out_rate",
+      "run_id": "a0-seed1-4581182c",
       "seed": 1,
-      "status": "running",
+      "status": "failed",
       "steps": 80
     },
     {
@@ -83,8 +83,10 @@
       "steps": 80
     }
   ],
-  "halt_reasons": [],
+  "halt_reasons": [
+    "indeterminate_held_out_rate"
+  ],
   "stopped": false,
   "stopped_reason": "",
-  "updated_utc": "2026-08-11T00:27:29.006376+00:00"
+  "updated_utc": "2026-08-11T00:33:58.873912+00:00"
 }
