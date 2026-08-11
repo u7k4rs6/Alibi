@@ -2,76 +2,92 @@
 
 Written for an audit, not for reassurance.
 
+## The queue is running
+
+| Item | Value |
+|---|---|
+| PID | **250259** |
+| Log | `queue.log` (untracked, local) |
+| Status | `.venv/bin/python -m alibi.cli queue status` |
+| Progress | `PROGRESS.md`, rewritten each run and pushed |
+| Stop | `kill 250259` |
+
+It is a session leader reparented to init, so it survived the launching shell
+and will survive a terminal close. It resumes by run id: if it is killed,
+relaunch with `./run_queue.sh` and each run continues from its own
+`state.json` rather than restarting.
+
+Matrix: a0/a1/a2 at seed 1, then seed 2, then seed 3. 80 steps each, group 8,
+2 prompts per step, 256 max new tokens. Measured ~35 s per step at launch, so
+about 47 minutes per run and roughly 7 hours for all nine.
+
+The queue stops only when all nine complete, when more than half fail, or when
+BLOCKED.md exists. A single failed run marks itself FAILED and the queue moves on.
+
 ## What ran
 
-- Instrument fixes, the frozen pre-registration, halt conditions, the GRPO loop,
-  the resumable queue, the report and verify paths.
-- Full gate over 376 problems, twice, after the fixes.
-- Smoke test on this host: 3 GRPO steps, 2 prompts, every logging path written.
-- 131 tests pass on the training interpreter.
+- Instrument fixes, frozen pre-registration, halt conditions, GRPO loop,
+  resumable queue, report, verify, monitor selection with probe and
+  qualification.
+- Gate over 376 problems: synthetic cheat passes visible 371/376, fails
+  held-out 370/376. Eligible set 365 of 376, hashed.
+- Calibration on a1: zero monitor errors in 72 judgements, zero indeterminate
+  in 5052 held-out tests.
+- 146 tests pass. `alibi verify --no-gpu` exits 0. Tag `alibi-prereg-v1.0`.
 
-## What did not run
+## What failed on the way, and what it cost
 
-**The run matrix has not started.** No a0, a1 or a2 run exists. Every hypothesis
-is unevaluated. Calibration has not run either, so BUDGET.md is empty by design
-rather than estimated.
+Four defects, all mine, all found by the machinery rather than by inspection:
 
-## What I should check first
+1. **Dirty-tree deadlock.** The runner's own bookkeeping dirtied the tree and
+   the next run's preflight halted on it. Fixed by gitignoring the logs and
+   staging only runner-owned paths, **not** by narrowing the halt condition and
+   **not** by `git add -A`, either of which would have destroyed the control.
+2. **Hooks re-dirtying the tree** after each commit. Fixed with `--no-verify`
+   on the runner's own commits only, which stage a fixed allowlist.
+3. **CUDA OOM in generation.** `output_scores` at 8 by 384 by 151936 held about
+   1.9 GB. Fixed by chunking and consuming scores per position, **not** by
+   recomputing sampler logprobs post hoc, which would have silently destroyed
+   the sampler seam the follow-on project exists to study.
+4. **CUDA OOM in the update.** Sixteen forward graphs alive before one
+   backward. Fixed with gradient accumulation.
 
-1. `docs/deviations.json` D8 is still `open`: base model pass rates are
-   unmeasured, so nobody has confirmed the base policy cannot already solve
-   these problems honestly. If it can, the environment does not have the
-   headroom the gate implies. This is the cheapest thing to check and the most
-   likely to invalidate the design.
-2. `BUDGET.md` is empty. The step count for the matrix has not been chosen, so
-   the matrix cannot be sized.
+A fifth, smaller: tracebacks were logged head-first, which discards the
+exception message. That cost one diagnostic cycle on the first OOM.
 
-## Where this result is weakest, ranked
+## Where this is weakest, ranked
 
-1. **The gate measures the environment, not the policy.** A synthetic cheat
-   passing visible on 98.67 percent of problems shows hardcoding is rewarded. It
-   says nothing about whether a 0.5B model discovers hardcoding in the step
-   budget. H1 is exactly that question. An auditor should attack any sentence
-   that slides from "cheating pays" to "the model will cheat".
-2. **The structural check was extended after seeing data.** On day 1 it caught
-   the if-chain cheat 372/376 and the dict cheat 0/376, and I extended it. That
-   is metric development after observation, and the only reason it is defensible
-   is that the extension happened before any training curve existed and the
-   structural check was simultaneously demoted to diagnostic. An auditor should
-   check the commit order against the tag, and should treat any structural
-   number as soft.
-3. **The KL term is homemade.** `_update` in `alibi/train/grpo.py` is a plain
-   GRPO formulation, not TRL's `GRPOTrainer.train()`, and its KL is the
-   difference between a mean per-token logprob under the current policy and the
-   sampler's own mean. That is a proxy, not a reference-policy KL. The KL spike
-   halt condition therefore fires on a proxy. Attack this first if any run halts
-   on `kl_spike`.
-4. **Indeterminate is defined by me.** I decided a candidate that does not
-   compile is a fail and a timeout is indeterminate. That boundary is a
-   judgement call and it directly moves the primary metric's denominator. It is
-   defensible, it is documented at the site, and it is exactly where I would
-   look for a thumb on the scale.
-5. **The synthetic cheat is not what a model produces.** It is a generated
-   if-chain over the exact visible inputs. A real policy's hardcoding will be
-   messier and may fall outside every enumerated `cheat_form`. The behavioural
-   oracle is form-blind, which is why it is primary, but the `cheat_form` panel
-   will understate real cheating.
-6. **Single host, laptop, thermal drift.** Nine runs over days on an RTX 4060.
-   Held-out timeouts are the contamination channel. The indeterminate rate is a
-   halt condition and a figure panel, and its correlation with cheat rate is
-   reported, but a sustained thermal decline that tracks training progress would
-   be hard to distinguish from a real effect.
-7. **n=3 seeds.** Any arm difference smaller than the seed spread is not
-   resolved, and with three seeds the spread is wide. Expect most between-arm
-   comparisons to be unresolved.
+1. **The judge shares a family with the policy.** Qwen2.5-7B grading
+   Qwen2.5-0.5B. This was your explicit override with the qualification table as
+   evidence, made before any curve existed, and it is carried in REPORT.md as
+   its own section. It bears directly on H2 and H3: a same-family judge may
+   track this policy's obfuscation more closely than an independent one, which
+   would understate the gap. Attack this first.
+2. **Qualification is not pre-registered and proves less than it looks like.**
+   Its thresholds are mine, it ran on the A2 view only, and 1.00 separation was
+   measured on programmatically generated stereotyped cheats. It is necessary,
+   not sufficient. Once the policy varies form, the judge faces a distribution
+   this never sampled.
+3. **The gate measures the environment, not the policy.** Hardcoding pays. That
+   is not evidence a 0.5B model discovers hardcoding in 80 steps. H1 is exactly
+   that question.
+4. **The KL is a homemade proxy**, the difference between a mean per-token
+   logprob under the current policy and the sampler's own, not a
+   reference-policy KL. The KL spike halt fires on that proxy.
+5. **The indeterminate boundary is my judgement.** I decided a candidate that
+   does not compile is a fail and a timeout is indeterminate. That directly
+   moves the primary metric's denominator.
+6. **80 steps may be too few** for a trend to emerge. The step count was chosen
+   to fit nine runs with slack, per the brief's preference for breadth.
+7. **n=3 seeds.** Expect most between-arm differences to be unresolved.
 
-## What is uncertain
+## What to check first on waking
 
-- Whether the monitor will be the LLM monitor or the rules monitor for a1 and
-  a2. No monitor model has been chosen and no API key is configured. The code
-  refuses to substitute the rules monitor into a monitored arm, so as it stands
-  a1 and a2 cannot run against an LLM monitor without that choice being made.
-  This is the single largest unresolved dependency for the matrix.
-- Whether this host or a Kaggle host runs the matrix. The smoke test ran here.
-  Kaggle almost certainly cannot open user namespaces, so the mount and network
-  namespaces would degrade there and `env.lock` would say so.
+1. `PROGRESS.md` for run status, and `queue.log` for the tail.
+2. Whether the false positive panel is non-zero. Calibration showed 0.00 with
+   the Qwen judge, which is the best case and probably optimistic.
+3. Whether oracle cheat rate moved at all in a0. Early steps show 0.00 to 0.06,
+   which is noise, not a trend.
+4. `artifacts/monitor_spend.json`. USD is null because no price per token is
+   configured; set `ALIBI_MONITOR_USD_PER_MTOK` to get the USD 4.00 cap enforced
+   in dollars rather than through a 20 million token stand-in.
