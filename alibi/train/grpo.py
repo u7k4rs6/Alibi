@@ -124,6 +124,57 @@ def set_all_seeds(seed: int) -> dict:
     return recorded
 
 
+
+class _SamplerLogprobRecorder:
+    """Capture the sampler's own logprob per generated token, one step at a time.
+
+    `output_scores=True` returns one [batch, vocab] tensor per generated
+    position and holds them all. At 3072 tokens and a 151936 vocabulary that is
+    about 3.7 GB, which is what put the probes into CUDA OOM during generation.
+    At v1's 256 tokens it was 311 MB and went unnoticed.
+
+    A logits processor sees each step's scores as generation proceeds, so only
+    the previous step needs to be held: when called at step t, the last entry of
+    `input_ids` is the token that was sampled at step t-1, which is exactly what
+    the previous step's scores are needed for. Peak cost is one [batch, vocab]
+    tensor rather than one per position.
+
+    The logprobs still come from the generating path, which is the whole point
+    of the sampler seam. A post hoc forward pass would have been the easy fix
+    and would have made the sampler and trainer columns the same measurement.
+    """
+
+    def __init__(self) -> None:
+        self.previous = None
+        self.records: dict[int, list[float]] = {}
+
+    def __call__(self, input_ids, scores):
+        import torch
+
+        if self.previous is not None:
+            chosen = input_ids[:, -1]
+            logprobs = torch.log_softmax(self.previous.float(), dim=-1)
+            for row in range(input_ids.shape[0]):
+                self.records.setdefault(row, []).append(float(logprobs[row, chosen[row]]))
+            del logprobs
+        self.previous = scores.detach()
+        return scores
+
+    def finalise(self, sequences) -> None:
+        """The last sampled token has no following call, so close it out here."""
+        import torch
+
+        if self.previous is None or sequences.shape[1] == 0:
+            return
+        logprobs = torch.log_softmax(self.previous.float(), dim=-1)
+        for row in range(sequences.shape[0]):
+            index = len(self.records.get(row, []))
+            if index < sequences.shape[1]:
+                self.records.setdefault(row, []).append(float(logprobs[row, sequences[row, index]]))
+        del logprobs
+        self.previous = None
+
+
 class InlineSampler:
     """Wraps transformers generate and normalises into Completion.
 
@@ -171,6 +222,7 @@ class InlineSampler:
             produced = 0
             while produced < n:
                 chunk = min(self.generation_chunk, n - produced)
+                recorder = _SamplerLogprobRecorder()
                 with torch.no_grad():
                     output = self.model.generate(
                         **encoded,
@@ -180,21 +232,17 @@ class InlineSampler:
                         top_p=1.0,
                         num_return_sequences=chunk,
                         return_dict_in_generate=True,
-                        output_scores=True,
+                        output_scores=False,
+                        logits_processor=[recorder],
                         pad_token_id=self.tokenizer.pad_token_id or self.tokenizer.eos_token_id,
                     )
                 sequences = output.sequences[:, prompt_len:]
+                recorder.finalise(sequences)
                 # One position at a time, gathering only the chosen token's
                 # logprob, so the full [positions, batch, vocab] tensor is never
                 # materialised.
-                per_sequence: list[list[float]] = [[] for _ in range(sequences.shape[0])]
-                for position, step_scores in enumerate(output.scores or []):
-                    step_logprobs = torch.log_softmax(step_scores.float(), dim=-1)
-                    for row in range(sequences.shape[0]):
-                        if position < sequences.shape[1]:
-                            per_sequence[row].append(float(step_logprobs[row, sequences[row, position]]))
-                    del step_logprobs
-                del output
+                per_sequence = [recorder.records.get(row, []) for row in range(sequences.shape[0])]
+                del output, recorder
 
                 for row in range(sequences.shape[0]):
                     index = produced + row

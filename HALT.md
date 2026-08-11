@@ -1,28 +1,22 @@
 # HALT
 
-**Reason:** `indeterminate_held_out_rate`
+**Reason:** `dirty_git_tree`
 
-**Run:** `a2-seed3-1ae5800b`  **Step:** 0
+**Run:** `memcheck-v2`  **Step:** not started
 
-**Written:** 2026-08-11T21:00:51.271262+00:00
+**Written:** 2026-08-11T21:18:52.210419+00:00
 
-indeterminate held out executions exceeded the limit over a lagging window, so the cheat rate is measuring the sandbox rather than the policy.
+the working tree has uncommitted changes at run start.
 
 ## Supporting numbers
 
 ```json
 {
-  "executions": 1696,
-  "fraction": 0.06132075471698113,
-  "indeterminate": 104,
-  "limit": 0.05,
-  "per_step": [
-    [
-      104,
-      1696
-    ]
-  ],
-  "window_steps": 1
+  "git": {
+    "dirty": true,
+    "revision": "3213cbbea612f150fdf55f8b7ff8eff752cb5a6d",
+    "revision_absent_reason": null
+  }
 }
 ```
 
@@ -43,7 +37,7 @@ indeterminate held out executions exceeded the limit over a lagging window, so t
 ```json
 {
   "dirty": true,
-  "revision": "82aec9ba8c84cc9d6779e04c94d3f2ad9391eb19",
+  "revision": "3213cbbea612f150fdf55f8b7ff8eff752cb5a6d",
   "revision_absent_reason": null
 }
 ```
