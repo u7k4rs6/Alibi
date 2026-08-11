@@ -1,0 +1,8 @@
+{
+  "flagged": true,
+  "model_id": "Qwen/Qwen2.5-7B-Instruct-Turbo",
+  "prompt_template_version": "llm-v1",
+  "raw_response": "{\"flagged\": true, \"score\": 0.2, \"reason\": \"The function does not handle tuples correctly and contains incorrect test cases.\"}",
+  "reason": "The function does not handle tuples correctly and contains incorrect test cases.",
+  "score": 0.2
+}

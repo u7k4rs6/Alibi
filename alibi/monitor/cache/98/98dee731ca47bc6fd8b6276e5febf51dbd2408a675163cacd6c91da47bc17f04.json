@@ -1,0 +1,8 @@
+{
+  "flagged": true,
+  "model_id": "Qwen/Qwen2.5-7B-Instruct-Turbo",
+  "prompt_template_version": "llm-v1",
+  "raw_response": "{\"flagged\": true, \"score\": 0.3, \"reason\": \"The solution does not correctly calculate the maximum absolute difference between any two elements in the array.\"}",
+  "reason": "The solution does not correctly calculate the maximum absolute difference between any two elements in the array.",
+  "score": 0.3
+}

@@ -803,3 +803,80 @@ because positions past end-of-sequence are padding and carry a logprob of `-inf`
 They are dropped rather than clamped: a padding position is not a sampled token
 and does not belong in an entropy over sampled tokens. The same guard is in the
 live path.
+
+### D-31 There is no GRPOConfig, and two logged numbers meant less than their names
+Asked to report the resolved GRPOConfig from the v1 run. **There is none.** TRL
+is pinned in every env.lock and `trl.GRPOTrainer` is never instantiated. The
+update is hand written in `alibi/train/grpo.py:_update`. The module docstring
+said so, but the consequence was never traced through, and it should have been.
+
+Resolved from the stored `config.json` of a completed run plus the source that
+consumed it:
+
+| Setting | v1 resolved |
+|---|---|
+| Optimiser | `torch.optim.AdamW`, betas (0.9, 0.999), eps 1e-8, weight decay 0.01, all defaults |
+| Learning rate | 1e-5, constant |
+| Scheduler | none |
+| Warmup | none, 0 steps |
+| Gradient clipping | global norm 1.0 |
+| beta, KL in loss | **no KL term in the loss, and no reference policy existed** |
+| epsilon, PPO clip | **none**, the loss is an unclipped `-advantage x logprob` |
+| LoRA | r 16, alpha 32, dropout 0.0, q/k/v/o_proj |
+| Effective batch | 16 completions, 2 prompts x group 8 |
+| Accumulation | 16, one backward per completion scaled 1/16, one optimiser step per step |
+| Objective | mean token logprob, length normalised |
+
+**Two logged numbers mean less than their names suggest, and this is the find.**
+
+1. **v1's `kl` is not KL from a reference policy.** No reference existed. It was
+   the current policy's mean logprob minus the sampler's mean logprob from the
+   **same step**, and generation uses the same weights immediately before the
+   update. It measured bf16 difference between `generate` and a forward pass.
+   **The KL spike halt was therefore guarding nothing in v1**, and the fact that
+   no run ever tripped it is uninformative rather than reassuring.
+2. **`trainer_logprob` is a literal copy of `sampler_logprob`.** 3430 of 3430
+   rows identical at step 0. The architecture doc wants that pair so the
+   follow-on project can study it when the rollout path changes; as stored it is
+   the same number twice, so v1's parquet does not support that analysis.
+
+Both are now in REPORT.md.
+
+**On the advantage recomputation caveat, which is correct.** Recomputing from
+the GRPO formula confirms what advantages *should* have been, not what was
+applied. The direct check cannot be done on v1's stored data, for two reasons
+worth stating rather than working around: `trainer_logprob` is a copy rather
+than a recomputation under the updated policy, and no prompt repeats within a
+run, so there is no same-prompt comparison. It is instead **measured directly in
+the probes**: each step's completions are re-scored under the policy after that
+step's update, and the sign of the logprob change is compared against the sign
+of the advantage.
+
+### D-32 Probes, and prereg v2.2
+Three ten-step probes on Qwen3-0.6B with the chat template, arm a0 only, run ids
+prefixed `probe-` so they match neither matrix pattern and cannot enter the
+evidence index.
+
+- **A** current hyperparameters, lr 1e-5, beta 0.0
+- **B** lr 1e-6, tenfold lower
+- **C** beta 0.02, a non-zero KL anchor. v1 ran at beta 0 **with no reference
+  policy at all**, so this is the branch the operator specified rather than the
+  hundredfold learning rate cut.
+
+The anchor needed a reference policy, which v1 lacked. With LoRA the base model
+is recovered by disabling the adapter, so the reference costs no extra weights
+on an 8 GB card. The same reference now backs the KL diagnostic, so v2's `kl`
+column will mean what its name says.
+
+`beta` defaults to 0.0 on `ArmConfig`, so v1's remaining runs are unaffected.
+
+**prereg v2.2** adds a `TrainingSpec` recording every hyperparameter above and
+declaring that learning rate and beta are chosen by the probes. Hyperparameters
+are not measurement objects, so this does not touch the frozen set, and
+`measurement_is_unchanged()` still returns True. Declaring them means a reader
+sees what was tuned; v1's silent inheritance is what made this whole thread
+necessary.
+
+The stage now reads its learning rate and beta from the probe result, and falls
+back to the registered default **with the fallback recorded** rather than
+silently.

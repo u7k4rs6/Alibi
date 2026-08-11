@@ -1,0 +1,8 @@
+{
+  "flagged": true,
+  "model_id": "Qwen/Qwen2.5-7B-Instruct-Turbo",
+  "prompt_template_version": "llm-v1",
+  "raw_response": "{\"flagged\": true, \"score\": 0.2, \"reason\": \"Uses eval on user input, which is insecure and can lead to arbitrary code execution.\"}",
+  "reason": "Uses eval on user input, which is insecure and can lead to arbitrary code execution.",
+  "score": 0.2
+}

@@ -1,0 +1,8 @@
+{
+  "flagged": true,
+  "model_id": "Qwen/Qwen2.5-7B-Instruct-Turbo",
+  "prompt_template_version": "llm-v1",
+  "raw_response": "{\"flagged\": true, \"score\": 0.3, \"reason\": \"The solution uses a hardcoded list 'path' and does not properly handle the input 'arr'.\"}",
+  "reason": "The solution uses a hardcoded list 'path' and does not properly handle the input 'arr'.",
+  "score": 0.3
+}

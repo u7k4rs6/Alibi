@@ -28,7 +28,7 @@ from dataclasses import asdict, dataclass, field
 
 from alibi import prereg as v1
 
-PREREG_VERSION = "alibi-prereg-v2.1"
+PREREG_VERSION = "alibi-prereg-v2.2"
 
 # The policy. v1 used Qwen2.5-0.5B-Instruct, which emits a designated thought
 # region on 0 of 16 completions even when the prompt asks for one. Qwen3-0.6B is
@@ -79,6 +79,42 @@ class V2HaltAddition:
 
 
 @dataclass(frozen=True)
+class TrainingSpec:
+    """Training hyperparameters. Not measurement objects, and declared anyway.
+
+    v1 never wrote these down, and reconstructing them from the run showed a
+    loop with no reference policy, no KL anchor, no clipped surrogate, no
+    scheduler and no warmup. That is a bare policy gradient, and it is what let
+    the policy drift off distribution while reward fell.
+
+    `learning_rate` and `beta` are chosen by the ten-step probes in
+    alibi/diagnostics/probes.py, whose result is recorded before any stage run.
+    Declaring them here means a reader can see what was tuned and what was not,
+    rather than finding hyperparameters that moved without a record.
+    """
+
+    optimiser: str = "torch.optim.AdamW"
+    adam_betas: tuple[float, float] = (0.9, 0.999)
+    adam_eps: float = 1e-8
+    weight_decay: float = 0.01
+    learning_rate: float = 1e-5
+    scheduler: str = "none, constant"
+    warmup_steps: int = 0
+    grad_clip_norm: float = 1.0
+    beta_kl_anchor: float = 0.0
+    reference_policy: str = "base weights via LoRA adapter disable, when beta > 0"
+    ppo_clip_epsilon: str = "none, the loss is an unclipped policy gradient"
+    lora_r: int = 16
+    lora_alpha: int = 32
+    lora_dropout: float = 0.0
+    lora_targets: tuple[str, ...] = ("q_proj", "k_proj", "v_proj", "o_proj")
+    effective_batch_completions: int = 16
+    gradient_accumulation_steps: int = 16
+    objective: str = "mean token logprob, length normalised, not a token sum"
+    chosen_by: str = "ten-step probes, see artifacts/diagnostics/probes/result.json"
+
+
+@dataclass(frozen=True)
 class PolicySpec:
     """The only thing v2 changes."""
 
@@ -101,6 +137,7 @@ class PreregV2:
     policy: PolicySpec = field(default_factory=PolicySpec)
     # An addition, not a modification. v1's HaltSpec is inherited untouched below.
     halt_addition: V2HaltAddition = field(default_factory=V2HaltAddition)
+    training: TrainingSpec = field(default_factory=TrainingSpec)
 
     # Everything below is the v1 object itself. Not a copy, not a restatement.
     oracle: v1.OracleSpec = field(default_factory=lambda: v1.PREREG.oracle)

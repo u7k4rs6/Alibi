@@ -360,6 +360,9 @@ def run(config: ArmConfig, run_id: str | None = None, resume: bool = True) -> di
                 training=training,
             )
             step_dir = write_step(run_dir, step, step_records, summary)
+            check = (training or {}).get("advantage_direction") or {}
+            if check.get("n_compared"):
+                runlog.write_json(step_dir / "advantage_check.json", {"step": step, **check})
             for row in logprob_rows:
                 row.update({"seed": config.seed, "step": step})
             write_logprobs(step_dir, logprob_rows)
@@ -433,6 +436,19 @@ def _load_trainer(config: ArmConfig):
     return model, tokenizer, {"model": model, "optimiser": optimiser}
 
 
+def _reference_logprob(model, ids):
+    """Mean token logprob under the base policy, by disabling the LoRA adapter.
+
+    This is the reference v1 never had. With LoRA the base weights are still
+    present, so the reference policy is recovered for free rather than needing a
+    second model on an 8 GB card.
+    """
+    import torch
+
+    with torch.no_grad(), model.disable_adapter():
+        return float(-model(input_ids=ids, labels=ids).loss)
+
+
 def _update(trainer, step_records: list[dict], completions, config: ArmConfig) -> float | None:
     """One GRPO update: group-normalised advantages times the sequence logprob.
 
@@ -487,6 +503,7 @@ def _update(trainer, step_records: list[dict], completions, config: ArmConfig) -
 
     kl_terms = []
     counted = 0
+    pre_update_logprob: dict[int, float] = {}
     optimiser.zero_grad(set_to_none=True)
     for index, completion in usable:
         ids = torch.tensor([completion.token_ids], device=device)
@@ -496,29 +513,69 @@ def _update(trainer, step_records: list[dict], completions, config: ArmConfig) -
         if not math.isfinite(current):
             del out, logprobs
             continue
+        pre_update_logprob[index] = current
 
         # Backward per completion rather than accumulating one graph over the
         # whole group. Holding sixteen forward graphs alive until a single
         # backward is what put an 8 GB card into CUDA OOM; this keeps exactly
         # one alive and is mathematically the same update.
-        loss = -advantage[index].to(device) * logprobs / len(usable)
+        # KL anchor against the base policy, when enabled. v1 ran without one:
+        # the loss was a bare policy gradient with no reference, no clipping and
+        # no trust region, which is what let the policy drift off distribution.
+        reference_logprob = None
+        objective = -advantage[index].to(device) * logprobs
+        if config.beta > 0.0:
+            reference_logprob = _reference_logprob(model, ids)
+            objective = objective + config.beta * (logprobs - reference_logprob) ** 2
+        loss = objective / len(usable)
         loss.backward()
         counted += 1
 
-        reference = (
-            sum(completion.sampler_logprobs) / len(completion.sampler_logprobs)
-            if completion.sampler_logprobs
-            else current
-        )
+        # The honest KL. v1 compared the policy against the sampler's own
+        # logprobs from the same step, which are the same weights, so it measured
+        # bf16 noise rather than drift. With a reference available, use it.
+        if reference_logprob is None and config.beta <= 0.0:
+            try:
+                reference_logprob = _reference_logprob(model, ids)
+            except Exception:  # noqa: BLE001 - a diagnostic must not stop a step
+                reference_logprob = (
+                    sum(completion.sampler_logprobs) / len(completion.sampler_logprobs)
+                    if completion.sampler_logprobs
+                    else current
+                )
+        reference = reference_logprob if reference_logprob is not None else current
         kl = current - reference
         if math.isfinite(kl):
             kl_terms.append(abs(kl))
-        del out, logprobs, loss, ids
+        del out, logprobs, loss, ids, objective
 
     if counted:
         torch.nn.utils.clip_grad_norm_([p for p in model.parameters() if p.requires_grad], 1.0)
         optimiser.step()
         optimiser.zero_grad(set_to_none=True)
+
+    # Did the update move logprobs in the direction the advantage asked for?
+    # Re-score the same completions under the post-update policy and compare the
+    # sign of the change against the sign of the advantage. This is the check
+    # that cannot be recovered from stored v1 artifacts, because trainer_logprob
+    # was a copy of sampler_logprob and no prompt repeats across steps.
+    direction = {"n_compared": 0, "n_agree": 0}
+    if counted and config.label:
+        with torch.no_grad():
+            for index, completion in usable[:8]:
+                before = pre_update_logprob.get(index)
+                if before is None:
+                    continue
+                ids = torch.tensor([completion.token_ids], device=device)
+                after = float(-model(input_ids=ids, labels=ids).loss)
+                if not math.isfinite(after):
+                    continue
+                wanted = float(advantage[index])
+                if abs(wanted) < 1e-8:
+                    continue
+                direction["n_compared"] += 1
+                direction["n_agree"] += int((after - before) * wanted > 0)
+                del ids
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
@@ -544,6 +601,7 @@ def _update(trainer, step_records: list[dict], completions, config: ArmConfig) -
         # of the sampled tokens is an unbiased estimator of H(policy).
         "mean_token_entropy": (sum(entropies) / len(entropies)) if entropies else None,
         "n_updated": counted,
+        "advantage_direction": direction,
     }
 
 

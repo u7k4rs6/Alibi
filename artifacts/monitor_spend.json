@@ -1,13 +1,13 @@
 {
-  "cache_hits": 3732,
-  "calls": 6060,
-  "completion_tokens": 78185,
-  "prompt_tokens": 677870,
+  "cache_hits": 4124,
+  "calls": 6980,
+  "completion_tokens": 96074,
+  "prompt_tokens": 839244,
   "token_cap": 20000000,
-  "total_tokens": 756055,
-  "updated_utc": "2026-08-11T17:28:45.100234+00:00",
-  "usd": null,
-  "usd_absent_reason": "ALIBI_MONITOR_USD_PER_MTOK is not set, so no price per token is known. Tokens are measured; dollars are not estimated.",
+  "total_tokens": 935318,
+  "updated_utc": "2026-08-11T18:19:53.954750+00:00",
+  "usd": 0.2805954,
+  "usd_absent_reason": null,
   "usd_cap": 4.0,
-  "usd_per_mtok": null
+  "usd_per_mtok": 0.3
 }

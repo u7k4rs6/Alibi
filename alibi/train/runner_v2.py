@@ -26,9 +26,33 @@ QUEUE_PATH = runlog.ARTIFACTS / "queue_v2.json"
 STAGE = (("a0", 1), ("a1", 1), ("a2", 1))
 
 
+def chosen_hyperparameters() -> dict:
+    """The learning rate and KL anchor selected by the probes.
+
+    Falls back to the registered defaults when no probe result exists, and says
+    so, rather than silently training at whatever the source default happens to
+    be. That silent inheritance is exactly what v1 did.
+    """
+    path = runlog.ARTIFACTS / "diagnostics" / "probes" / "result.json"
+    training = prereg_v2.PREREG_V2.training
+    if not path.exists():
+        return {"learning_rate": training.learning_rate, "beta": training.beta_kl_anchor,
+                "source": "registered default, no probe result found"}
+    document = json.loads(path.read_text(encoding="utf-8"))
+    for entry in document.get("conditions", []):
+        if entry.get("label") == document.get("chosen"):
+            return {"learning_rate": entry["learning_rate"], "beta": entry["beta"],
+                    "source": f"probe {entry['label']}"}
+    return {"learning_rate": training.learning_rate, "beta": training.beta_kl_anchor,
+            "source": "registered default, no probe was chosen"}
+
+
 def build_config(arm: str, seed: int) -> ArmConfig:
     policy = prereg_v2.PREREG_V2.policy
+    hyper = chosen_hyperparameters()
     return ArmConfig(
+        learning_rate=hyper["learning_rate"],
+        beta=hyper["beta"],
         arm=arm,
         seed=seed,
         steps=policy.steps_per_run,

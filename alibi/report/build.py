@@ -996,6 +996,63 @@ def build_report() -> dict[str, Path]:
         )
     lines.append("")
 
+    # 6c-septies. The resolved training configuration.
+    lines.append("## The resolved training configuration, and what is not in it")
+    lines.append("")
+    lines.append(
+        "**There is no `GRPOConfig` to report.** TRL is pinned in `env.lock` and `trl.GRPOTrainer` "
+        "is never instantiated. The update in `alibi/train/grpo.py:_update` is hand written, and the "
+        "module docstring says so, but the absence of the trainer changes what several logged "
+        "numbers mean. Resolved from the stored `config.json` of a completed v1 run and from the "
+        "source that consumed it, not from library defaults."
+    )
+    lines.append("")
+    lines.append("| Setting | v1 resolved value |")
+    lines.append("|---|---|")
+    for name, value in [
+        ("Optimiser", "`torch.optim.AdamW`, betas (0.9, 0.999), eps 1e-8, weight decay 0.01, all defaults"),
+        ("Learning rate", "1e-5, constant"),
+        ("Scheduler", "**none**"),
+        ("Warmup", "**none**, 0 steps"),
+        ("Gradient clipping", "global norm 1.0"),
+        ("beta, KL coefficient in the loss", "**there is no KL term in the loss**, and no reference policy existed"),
+        ("epsilon, PPO clip ratio", "**none**, the loss is an unclipped `-advantage x logprob`"),
+        ("LoRA", "r 16, alpha 32, dropout 0.0, targets q/k/v/o_proj, task CAUSAL_LM"),
+        ("Effective batch", "16 completions per step, 2 prompts x group 8"),
+        ("Gradient accumulation", "16, one backward per completion scaled 1/16, one optimiser step per training step"),
+        ("Objective", "mean token logprob, length normalised, not a token sum"),
+    ]:
+        lines.append(f"| {name} | {value} |")
+    lines.append("")
+    lines.append("### Two logged numbers mean less than their names suggest")
+    lines.append("")
+    lines.append(
+        "**The `kl` column in v1 is not KL from a reference policy.** No reference policy existed. "
+        "It was computed as the current policy's mean token logprob minus the sampler's mean token "
+        "logprob **from the same step**, and generation happens with the same weights immediately "
+        "before the update. It therefore measured numerical difference between `generate` and a "
+        "forward pass, not policy drift. **The KL spike halt condition was consequently guarding "
+        "nothing meaningful in v1**, and no v1 run ever tripped it, which should now be read as "
+        "uninformative rather than reassuring."
+    )
+    lines.append("")
+    lines.append(
+        "**`trainer_logprob` is a literal copy of `sampler_logprob`.** Verified on stored data: "
+        "3430 of 3430 rows identical at step 0 of a0 seed 1. The architecture doc asks for this pair "
+        "so the follow-on project can study what happens to it when the rollout path changes. As "
+        "stored it is the same number twice, so v1's `logprobs.parquet` does not support that "
+        "analysis. This is a defect in v1's logging, not in the follow-on plan."
+    )
+    lines.append("")
+    lines.append(
+        "Taken with the retrospective above, the picture is coherent: an unclipped, unanchored "
+        "policy gradient with no trust region, at a constant learning rate, on a small model. "
+        "Reward fell and entropy rose, which is what that configuration does when the reward is "
+        "sparse and mostly negative. v2 declares these settings in `alibi/prereg_v2.py` and chooses "
+        "the learning rate and KL anchor from ten-step probes rather than inheriting them silently."
+    )
+    lines.append("")
+
     # 6d. Amendments to the halt conditions, stated plainly.
     lines.append("## Halt conditions were amended before any curve existed")
     lines.append("")

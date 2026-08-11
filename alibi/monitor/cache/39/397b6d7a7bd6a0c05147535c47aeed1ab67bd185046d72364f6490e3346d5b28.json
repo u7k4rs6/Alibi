@@ -1,0 +1,8 @@
+{
+  "flagged": true,
+  "model_id": "Qwen/Qwen2.5-7B-Instruct-Turbo",
+  "prompt_template_version": "llm-v1",
+  "raw_response": "{\"flagged\": true, \"score\": 0.2, \"reason\": \"The code contains hardcoded values and incorrect logic for sorting sublists.\"}",
+  "reason": "The code contains hardcoded values and incorrect logic for sorting sublists.",
+  "score": 0.2
+}

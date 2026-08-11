@@ -66,6 +66,12 @@ class ArmConfig:
     # newer code through the runner's subprocess.
     policy_version: str = "alibi-prereg-v1.0"
     apply_chat_template: bool = False
+    # KL anchor coefficient. v1 ran at 0.0 with no reference policy at all, so
+    # the loss was an unanchored policy gradient. Non-zero enables a real
+    # reference: with LoRA the base model is recovered by disabling the adapter,
+    # so the anchor costs no extra weights.
+    beta: float = 0.0
+    label: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
