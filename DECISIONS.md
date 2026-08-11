@@ -239,3 +239,39 @@ stop the queue.
 for the same reason is still detected and written into the queue's
 `stopped_reason` as a WARN, because it is worth seeing, but it no longer stops
 the queue on its own.
+
+### D-18 Runner deadlocked itself on the dirty-tree halt, fixed without touching the halt
+**Symptom:** the first detached launch failed all five attempted runs with
+`dirty_git_tree` in under 10 seconds. The runner writes `queue.log`,
+`PROGRESS.md` and `artifacts/queue.json` as it works, which dirties the tree, so
+the next run's preflight halted. The commit that would have cleaned it was
+itself blocked by the secret scanner on sha256 digests inside `HALT.md`. A
+self-inflicted deadlock.
+
+**Chose, three parts:**
+1. `queue.log` and `queue.pid` are gitignored. They are regenerable operational
+   logs and the meaningful state is in `PROGRESS.md` and `artifacts/`.
+2. The runner stages **only runner-owned paths** before each run, never
+   `git add -A`.
+3. `HALT.md`, `BLOCKED.md`, `PROGRESS.md`, `DECISIONS.md` and `BUDGET.md` are
+   excluded from the secret scanner's content check, like `artifacts/` and
+   `report/` already were. They carry sha256 digests by design and are rewritten
+   constantly. They remain covered by the path denylist hook.
+
+**Rejected: narrowing the dirty-tree check to ignore operational paths.** That
+would have been the quickest fix and it modifies a halt condition, which section
+6 forbids. It would also have been the wrong fix: the point of the control is
+that an artifact cannot come from an uncommitted tree.
+
+**Rejected: `git add -A` in the runner.** It would have cleaned the tree and
+unblocked the queue, and it would have silently destroyed the control, because
+an uncommitted source change would be swept into a commit instead of halting.
+Staging only runner-owned paths keeps the halt able to fire on real source
+drift, which is what it is for.
+
+**On the five failed entries:** they failed for an infrastructure defect of
+mine, not a measurement outcome, and each produced zero steps. Their run
+directories contained only a config and an env.lock from a run that never
+started, so they were removed along with the queue state and the matrix rebuilt.
+No step, completion or measurement was deleted, and nothing that ever entered
+the evidence index was touched.

@@ -29,6 +29,12 @@ wandb/
 runs/
 checkpoints/
 
+# Operational logs from the detached queue runner. Regenerable, and the
+# meaningful state lives in PROGRESS.md and artifacts/. Untracked so the runner
+# cannot dirty its own tree and trip the dirty-tree halt on the next run.
+queue.log
+queue.pid
+
 # Local scratch. Anything here is never published.
 scratch/
 tmp/

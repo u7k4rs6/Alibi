@@ -56,9 +56,18 @@ def _git(*args: str) -> tuple[int, str]:
     return out.returncode, (out.stdout + out.stderr).strip()
 
 
+# Only these paths are staged by the runner. Deliberately not `git add -A`:
+# if the runner committed everything, an uncommitted source change would be
+# swept in and the dirty-tree halt could never fire, which would defeat the
+# control rather than satisfy it.
+RUNNER_OWNED = ("PROGRESS.md", "HALT.md", "BLOCKED.md", "artifacts", "report", "DECISIONS.md", "BUDGET.md")
+
+
 def commit_and_push(message: str) -> None:
     """Best effort. A push failure must never stop the queue."""
-    _git("add", "-A")
+    for path in RUNNER_OWNED:
+        if (runlog.REPO_ROOT / path).exists():
+            _git("add", path)
     code, detail = _git("commit", "-q", "-m", message)
     if code != 0 and "nothing to commit" not in detail:
         log(f"WARN commit failed: {detail[:300]}")
@@ -204,6 +213,10 @@ def main() -> int:
         entry["status"] = "running"
         queue_module.save_queue(state)
         write_progress(state, entry, started)
+        # Commit the runner's own bookkeeping before the run starts, so the
+        # tree is clean for the dirty-tree preflight. Only runner-owned paths
+        # are staged, so a genuine uncommitted source change still halts.
+        commit_and_push(f"queue: starting {entry['arm']} seed {entry['seed']}")
 
         config = ArmConfig(
             arm=entry["arm"],

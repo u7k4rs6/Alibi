@@ -1,0 +1,80 @@
+[2026-08-11T00:05:24Z] queue runner starting
+[2026-08-11T00:05:24Z] prereg 84c43a5085a5b6c0 eligibility ffdce1c3e4744a9f
+[2026-08-11T00:05:24Z] built queue with 9 entries
+[2026-08-11T00:05:24Z] starting a0 seed 1 as a0-seed1-90f5449f, 80 steps
+[2026-08-11T00:05:24Z] a0-seed1-90f5449f -> failed dirty_git_tree
+[2026-08-11T00:05:24Z] WARN commit failed: Detect secrets...........................................................Failed
+- hook id: detect-secrets
+- exit code: 1
+
+ERROR: Potential secrets about to be committed to git repo!
+
+Secret Type: Hex High Entropy String
+Location:    HALT.md:17
+
+Secret Type: Hex High Entropy String
+Location:    HALT.
+[2026-08-11T00:05:27Z] starting a1 seed 1 as a1-seed1-97bc4759, 80 steps
+[2026-08-11T00:05:27Z] a1-seed1-97bc4759 -> failed dirty_git_tree
+[2026-08-11T00:05:28Z] WARN commit failed: Detect secrets...........................................................Failed
+- hook id: detect-secrets
+- exit code: 1
+
+ERROR: Potential secrets about to be committed to git repo!
+
+Secret Type: Hex High Entropy String
+Location:    HALT.md:17
+
+Secret Type: Hex High Entropy String
+Location:    HALT.
+[2026-08-11T00:05:30Z] starting a2 seed 1 as a2-seed1-abbdfdc8, 80 steps
+[2026-08-11T00:05:30Z] a2-seed1-abbdfdc8 -> failed dirty_git_tree
+[2026-08-11T00:05:31Z] WARN commit failed: Detect secrets...........................................................Failed
+- hook id: detect-secrets
+- exit code: 1
+
+ERROR: Potential secrets about to be committed to git repo!
+
+Secret Type: Hex High Entropy String
+Location:    HALT.md:17
+
+Secret Type: Hex High Entropy String
+Location:    HALT.
+[2026-08-11T00:05:34Z] starting a0 seed 2 as a0-seed2-8c165e22, 80 steps
+[2026-08-11T00:05:34Z] a0-seed2-8c165e22 -> failed dirty_git_tree
+[2026-08-11T00:05:34Z] WARN commit failed: Detect secrets...........................................................Failed
+- hook id: detect-secrets
+- exit code: 1
+
+ERROR: Potential secrets about to be committed to git repo!
+
+Secret Type: Hex High Entropy String
+Location:    HALT.md:17
+
+Secret Type: Hex High Entropy String
+Location:    HALT.
+[2026-08-11T00:05:37Z] starting a1 seed 2 as a1-seed2-5485cadf, 80 steps
+[2026-08-11T00:05:37Z] a1-seed2-5485cadf -> failed dirty_git_tree
+[2026-08-11T00:05:38Z] WARN commit failed: Detect secrets...........................................................Failed
+- hook id: detect-secrets
+- exit code: 1
+
+ERROR: Potential secrets about to be committed to git repo!
+
+Secret Type: Hex High Entropy String
+Location:    HALT.md:17
+
+Secret Type: Hex High Entropy String
+Location:    HALT.
+[2026-08-11T00:05:40Z] queue stopped: 5 of 9 runs have failed, which is more than half. Continuing would spend hours to produce a matrix that cannot support a comparison.
+[2026-08-11T00:05:41Z] WARN commit failed: Detect secrets...........................................................Failed
+- hook id: detect-secrets
+- exit code: 1
+
+ERROR: Potential secrets about to be committed to git repo!
+
+Secret Type: Hex High Entropy String
+Location:    HALT.md:17
+
+Secret Type: Hex High Entropy String
+Location:    HALT.

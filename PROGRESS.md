@@ -1,36 +1,35 @@
 # PROGRESS
 
-One file to read on waking. Updated at least every 15 minutes while the queue runs.
+Updated 2026-08-11T00:05:40.562316+00:00
 
 | Field | Value |
 |---|---|
-| Phase | preparation complete, matrix NOT started |
+| Phase | queue stopped |
 | Current run id | none |
-| Step | n/a |
-| Wall clock elapsed | preparation session only |
-| Projected finish | not projected: calibration has not run, see BUDGET.md |
-| Open blocker | the run matrix has not been started, see "How to start" below |
+| Current entry | none |
+| Runs complete | 0 of 9 |
+| Runs failed | 5 |
+| Wall clock elapsed | 0.00 h |
+| Projected remaining | 0.00 h |
+| Monitor tokens | 2093 |
+| Monitor USD | not measured, no price configured |
+| Open blocker | none |
 
-## State
+## Queue
 
-- Preparation session finished and printed GO.
-- Tag `alibi-prereg-v1.0` exists.
-- `alibi verify --no-gpu` exits 0.
-- Smoke test passed on this host: 3 GRPO steps, 2 prompts, all logging paths written.
-- Queue: 9 entries (a0/a1/a2 x seeds 1/2/3), all `pending`.
+| Arm | Seed | Status | Run id | Detail |
+|---|---|---|---|---|
+| a0 | 1 | failed | a0-seed1-90f5449f | dirty_git_tree |
+| a1 | 1 | failed | a1-seed1-97bc4759 | dirty_git_tree |
+| a2 | 1 | failed | a2-seed1-abbdfdc8 | dirty_git_tree |
+| a0 | 2 | failed | a0-seed2-8c165e22 | dirty_git_tree |
+| a1 | 2 | failed | a1-seed2-5485cadf | dirty_git_tree |
+| a2 | 2 | pending |  |  |
+| a0 | 3 | pending |  |  |
+| a1 | 3 | pending |  |  |
+| a2 | 3 | pending |  |  |
 
-## How to start
+Stop rule: all 9 complete, or more than half failed, or BLOCKED.md exists.
+Stopped: True. 5 of 9 runs have failed, which is more than half. Continuing would spend hours to produce a matrix that cannot support a comparison.
 
-Calibration first, then the matrix. Neither has run.
-
-```
-.venv/bin/python -m alibi.cli train --arm a0 --seed 1 --steps 30   # calibration, not evidence
-.venv/bin/python -m alibi.cli train --arm a0 --seed 1              # matrix
-```
-
-Runs are resumable by run id: rerunning the same command continues from
-`artifacts/runs/<run_id>/state.json` rather than restarting.
-
-## Halt state
-
-No HALT.md. No BLOCKED.md.
+Log: `queue.log`. Status: `python -m alibi.cli queue status`.
