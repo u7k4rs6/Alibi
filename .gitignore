@@ -46,3 +46,4 @@ data/cache/
 artifacts/queue.lock
 queue_v2.log
 queue_v2.pid
+supervise.log
