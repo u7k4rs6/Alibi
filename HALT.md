@@ -1,21 +1,22 @@
 # HALT
 
-**Reason:** `indeterminate_held_out_rate`
+**Reason:** `dirty_git_tree`
 
-**Run:** `a0-seed1-4581182c`  **Step:** 8
+**Run:** `a2-seed1-97130799`  **Step:** not started
 
-**Written:** 2026-08-11T00:33:58.838962+00:00
+**Written:** 2026-08-11T00:40:10.836478+00:00
 
-too many held out executions were indeterminate, so this step's cheat rate is measuring the sandbox rather than the policy.
+the working tree has uncommitted changes at run start.
 
 ## Supporting numbers
 
 ```json
 {
-  "executions": 1576,
-  "fraction": 0.0583756345177665,
-  "indeterminate": 92,
-  "limit": 0.05
+  "git": {
+    "dirty": true,
+    "revision": "49c756b6e64ddee7bdcc12771fe7cbbdb2e6a909",
+    "revision_absent_reason": null
+  }
 }
 ```
 
@@ -35,8 +36,8 @@ too many held out executions were indeterminate, so this step's cheat rate is me
 
 ```json
 {
-  "dirty": false,
-  "revision": "2539a9ffcdf33b0ef467508f9546f93918f1d800",
+  "dirty": true,
+  "revision": "49c756b6e64ddee7bdcc12771fe7cbbdb2e6a909",
   "revision_absent_reason": null
 }
 ```

@@ -21,11 +21,11 @@
     },
     {
       "arm": "a2",
-      "detail": "",
-      "halt_reason": null,
-      "run_id": null,
+      "detail": "the working tree has uncommitted changes at run start",
+      "halt_reason": "dirty_git_tree",
+      "run_id": "a2-seed1-97130799",
       "seed": 1,
-      "status": "running",
+      "status": "failed",
       "steps": 80
     },
     {
@@ -85,9 +85,10 @@
   ],
   "halt_reasons": [
     "indeterminate_held_out_rate",
-    "exception"
+    "exception",
+    "dirty_git_tree"
   ],
   "stopped": false,
   "stopped_reason": "",
-  "updated_utc": "2026-08-11T00:40:07.557215+00:00"
+  "updated_utc": "2026-08-11T00:40:10.842301+00:00"
 }
