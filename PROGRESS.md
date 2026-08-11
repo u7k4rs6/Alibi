@@ -1,6 +1,6 @@
 # PROGRESS
 
-Updated 2026-08-11T17:42:49.559684+00:00
+Updated 2026-08-11T20:51:10.606833+00:00
 
 | Field | Value |
 |---|---|
@@ -11,8 +11,8 @@ Updated 2026-08-11T17:42:49.559684+00:00
 | Runs failed | 2 |
 | Wall clock elapsed | 0.00 h |
 | Projected remaining | 0.00 h |
-| Monitor tokens | 756055 |
-| Monitor USD | 0.2268165 |
+| Monitor tokens | 935318 |
+| Monitor USD | 0.2805954 |
 | Open blocker | BLOCKED.md exists |
 
 ## Queue
