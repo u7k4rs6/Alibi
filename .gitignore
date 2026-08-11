@@ -44,3 +44,5 @@ tmp/
 # so it is not committed. The manifest is.
 data/cache/
 artifacts/queue.lock
+queue_v2.log
+queue_v2.pid
