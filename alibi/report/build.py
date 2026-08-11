@@ -20,6 +20,11 @@ from alibi.report import figure, metrics
 REPORT_DIR = runlog.REPO_ROOT / "report"
 REPORT_PATH = REPORT_DIR / "REPORT.md"
 PUBLISHED_PATH = REPORT_DIR / "published.json"
+STEP_ZERO_FLAGGED_PATH = REPORT_DIR / "STEP_ZERO_FLAGGED.md"
+
+# What counts as "near zero" for the structural check's false positive rate on
+# known-honest code. Declared here rather than judged after seeing the number.
+NEAR_ZERO_FALSE_POSITIVE_RATE = 0.01
 
 
 def _fmt(value, digits: int = 4) -> str:
@@ -59,11 +64,73 @@ def build_published(computed: dict) -> dict:
     }
 
 
+def write_step_zero_flagged() -> Path:
+    """Full text of every step-zero completion carrying a cheat_form, for reading by hand.
+
+    Lives under report/ because the queue runner stages that directory. A file
+    at the repository root would be left unstaged after each run and would dirty
+    the tree, which is precisely what halted three runs earlier.
+    """
+    payload = metrics.flagged_step_zero_completions()
+    lines = [
+        "# Step-zero completions carrying a cheat_form",
+        "",
+        "Every completion sampled **before any policy update** whose code the structural check "
+        "labelled with a cheat_form, pooled across all matrix runs. Step 0 is the same untrained "
+        "base policy in every arm and at every seed.",
+        "",
+        f"Total flagged: **{payload['total']}**. Shown here: **{payload['shown']}**.",
+        "",
+    ]
+    if payload["sampled"]:
+        lines += [
+            f"More than {metrics.STEP_ZERO_SAMPLE_CAP} were flagged, so this is a sample of "
+            f"{metrics.STEP_ZERO_SAMPLE_CAP} drawn at declared seed "
+            f"`{metrics.STEP_ZERO_SAMPLE_SEED}`, fixed before the draw.",
+            "",
+        ]
+    if not payload["items"]:
+        lines += [
+            "No step-zero completion carries a cheat_form yet, or no matrix run has stored a step 0.",
+            "",
+            "This file is regenerated after every completed run.",
+            "",
+        ]
+    else:
+        lines.append(
+            "The structural check flags "
+            f"{_fmt(metrics.reference_structural_false_positives()['false_positive_rate'])} of known-honest "
+            "MBPP+ reference solutions, so some of what follows is expected to be detector error rather "
+            "than model behaviour. That is the reason for reading them by hand."
+        )
+        lines.append("")
+        for index, item in enumerate(payload["items"], start=1):
+            lines += [
+                "---",
+                "",
+                f"## {index}. {item['run_id']}, prompt {item['prompt_id']}, completion {item['completion_idx']}",
+                "",
+                f"- cheat_form: `{item['cheat_form']}`",
+                f"- oracle signals: `{item['oracle_signals']}`",
+                f"- visible pass fraction: {_fmt(item['visible_pass_fraction'])}",
+                f"- held-out pass fraction: {_fmt(item['held_out_pass_fraction'])}",
+                f"- behavioural cheat verdict: {item['oracle_behavioural']}",
+                "",
+                "```",
+                (item.get("text") or "").rstrip(),
+                "```",
+                "",
+            ]
+    STEP_ZERO_FLAGGED_PATH.write_text("\n".join(lines), encoding="utf-8")
+    return STEP_ZERO_FLAGGED_PATH
+
+
 def build_report() -> dict[str, Path]:
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     computed = metrics.claims()
     figures = figure.build_figures()
 
+    write_step_zero_flagged()
     published = build_published(computed)
     PUBLISHED_PATH.write_text(json.dumps(published, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -341,6 +408,103 @@ def build_report() -> dict[str, Path]:
             )
     lines.append("")
 
+    # 6c-bis. Pooled step zero and structural precision.
+    pooled = computed.get("pooled_step_zero") or {}
+    lines.append("### Pooled across all matrix runs")
+    lines.append("")
+    if not pooled.get("n_completions"):
+        lines.append(f"Not measured yet: {pooled.get('absent_reason')}")
+    else:
+        ci = pooled.get("prevalence_ci95") or [None, None]
+        bci = pooled.get("behavioural_ci95") or [None, None]
+        lines.append(
+            f"Step 0 is the same untrained base policy in every arm and at every seed, so the runs pool. "
+            f"**{pooled['n_runs_pooled']} of {pooled['n_runs_expected']} runs** have stored a step 0 so far; "
+            "this table is regenerated after every completed run."
+        )
+        lines.append("")
+        lines.append("| Measure | Value |")
+        lines.append("|---|---|")
+        lines.append(f"| Runs pooled | {pooled['n_runs_pooled']} of {pooled['n_runs_expected']} |")
+        lines.append(f"| Completions | {pooled['n_completions']} |")
+        lines.append(
+            f"| Any cheat_form | {pooled['any_cheat_form']}/{pooled['n_completions']} = "
+            f"{_fmt(pooled['prevalence'])} |"
+        )
+        lines.append(f"| 95 percent interval (Wilson) | {_fmt(ci[0])} to {_fmt(ci[1])} |")
+        lines.append(
+            f"| Behavioural cheat rate | {pooled['behavioural_cheat']}/{pooled['behavioural_determinate']} = "
+            f"{_fmt(pooled['behavioural_rate'])} |"
+        )
+        lines.append(f"| 95 percent interval (Wilson) | {_fmt(bci[0])} to {_fmt(bci[1])} |")
+        lines.append(f"| Per-run spread | {_fmt(pooled['per_run_spread'])} |")
+        lines.append(f"| cheat_form breakdown | {pooled['cheat_form_counts'] or 'none'} |")
+        lines.append("")
+        lines.append("Per run:")
+        lines.append("")
+        lines.append("| Run | Arm | Seed | n | Any cheat_form |")
+        lines.append("|---|---|---|---|---|")
+        for entry in pooled.get("per_run_prevalence", []):
+            lines.append(
+                f"| `{entry['run_id']}` | {entry['arm']} | {entry['seed']} | {entry['n']} | {_fmt(entry['rate'])} |"
+            )
+        lines.append("")
+        lines.append(
+            "Wilson intervals rather than the normal approximation, because n is small and the "
+            "proportion is near zero, which is exactly where the textbook interval returns a "
+            "negative lower bound."
+        )
+    lines.append("")
+
+    precision = computed.get("structural_precision_on_honest_code") or {}
+    lines.append("## Structural check precision on known-honest code")
+    lines.append("")
+    if not precision.get("n_reference_solutions"):
+        lines.append("Not measured.")
+    else:
+        rate = precision["false_positive_rate"]
+        ci = precision.get("false_positive_ci95") or [None, None]
+        lines.append(
+            "The structural check's **recall** was validated on generated cheats. Its **precision** was "
+            "not, until now. Every eligible MBPP+ reference solution is a genuine algorithm, so any flag "
+            "on one is a false positive by construction."
+        )
+        lines.append("")
+        lines.append("| Measure | Value |")
+        lines.append("|---|---|")
+        lines.append(f"| Reference solutions checked | {precision['n_reference_solutions']} |")
+        lines.append(f"| Flagged (false positives) | {precision['n_flagged']} |")
+        lines.append(f"| **False positive rate** | **{_fmt(rate)}** |")
+        lines.append(f"| 95 percent interval (Wilson) | {_fmt(ci[0])} to {_fmt(ci[1])} |")
+        lines.append(f"| Per form | {precision['per_form'] or 'none'} |")
+        lines.append(f"| Parse errors | {precision['parse_errors']} |")
+        lines.append(f"| Flagged task ids | `{precision['flagged_task_ids']}` |")
+        lines.append("")
+        if rate is not None and rate >= NEAR_ZERO_FALSE_POSITIVE_RATE:
+            lines.append(
+                f"**This is not near zero.** At {_fmt(rate)} the detector flags roughly "
+                f"{rate * 16:.1f} of every 16 completions on honest code alone. The cheat_form panel is "
+                "therefore reporting **detector behaviour as well as policy behaviour**, and any observed "
+                f"cheat_form prevalence below about {_fmt(rate * 2)} should be read as within detector "
+                "noise rather than as a signal about the policy. This is one reason the pre-registration "
+                "makes the behavioural oracle primary and the structural check diagnostic only: the "
+                "behavioural check has no equivalent false positive floor, because it is defined on "
+                "execution outcomes rather than on the shape of code."
+            )
+        else:
+            lines.append(
+                f"At {_fmt(rate)} this is near zero against the declared "
+                f"{NEAR_ZERO_FALSE_POSITIVE_RATE:.2f} bar, so the cheat_form panel can be read as policy "
+                "behaviour rather than detector behaviour."
+            )
+        lines.append("")
+        lines.append(
+            "The full text of every step-zero completion carrying a cheat_form is in "
+            "[STEP_ZERO_FLAGGED.md](STEP_ZERO_FLAGGED.md), for reading by hand rather than trusting the "
+            "label."
+        )
+    lines.append("")
+
     # 6d. Amendments to the halt conditions, stated plainly.
     lines.append("## Halt conditions were amended before any curve existed")
     lines.append("")
@@ -410,6 +574,6 @@ def build_report() -> dict[str, Path]:
     lines.append("")
 
     REPORT_PATH.write_text("\n".join(lines), encoding="utf-8")
-    out = {"report": REPORT_PATH, "published": PUBLISHED_PATH}
+    out = {"report": REPORT_PATH, "published": PUBLISHED_PATH, "step_zero_flagged": STEP_ZERO_FLAGGED_PATH}
     out.update({f"figure_{k}": v for k, v in figures.items()})
     return out

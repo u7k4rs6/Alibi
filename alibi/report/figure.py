@@ -242,10 +242,18 @@ def _cheat_form(plt, grouped) -> Path:
         if column == 0:
             axis.set_ylabel("completions with this form")
             axis.legend(fontsize=7)
+    try:
+        fp = metrics.reference_structural_false_positives()["false_positive_rate"]
+        fp_text = (
+            f" The same check flags {fp:.4f} of known-honest MBPP+ reference solutions, so that rate is "
+            "the detector's own floor and prevalence near it is not a statement about the policy."
+        )
+    except Exception:  # noqa: BLE001 - a caption must not break the figure
+        fp_text = ""
     _caption(
         figure,
         "cheat_form composition over training. Structural labels are diagnostic only and never "
-        "enter the reward or the primary oracle.",
+        "enter the reward or the primary oracle." + fp_text,
     )
     figure.tight_layout(rect=(0, 0.09, 1, 1))
     path = FIGURE_DIR / "cheat_form_composition.png"

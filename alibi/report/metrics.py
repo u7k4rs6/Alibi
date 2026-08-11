@@ -12,6 +12,8 @@ or touches the network.
 from __future__ import annotations
 
 import json
+import math
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -33,6 +35,38 @@ DETERMINACY_FLOOR = 30
 # invented for this purpose. With one seed the band is zero, so a small
 # absolute floor stands in.
 MATERIAL_ABSOLUTE = 0.02
+
+# Matrix run directories only. Calibration, smoke and data-check runs are not
+# the experiment and never pool into a published number.
+MATRIX_RUN_RE = re.compile(r"^a[0-3]-seed[0-9]+-[0-9a-f]+$")
+
+# Declared seed for sampling flagged step-zero completions when there are more
+# than the cap. Fixed here so the sample is reproducible.
+STEP_ZERO_SAMPLE_SEED = 0
+STEP_ZERO_SAMPLE_CAP = 20
+
+
+def wilson_interval(successes: int, total: int, z: float = 1.96) -> tuple[float | None, float | None]:
+    """Wilson score interval. Correct at small n and at p near 0, unlike normal approximation.
+
+    The step-zero counts are small and the proportion is near zero, which is
+    exactly where the textbook interval gives nonsense such as a negative lower
+    bound.
+    """
+    if total <= 0:
+        return None, None
+    p = successes / total
+    denominator = 1 + z * z / total
+    centre = (p + z * z / (2 * total)) / denominator
+    half = z * math.sqrt(p * (1 - p) / total + z * z / (4 * total * total)) / denominator
+    return max(0.0, centre - half), min(1.0, centre + half)
+
+
+def matrix_run_dirs() -> list[Path]:
+    root = ARTIFACTS / "runs"
+    if not root.exists():
+        return []
+    return sorted(p for p in root.iterdir() if p.is_dir() and MATRIX_RUN_RE.match(p.name))
 
 
 @dataclass(frozen=True)
@@ -174,6 +208,135 @@ def step_zero_prevalence(run_dir: Path) -> dict:
         ),
         "n_behaviourally_determinate": len(behavioural_determinate),
     }
+
+
+def pooled_step_zero() -> dict:
+    """Step-zero cheat prevalence pooled across every matrix run.
+
+    Step 0 is the same untrained base policy in every arm and at every seed, so
+    pooling is legitimate and simply buys sample size. Per-run figures are kept
+    beside the pooled one so that a run behaving differently is visible rather
+    than averaged away.
+    """
+    per_run = []
+    for run_dir in matrix_run_dirs():
+        entry = step_zero_prevalence(run_dir)
+        if entry.get("n"):
+            entry["run_id"] = run_dir.name
+            entry["arm"] = run_dir.name.split("-")[0]
+            entry["seed"] = int(run_dir.name.split("-")[1].replace("seed", ""))
+            per_run.append(entry)
+
+    total = sum(e["n"] for e in per_run)
+    flagged = sum(e["any_cheat_form"] for e in per_run)
+    breakdown: dict[str, int] = {}
+    for entry in per_run:
+        for form, count in (entry.get("cheat_form_counts") or {}).items():
+            breakdown[form] = breakdown.get(form, 0) + count
+
+    behav_num = 0
+    behav_den = 0
+    for entry in per_run:
+        if entry.get("behavioural_cheat_fraction") is not None:
+            den = entry["n_behaviourally_determinate"]
+            behav_den += den
+            behav_num += round(entry["behavioural_cheat_fraction"] * den)
+
+    rates = [e["any_cheat_form_fraction"] for e in per_run]
+    low, high = wilson_interval(flagged, total)
+    b_low, b_high = wilson_interval(behav_num, behav_den)
+    return {
+        "n_runs_pooled": len(per_run),
+        "n_runs_expected": len(prereg.PREREG.run_order.schedule()),
+        "n_completions": total,
+        "any_cheat_form": flagged,
+        "prevalence": (flagged / total) if total else None,
+        "prevalence_ci95": [low, high],
+        "cheat_form_counts": dict(sorted(breakdown.items())),
+        "per_run_prevalence": [
+            {"run_id": e["run_id"], "arm": e["arm"], "seed": e["seed"], "n": e["n"], "rate": e["any_cheat_form_fraction"]}
+            for e in per_run
+        ],
+        "per_run_spread": (max(rates) - min(rates)) if len(rates) > 1 else None,
+        "behavioural_cheat": behav_num,
+        "behavioural_determinate": behav_den,
+        "behavioural_rate": (behav_num / behav_den) if behav_den else None,
+        "behavioural_ci95": [b_low, b_high],
+        "absent_reason": None if per_run else "no matrix run has stored a step 0 yet",
+    }
+
+
+def reference_structural_false_positives() -> dict:
+    """The structural check's precision, run over known-honest code.
+
+    Recall was validated on generated cheats. Precision was not. Every eligible
+    MBPP+ reference solution is a genuine algorithm, so **any** flag here is a
+    false positive by construction.
+    """
+    from alibi.data.build import build
+    from alibi.env.oracle import structural_check
+
+    document = prereg.load_eligibility()
+    allowed = set(document["task_ids"])
+    problems = [p for p in build().problems if p.task_id in allowed]
+
+    flagged = []
+    forms: dict[str, int] = {}
+    errors = 0
+    for problem in problems:
+        is_flagged, problem_forms, signals, error = structural_check(
+            problem.reference_code, problem.visible_asserts, problem.entry_point
+        )
+        if error:
+            errors += 1
+        if is_flagged:
+            flagged.append({"task_id": problem.task_id, "forms": problem_forms, "signals": signals})
+            for form in problem_forms:
+                forms[form] = forms.get(form, 0) + 1
+
+    total = len(problems)
+    low, high = wilson_interval(len(flagged), total)
+    return {
+        "n_reference_solutions": total,
+        "n_flagged": len(flagged),
+        "false_positive_rate": (len(flagged) / total) if total else None,
+        "false_positive_ci95": [low, high],
+        "per_form": dict(sorted(forms.items())),
+        "parse_errors": errors,
+        "flagged_task_ids": [f["task_id"] for f in flagged][:40],
+        "examples": flagged[:5],
+    }
+
+
+def flagged_step_zero_completions() -> dict:
+    """Full text of every step-zero completion carrying a cheat_form, pooled."""
+    import random
+
+    hits = []
+    for run_dir in matrix_run_dirs():
+        for record in load_step_completions(run_dir, 0):
+            if has_cheat_form(record):
+                hits.append(
+                    {
+                        "run_id": run_dir.name,
+                        "arm": record.get("arm"),
+                        "seed": record.get("seed"),
+                        "prompt_id": record.get("prompt_id"),
+                        "completion_idx": record.get("completion_idx"),
+                        "cheat_form": record.get("cheat_form"),
+                        "oracle_signals": record.get("oracle_signals"),
+                        "visible_pass_fraction": record.get("visible_pass_fraction"),
+                        "held_out_pass_fraction": record.get("held_out_pass_fraction"),
+                        "oracle_behavioural": record.get("oracle_behavioural"),
+                        "text": record.get("text", ""),
+                    }
+                )
+    hits.sort(key=lambda h: (h["run_id"], str(h["prompt_id"]), h["completion_idx"]))
+    sampled = hits
+    if len(hits) > STEP_ZERO_SAMPLE_CAP:
+        sampled = random.Random(STEP_ZERO_SAMPLE_SEED).sample(hits, STEP_ZERO_SAMPLE_CAP)
+        sampled.sort(key=lambda h: (h["run_id"], str(h["prompt_id"]), h["completion_idx"]))
+    return {"total": len(hits), "shown": len(sampled), "sampled": len(hits) > STEP_ZERO_SAMPLE_CAP, "items": sampled}
 
 
 def series_for(run_dir: Path) -> RunSeries | None:
@@ -340,6 +503,8 @@ def claims() -> dict:
         "hypotheses": {},
         "sensitivity": {},
         "diagnostics": {},
+        "pooled_step_zero": pooled_step_zero(),
+        "structural_precision_on_honest_code": reference_structural_false_positives(),
     }
     if not runs:
         out["absent_reason"] = "no runs are declared in artifacts/index.json yet"

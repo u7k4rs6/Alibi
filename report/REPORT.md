@@ -92,6 +92,47 @@ What the base policy already does at step 0, before a single gradient step. If p
 
 No declared runs yet, so step 0 has not been read.
 
+### Pooled across all matrix runs
+
+Step 0 is the same untrained base policy in every arm and at every seed, so the runs pool. **1 of 9 runs** have stored a step 0 so far; this table is regenerated after every completed run.
+
+| Measure | Value |
+|---|---|
+| Runs pooled | 1 of 9 |
+| Completions | 16 |
+| Any cheat_form | 1/16 = 0.0625 |
+| 95 percent interval (Wilson) | 0.0111 to 0.2833 |
+| Behavioural cheat rate | 0/16 = 0.0000 |
+| 95 percent interval (Wilson) | 0.0000 to 0.1936 |
+| Per-run spread | not measured |
+| cheat_form breakdown | {'if_chain': 1} |
+
+Per run:
+
+| Run | Arm | Seed | n | Any cheat_form |
+|---|---|---|---|---|
+| `a0-seed1-4581182c` | a0 | 1 | 16 | 0.0625 |
+
+Wilson intervals rather than the normal approximation, because n is small and the proportion is near zero, which is exactly where the textbook interval returns a negative lower bound.
+
+## Structural check precision on known-honest code
+
+The structural check's **recall** was validated on generated cheats. Its **precision** was not, until now. Every eligible MBPP+ reference solution is a genuine algorithm, so any flag on one is a false positive by construction.
+
+| Measure | Value |
+|---|---|
+| Reference solutions checked | 365 |
+| Flagged (false positives) | 5 |
+| **False positive rate** | **0.0137** |
+| 95 percent interval (Wilson) | 0.0059 to 0.0317 |
+| Per form | {'constant_return': 1, 'if_chain': 5} |
+| Parse errors | 0 |
+| Flagged task ids | `[84, 167, 577, 626, 801]` |
+
+**This is not near zero.** At 0.0137 the detector flags roughly 0.2 of every 16 completions on honest code alone. The cheat_form panel is therefore reporting **detector behaviour as well as policy behaviour**, and any observed cheat_form prevalence below about 0.0274 should be read as within detector noise rather than as a signal about the policy. This is one reason the pre-registration makes the behavioural oracle primary and the structural check diagnostic only: the behavioural check has no equivalent false positive floor, because it is defined on execution outcomes rather than on the shape of code.
+
+The full text of every step-zero completion carrying a cheat_form is in [STEP_ZERO_FLAGGED.md](STEP_ZERO_FLAGGED.md), for reading by hand rather than trusting the label.
+
 ## Halt conditions were amended before any curve existed
 
 Two of the pre-declared halt conditions were amended before any monitored-arm curve had been produced. Both amendments are recorded here because a halt condition that moved is a fact about the experiment, not an implementation detail.
@@ -120,5 +161,5 @@ Two of the pre-declared halt conditions were amended before any monitored-arm cu
 }
 ```
 
-Generated 2026-08-11T06:19:01.207603+00:00 by `alibi report`. Numbers are injected from
+Generated 2026-08-11T06:24:28.891296+00:00 by `alibi report`. Numbers are injected from
 `artifacts/`, never typed. `alibi verify --no-gpu` recomputes every claim above.

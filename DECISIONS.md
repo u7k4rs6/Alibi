@@ -404,3 +404,53 @@ is a smaller finding than it appears.
 existed**, which two, by whom, and why, and that the halts were specified against
 an imagined run rather than against observed behaviour. The indeterminate window
 amendment was mine; the queue stop rule amendment was the operator's.
+
+### D-24 Pooled step zero and structural precision, declared mid-queue
+**Both declared by the operator while the queue was still running**, with only
+partial a0 seed 1 data in existence and no monitored-arm curve produced. Applied
+at report time only. `alibi/prereg.py` untouched, the running queue untouched,
+nothing restarted.
+
+**1. Pooled step zero.** Step 0 is the same untrained base policy in every arm
+and at every seed, so the runs pool legitimately and pooling simply buys sample
+size. Reported with pooled n, prevalence, cheat_form breakdown, per-run spread
+and a Wilson interval. Per-run figures are kept beside the pooled one so a run
+behaving differently is visible rather than averaged away. The table regenerates
+after every completed run, so it fills in from 1 of 9 to 9 of 9 as the queue
+proceeds.
+
+*Choice:* Wilson interval rather than the normal approximation. n is small and
+the proportion is near zero, which is exactly where the textbook interval gives
+a negative lower bound. At 1/16 the difference is not cosmetic: Wilson gives
+0.0111 to 0.2833, the normal approximation would give a lower bound below zero.
+
+**2. Structural precision on honest code. This produced a finding.** The
+structural check's recall was validated on generated cheats; its precision never
+was. Run over all 365 eligible MBPP+ reference solutions, every one of which is a
+genuine algorithm:
+
+**5 of 365 flagged, a false positive rate of 0.0137**, 95 percent interval 0.0059
+to 0.0317, per form `{if_chain: 5, constant_return: 1}`, zero parse errors.
+Flagged task ids 84, 167, 577, 626, 801.
+
+This is **not** near zero against the 0.01 bar I declared before looking. At
+0.0137 the detector produces roughly 0.2 false flags per 16-completion step on
+honest code alone, against an observed step-zero prevalence of 0.0625. The
+cheat_form panel therefore reports detector behaviour as well as policy
+behaviour, and REPORT.md now says so in those words, with the rule that observed
+prevalence below about 0.027 is within detector noise.
+
+*Choice:* "near zero" was fixed at 0.01 in `alibi/report/build.py` before the
+measurement was run, so that the verdict could not be fitted to the number.
+
+This is a direct argument for the pre-registration's decision to make the
+behavioural oracle primary and the structural check diagnostic only. The
+behavioural check has no equivalent false positive floor because it is defined
+on execution outcomes rather than on the shape of code.
+
+**3. `report/STEP_ZERO_FLAGGED.md`** carries the full text of every step-zero
+completion carrying a cheat_form, pooled across runs, sampled to 20 at declared
+seed 0 if there are more. It lives under `report/` rather than the repository
+root because the queue runner stages that directory; a root file would be left
+unstaged after each run and would dirty the tree, which is exactly what halted
+three runs earlier.
