@@ -70,11 +70,35 @@ def save_queue(state: QueueState, path: Path = QUEUE_PATH) -> None:
     tmp.rename(path)
 
 
+def blocked_arms() -> set[str]:
+    """Arms named by a `blocked-arms:` line in BLOCKED.md. Empty means global."""
+    if not halt_module.BLOCKED_PATH.exists():
+        return set()
+    for line in halt_module.BLOCKED_PATH.read_text(encoding="utf-8").splitlines():
+        if line.lower().startswith("blocked-arms:"):
+            return {a.strip() for a in line.split(":", 1)[1].split(",") if a.strip()}
+    return set()
+
+
 def next_pending(state: QueueState) -> dict | None:
-    """The first entry that is not complete. Order is never re-sorted."""
+    """The first entry that is not complete, skipping arms blocked by a collision.
+
+    A blocked entry is marked failed with its reason rather than silently
+    skipped, so the matrix records why it never ran.
+    """
+    blocked = blocked_arms()
     for entry in state.entries:
-        if entry["status"] in {"pending", "running"}:
-            return entry
+        if entry["status"] not in {"pending", "running"}:
+            continue
+        if entry["arm"] in blocked:
+            entry["status"] = "failed"
+            entry["halt_reason"] = "section_6_collision"
+            entry["detail"] = (
+                f"arm {entry['arm']} is blocked by BLOCKED.md: the view its monitor reads is empty, "
+                "so the arm cannot measure what it was registered to measure"
+            )
+            continue
+        return entry
     return None
 
 
@@ -110,12 +134,25 @@ def record_result(state: QueueState, entry: dict, result: dict) -> None:
         state.stopped = True
         state.stopped_reason = f"all {total} runs are complete"
     elif halt_module.BLOCKED_PATH.exists():
-        state.stopped = True
-        state.stopped_reason = (
-            "BLOCKED.md exists: a section 6 collision was found, meaning something that may not "
-            "be changed appears to be wrong. That is a finding, not a task, and the affected runs "
-            "stop rather than being quietly corrected."
-        )
+        # A section 6 collision halts **the affected runs**, and stops the whole
+        # queue only when nothing unaffected is left. The brief says to halt the
+        # affected runs and continue with work that does not depend on the
+        # collision, and a collision confined to one arm leaves the other arms
+        # perfectly valid. BLOCKED.md declares its own scope on a line reading
+        # `blocked-arms: a1` and a collision with no declared scope is global.
+        blocked = blocked_arms()
+        remaining = [e for e in state.entries if e["status"] == "pending" and e["arm"] not in blocked]
+        if not blocked:
+            state.stopped = True
+            state.stopped_reason = (
+                "BLOCKED.md exists with no declared arm scope, so the collision is treated as global. "
+                "That is a finding, not a task, and the runs stop rather than being quietly corrected."
+            )
+        elif not remaining:
+            state.stopped = True
+            state.stopped_reason = (
+                f"BLOCKED.md blocks arms {sorted(blocked)} and no unaffected run remains pending."
+            )
     elif halt_module.should_stop_queue([r for r in state.halt_reasons]):
         state.stopped_reason = (
             f"WARN three consecutive runs halted for the same reason: {state.halt_reasons[-1]}. "

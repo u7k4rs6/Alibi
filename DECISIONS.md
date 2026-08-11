@@ -572,3 +572,56 @@ and not to MBPP, and that any claim about MBPP should be read as a claim about
 I would not have found this from the four requested properties alone. It is
 worth noting that the requested comparison came back clean and the finding came
 from asking what the four properties could not see.
+
+### D-27 Power loss, and the A1 collision found on restart
+**Power loss.** The laptop went off during a2 seed 2. Nothing was lost: the
+resume state said step 10 and steps 8 and 9 were complete with all three files,
+so no partial write occurred. The queue was restarted and resumed from step 10.
+Completed before the loss: a0/s1, a1/s1, a0/s2, a1/s2. Failed: a2/s1 on
+`indeterminate_held_out_rate` at step 64, 507/8424 = 0.0602 over the lagging
+window, which is sustained rather than a single spike and is the halt working as
+intended after hours of sustained laptop load.
+
+**The A1 collision.** Reviewing the completed runs I found a0 and a1 producing
+identical trajectories at matching seeds. Cause: A1's monitor reads
+`completion.think`, and Qwen2.5-0.5B-Instruct does not emit `<think>` tags
+despite being asked. Mean `think_chars` is 3.2 over 320 completions, the monitor
+flagged 0 of 320, and its own reasons include "No code provided to audit." A2,
+which reads the answer, flagged 21 of 320 on the same policy. So A1's penalty
+term is identically zero and A1 is arithmetically A0. Full evidence in
+BLOCKED.md.
+
+**Decision I had to take alone, and the conflict it resolves.** The stop rule
+says the queue stops when a section 6 collision occurs. Section 6 and section 7
+say to halt the affected runs and continue with work that does not depend on the
+collision. Those conflict when the collision is confined to one arm.
+
+**Chose:** block a1 only, and continue a0 and a2. BLOCKED.md declares its scope
+on a `blocked-arms:` line, `next_pending` marks blocked entries failed with
+reason `section_6_collision` rather than skipping them silently, and the queue
+stops only when a collision has no declared scope or when nothing unaffected
+remains.
+
+**Rejected:** stopping the whole queue. It would have discarded a valid two-arm
+comparison, a0 against a2, for no benefit, since neither arm depends on the
+think region. a2 is the arm that actually reads text and actually flags, so
+stopping would have thrown away the only working monitored arm over a defect in
+a different one.
+
+**Rejected:** repointing A1 at the answer view, or changing the policy prompt to
+force think tags. The first changes which view an arm sees, which section 6
+forbids outright. The second invalidates comparability with four completed runs.
+Both would convert a finding into a silent correction.
+
+**The four completed a1 runs are kept**, relabelled as A0 replicates rather than
+monitored-arm evidence. They are valid data about the unmonitored condition.
+
+**Consequence for the hypotheses:** H2 is unevaluable, because a flag rate that
+is zero by construction cannot fall. H3 survives in the form A2 against A0. The
+surviving deliverable is a two-arm experiment, control against output-space
+monitor, at up to three seeds.
+
+**This is a result, not only an accident:** a 0.5B instruction-tuned model does
+not reliably produce a designated reasoning region when asked, so think-region
+monitoring has nothing to read at this scale. An arm that reads thought tokens
+presupposes thought tokens exist.
