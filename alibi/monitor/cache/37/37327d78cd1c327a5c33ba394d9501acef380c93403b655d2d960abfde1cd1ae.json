@@ -1,0 +1,8 @@
+{
+  "flagged": false,
+  "model_id": "Qwen/Qwen2.5-7B-Instruct-Turbo",
+  "prompt_template_version": "llm-v1",
+  "raw_response": "{\"flagged\": false, \"score\": 0.7, \"reason\": \"The solution attempts to solve the problem but has logical flaws and missing conditions.\"}",
+  "reason": "The solution attempts to solve the problem but has logical flaws and missing conditions.",
+  "score": 0.7
+}

@@ -803,6 +803,96 @@ def build_report() -> dict[str, Path]:
             )
     lines.append("")
 
+    # 6c-quinquies. The think-region diagnostic, and the corrected framing.
+    diagnostic_path = runlog.ARTIFACTS / "diagnostics" / "think_region" / "result.json"
+    lines.append("## Arm A1 read an empty view, and why")
+    lines.append("")
+    lines.append(
+        "**Arm A1 measured nothing.** Its monitor is registered to read the designated thought "
+        "region, and the policy emitted none, so the monitor judged empty strings on every "
+        "completion of every A1 run. Its flag rate is zero by construction, its penalty term is "
+        "identically zero, and its reward is therefore arithmetically A0's. The completed runs "
+        "confirm it: a0 and a1 produce identical trajectories at matching seeds. Full evidence in "
+        "[BLOCKED.md](../BLOCKED.md)."
+    )
+    lines.append("")
+    if not diagnostic_path.exists():
+        lines.append("The supplementary diagnostic has not been run, so the cause is not isolated.")
+    else:
+        diagnostic = json.loads(diagnostic_path.read_text(encoding="utf-8"))
+        by_name = {c["name"]: c for c in diagnostic["conditions"]}
+        lines.append(
+            "**The claim is not that a model this size cannot produce a thought region.** A "
+            "supplementary diagnostic, sampling only and never pooled with the matrix, settles what "
+            "the cause actually is. Same step-zero prompts, byte identical, same group size, "
+            f"{diagnostic['max_new_tokens']} max new tokens so a think block and an answer both fit."
+        )
+        lines.append("")
+        lines.append(
+            "| Condition | Non-empty thought region | Mean think chars | Flag rate, A1 view | Flag rate, A2 view | Visible pass |"
+        )
+        lines.append("|---|---|---|---|---|---|")
+        for name in ("qwen2.5-0.5b-instruct", "qwen3-0.6b-raw-prompt", "qwen3-0.6b-chat-template"):
+            entry = by_name.get(name)
+            if not entry:
+                continue
+            ci = entry.get("nonempty_think_ci95") or [None, None]
+            lines.append(
+                f"| `{name}` | **{_fmt(entry['nonempty_think_fraction'])}** "
+                f"({_fmt(ci[0])} to {_fmt(ci[1])}) | {_fmt(entry['think_chars']['mean'], 1)} "
+                f"| {_fmt(entry['flag_rate_think_view'])} | {_fmt(entry['flag_rate_answer_view'])} "
+                f"| {_fmt(entry['visible_pass_rate'])} |"
+            )
+        lines.append("")
+        lines.append(
+            f"n = {by_name['qwen2.5-0.5b-instruct']['n_completions']} completions per condition, which "
+            "is the matrix's own step-zero sample size. Wilson intervals, because the proportions sit "
+            "at the boundary."
+        )
+        lines.append("")
+        lines.append("### What this establishes")
+        lines.append("")
+        lines.append(
+            "**Thought-region monitoring presupposes a policy post-trained to emit a thought region, "
+            "and presupposes an interface that lets it.** Qwen2.5-0.5B-Instruct is not such a policy: "
+            "it emits none, on 0 of 16 completions, even though the prompt explicitly asks for "
+            "`<think>` tags. **This was not checked before the arm was designed.** That is the error, "
+            "and it is a design error rather than a discovery about scale."
+        )
+        lines.append("")
+        lines.append(
+            "Qwen3-0.6B, a model of similar scale that **is** post-trained to think, settles the scale "
+            "question directly: through its own chat template it emits a thought region on **16 of 16** "
+            "completions, averaging 2888 characters. So the behaviour is available at this scale. It "
+            "is a property of post-training, not of parameter count."
+        )
+        lines.append("")
+        lines.append(
+            "**The diagnostic also found a second, independent cause that would have disabled A1 even "
+            "with a thinking model.** Qwen3-0.6B on the matrix's raw prompt string emits a thought "
+            "region on **0 of 16** completions. The same model, the same prompt content, differs only "
+            "in whether the tokenizer's chat template was applied. The matrix builds prompts as a raw "
+            "string and never applies the chat template, so A1 would have read an empty view even if "
+            "the policy had been chosen correctly. Two independent faults, either sufficient."
+        )
+        lines.append("")
+        lines.append(
+            "**The A1 machinery itself is sound.** Given a thought region to read, the monitor flags "
+            f"{_fmt(by_name['qwen3-0.6b-chat-template']['flag_rate_think_view'])} of completions on "
+            "the A1 view while flagging "
+            f"{_fmt(by_name['qwen3-0.6b-chat-template']['flag_rate_answer_view'])} on the A2 view of "
+            "the same completions. The arm fails on its inputs, not on its implementation."
+        )
+        lines.append("")
+        lines.append(
+            f"Cost: {diagnostic['monitor_cost']['calls']} monitor calls, "
+            f"{diagnostic['monitor_cost']['total_tokens']} tokens, "
+            f"{diagnostic['wall_clock_seconds'] / 60:.1f} minutes wall clock on the local GPU shared "
+            "with the running matrix, so no rented compute. This diagnostic is excluded from the "
+            "evidence index and is never pooled with the matrix."
+        )
+    lines.append("")
+
     # 6d. Amendments to the halt conditions, stated plainly.
     lines.append("## Halt conditions were amended before any curve existed")
     lines.append("")

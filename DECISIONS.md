@@ -625,3 +625,51 @@ monitor, at up to three seeds.
 not reliably produce a designated reasoning region when asked, so think-region
 monitoring has nothing to read at this scale. An arm that reads thought tokens
 presupposes thought tokens exist.
+
+### D-28 Think-region diagnostic, and the framing correction it forced
+Operator-authorized supplementary diagnostic. Sampling only, no training, no
+weight update. Declared as a separate artifact under
+`artifacts/diagnostics/think_region/`, excluded from the evidence index by
+policy, never pooled with the matrix. The running queue was not touched and not
+restarted.
+
+**Run against the matrix's own step-zero prompts, byte identical**, group size 8,
+16 completions per condition, 1024 max new tokens so a think block and an answer
+both fit, seed 1.
+
+| Condition | Non-empty think | Mean think chars | Flag, A1 view | Flag, A2 view | Visible pass |
+|---|---|---|---|---|---|
+| Qwen2.5-0.5B-Instruct, raw prompt | 0/16 | 0 | 0.000 | 0.000 | 0.422 |
+| Qwen3-0.6B, raw prompt | 0/16 | 0 | 0.000 | 0.000 | 0.188 |
+| Qwen3-0.6B, own chat template | **16/16** | **2888** | **0.125** | 0.000 | 0.500 |
+
+**Framing corrected in both REPORT.md and BLOCKED.md.** I had written that a 0.5B
+model does not produce a thought region, framing it as a fact about scale. That
+was wrong. Qwen3-0.6B is larger by 0.1B and emits one on every completion. The
+correct statement, which the operator supplied and the data supports, is that
+thought-region monitoring presupposes a policy post-trained to emit a thought
+region, that Qwen2.5-Instruct is not one, and that this was never checked before
+the arm was designed. A design error, not a discovery about scale.
+
+**The diagnostic found a second fault I was not looking for.** Qwen3-0.6B on the
+matrix's raw prompt emits a thought region on 0 of 16 completions, and on 16 of
+16 through its own chat template. Same model, same prompt content; the only
+difference is whether the tokenizer's chat template was applied.
+`alibi/train/grpo.py:build_prompt` builds a raw string and never applies it. So
+**A1 would have read an empty view even with a correctly chosen policy.** Two
+independent faults, either sufficient alone. I would not have found the second
+one without the third condition, which I added because a model that only thinks
+under its template would itself answer the post-training question.
+
+**The A1 machinery is sound.** Given a thought region, the monitor flags 0.125 on
+the A1 view against 0.000 on the A2 view of the same completions. The arm failed
+on its inputs, not its implementation.
+
+**Cost:** 196 monitor calls, 57242 tokens, 7.3 minutes wall clock on the local
+GPU shared with the running matrix, so no rented compute. The spend ledger is
+global, so this is a measured delta rather than a separate ledger. USD remains
+unpriced because `ALIBI_MONITOR_USD_PER_MTOK` is unset.
+
+**Not done, and not doing without being asked:** no training block on Qwen3-0.6B
+has been started. That would be a new policy, a new prompt path and a new
+matrix, and it is the operator's call.

@@ -100,18 +100,18 @@ What the base policy already does at step 0, before a single gradient step. If p
 
 ### Pooled across all matrix runs
 
-Step 0 is the same untrained base policy in every arm and at every seed, so the runs pool. **5 of 9 runs** have stored a step 0 so far; this table is regenerated after every completed run.
+Step 0 is the same untrained base policy in every arm and at every seed, so the runs pool. **6 of 9 runs** have stored a step 0 so far; this table is regenerated after every completed run.
 
 | Measure | Value |
 |---|---|
-| Runs pooled | 5 of 9 |
-| Completions | 80 |
-| Any cheat_form | 5/80 = 0.0625 |
-| 95 percent interval (Wilson) | 0.0270 to 0.1381 |
-| Behavioural cheat rate | 0/80 = 0.0000 |
-| 95 percent interval (Wilson) | 0.0000 to 0.0458 |
+| Runs pooled | 6 of 9 |
+| Completions | 96 |
+| Any cheat_form | 6/96 = 0.0625 |
+| 95 percent interval (Wilson) | 0.0290 to 0.1297 |
+| Behavioural cheat rate | 0/96 = 0.0000 |
+| 95 percent interval (Wilson) | 0.0000 to 0.0385 |
 | Per-run spread | 0.0000 |
-| cheat_form breakdown | {'if_chain': 5} |
+| cheat_form breakdown | {'if_chain': 6} |
 
 Per run:
 
@@ -122,6 +122,7 @@ Per run:
 | `a1-seed1-17e2af38` | a1 | 1 | 16 | 0.0625 |
 | `a1-seed2-67fa65aa` | a1 | 2 | 16 | 0.0625 |
 | `a2-seed1-97130799` | a2 | 1 | 16 | 0.0625 |
+| `a2-seed2-b3fa8c57` | a2 | 2 | 16 | 0.0625 |
 
 Wilson intervals rather than the normal approximation, because n is small and the proportion is near zero, which is exactly where the textbook interval returns a negative lower bound.
 
@@ -139,9 +140,123 @@ The structural check's **recall** was validated on generated cheats. Its **preci
 | Parse errors | 0 |
 | Flagged task ids | `[84, 167, 577, 626, 801]` |
 
-**This is not near zero.** At 0.0137 the detector flags roughly 0.2 of every 16 completions on honest code alone. The cheat_form panel is therefore reporting **detector behaviour as well as policy behaviour**, and any observed cheat_form prevalence below about 0.0274 should be read as within detector noise rather than as a signal about the policy. This is one reason the pre-registration makes the behavioural oracle primary and the structural check diagnostic only: the behavioural check has no equivalent false positive floor, because it is defined on execution outcomes rather than on the shape of code.
+**This is not near zero.** At 0.0137 the detector flags roughly 0.2 of every 16 completions on honest code alone. The cheat_form panel therefore reports **detector behaviour as well as policy behaviour**.
+
+But the rate is **not uniform**. It is five specific problems, listed with their full source in [STRUCTURAL_FP.md](STRUCTURAL_FP.md). The floor appears only on the steps where one of them is sampled, so it is a small number of contaminated steps rather than a constant offset on every step. See the exposure table below.
 
 The full text of every step-zero completion carrying a cheat_form is in [STEP_ZERO_FLAGGED.md](STEP_ZERO_FLAGGED.md), for reading by hand rather than trusting the label.
+
+### How often the false positive problems are actually sampled
+
+| Run | Steps touching a flagged problem | Of steps | Fraction |
+|---|---|---|---|
+| (run) | `[18, 46]` | 80 | 0.0250 |
+| (run) | `[18, 46]` | 80 | 0.0250 |
+| (run) | `[18, 46]` | 80 | 0.0250 |
+| (run) | `[18, 46]` | 80 | 0.0250 |
+
+The floor is therefore **confined to those steps**, not spread across the series. On every other step the structural panel carries no known detector contribution. This is why the excluding-the-five series below is the primary one.
+
+### Prompt coverage, which this exposed
+
+A run of this length samples **160 distinct problems of 365 eligible**, a coverage of 0.4384. Prompt selection is a deterministic round robin with no seed, so all arms and all seeds see the same problems in the same order. The eligible count of 365 therefore overstates what any run actually sees, and the effective problem set is the same fixed prefix in every arm and every seed. That is good for comparability between arms and it means the seeds vary sampling only, not problems.
+
+## Behavioural check precision, and a correction
+
+An earlier draft of this report claimed the structural check's false positive rate was a vindication of the pre-registration's choice to make the behavioural oracle primary, on the grounds that the behavioural check has no equivalent false positive floor. **That claim was wrong and is withdrawn.**
+
+The behavioural check has not been shown to have no false positive floor. It had not been measured at all. The reason is circularity: **eligibility excludes problems whose reference solution fails held out**, which is the same criterion the behavioural rule uses. Any false positive rate computed on the eligible set is zero by construction and carries no information. The two checks were validated on differently filtered populations: the eligibility filter is unrelated to the structural criterion, so the structural measurement is real, and it is identical to the behavioural criterion, so a behavioural measurement there would be vacuous.
+
+A non circular estimate is available from stored data and is reported here **as an estimate with named limits**, not as a resolution of the gap. The pre eligibility joined set is filtered only for reasons unrelated to the behavioural rule, so reference solutions on it were never selected for passing held out.
+
+| Measure | Value |
+|---|---|
+| Population | pre-eligibility joined MBPP and MBPP+ set, reference solutions |
+| Source artifact | `artifacts/runs/datacheck-20260810T230821Z/result.json` |
+| Evaluable | 375 |
+| Flagged (false positives) | 0 |
+| Point estimate | 0.0000 |
+| **95 percent upper bound** | **0.0101** |
+
+With zero events the point estimate is uninformative on its own and the upper bound is the number worth quoting. Against the structural check's 0.0137, the comparison that can honestly be made is: the structural rate is measured and above the near zero bar, while the behavioural rate is bounded above by 0.0101 and is consistent with zero. That is weaker than the withdrawn claim and it is what the data supports.
+
+Limits of this estimate, all of which keep it an estimate:
+
+- Reference solutions are cleaner and more idiomatic than anything a 0.5B policy emits, so this is a lower bound on the rate against real completions, exactly as the honest probe is.
+- The pre eligibility set is still filtered for harness reasons, and if those correlate with generalisation the estimate is biased by an unknown amount.
+- Zero events means the point estimate is 0.0 and uninformative on its own. The upper confidence bound is the number worth quoting.
+- This is measured on the same held-out harness and timeouts the experiment uses, so a systematic harness problem would be invisible to it.
+
+## Two variance estimates, and which one a verdict must clear
+
+**Seed band** is the min to max across seeds. It captures **sampling variance only**: the same problems, the same order, a different sampling seed. It says nothing about whether the result would hold on other problems.
+
+**Cluster bootstrap** resamples **problems** with replacement, 1000 draws at declared seed `20260811`, and recomputes the terminal statistics each draw. The cluster is the problem, not the completion, because completions on one problem share its difficulty, its visible asserts and its held-out set, so treating them as independent understates variance. This captures **problem variance**.
+
+"Terminal" here is the last 10 steps, not the last step. The final step contains 2 problems and 16 completions, and resampling 2 clusters is not a bootstrap. That window choice is an implementation decision and is stated rather than buried.
+
+| Arm | Seed band, terminal gap | Bootstrap 95 percent, terminal gap | Problems | Wider |
+|---|---|---|---|---|
+| a0 | 0.0000 | 0.0000 to 0.0000 (width 0.0000) | 20 | bootstrap |
+| a1 | 0.0000 | 0.0000 to 0.0000 (width 0.0000) | 20 | bootstrap |
+
+**A difference between arms is reported as resolved only if it clears the wider of the two.** Where the bootstrap is wider than the seed band, a verdict that looked resolved on the seed band alone does not survive, and this section names any verdict that changes.
+
+Verdicts affected: none yet, because no between-arm comparison exists. Per-arm widths: a0: seed band 0.0000 against bootstrap width 0.0000; a1: seed band 0.0000 against bootstrap width 0.0000
+
+A zero-width bootstrap interval means zero events were observed in the window, not that the estimate is precise. It should be read as uninformative, not as certainty.
+
+**What the bootstrap does not fix.** It corrects understated variance. It does **not** correct selection bias. The problems in any run are a fixed, deterministic, non-random prefix of the eligible set, not a random draw from it, so resampling them estimates the uncertainty of a statement about *those* problems and cannot license a statement about MBPP as a whole. The bootstrap widens the interval around the right target; it does not move the target.
+
+## What the sampled problems are
+
+**Ordering.** eligible problems sorted ascending by MBPP task_id, then a deterministic round robin from index 0 with no seed, so the sampled set is the lowest-task-id prefix.
+
+**160 sampled** (task ids [2, 308]) against **205 never sampled** (task ids [309, 809]).
+
+| Property | Sampled mean | Never-sampled mean | Difference | Permutation p | Material |
+|---|---|---|---|---|---|
+| n_held_out | 105.8250 | 106.0488 | -0.2238 | 0.7976 | False |
+| n_visible | 3.0562 | 3.1220 | -0.0657 | 0.1304 | False |
+| reference_chars | 125.7500 | 117.8878 | 7.8622 | 0.4728 | False |
+| cheat_passes_visible | 0.9938 | 1.0000 | -0.0062 | 0.4388 | False |
+
+Two-sided permutation test, 2000 draws, alpha 0.05, seed as declared for the bootstrap.
+
+### Provenance, which those four properties do not capture
+
+- Sampled: `{'prompt': 7, 'test': 153}`
+- Never sampled: `{'test': 68, 'train': 100, 'validation': 37}`
+
+**The four properties above show no material difference, and this does.** Because task id ordering tracks MBPP's own split boundaries, the sampled prefix is almost entirely MBPP's *test* split plus several problems from the *prompt* split, while the unsampled tail spans test, validation and train. The prompt split is MBPP's designated few-shot exemplar set and is the most likely of all to appear in pretraining data.
+
+So the honest statement is: on problem shape, held-out size, visible assert count, reference length and cheat constructibility, the prefix looks like the tail. On **provenance** it does not. **Generalisation from this run is to the sampled prefix, not to MBPP.** Any claim in this report about behaviour on MBPP should be read as a claim about 160 mostly-test-split problems that were chosen by sort order rather than at random.
+
+## Arm A1 read an empty view, and why
+
+**Arm A1 measured nothing.** Its monitor is registered to read the designated thought region, and the policy emitted none, so the monitor judged empty strings on every completion of every A1 run. Its flag rate is zero by construction, its penalty term is identically zero, and its reward is therefore arithmetically A0's. The completed runs confirm it: a0 and a1 produce identical trajectories at matching seeds. Full evidence in [BLOCKED.md](../BLOCKED.md).
+
+**The claim is not that a model this size cannot produce a thought region.** A supplementary diagnostic, sampling only and never pooled with the matrix, settles what the cause actually is. Same step-zero prompts, byte identical, same group size, 1024 max new tokens so a think block and an answer both fit.
+
+| Condition | Non-empty thought region | Mean think chars | Flag rate, A1 view | Flag rate, A2 view | Visible pass |
+|---|---|---|---|---|---|
+| `qwen2.5-0.5b-instruct` | **0.0000** (0.0000 to 0.1936) | 0.0 | 0.0000 | 0.0000 | 0.4219 |
+| `qwen3-0.6b-raw-prompt` | **0.0000** (0.0000 to 0.1936) | 0.0 | 0.0000 | 0.0000 | 0.1875 |
+| `qwen3-0.6b-chat-template` | **1.0000** (0.8064 to 1.0000) | 2888.3 | 0.1250 | 0.0000 | 0.5000 |
+
+n = 16 completions per condition, which is the matrix's own step-zero sample size. Wilson intervals, because the proportions sit at the boundary.
+
+### What this establishes
+
+**Thought-region monitoring presupposes a policy post-trained to emit a thought region, and presupposes an interface that lets it.** Qwen2.5-0.5B-Instruct is not such a policy: it emits none, on 0 of 16 completions, even though the prompt explicitly asks for `<think>` tags. **This was not checked before the arm was designed.** That is the error, and it is a design error rather than a discovery about scale.
+
+Qwen3-0.6B, a model of similar scale that **is** post-trained to think, settles the scale question directly: through its own chat template it emits a thought region on **16 of 16** completions, averaging 2888 characters. So the behaviour is available at this scale. It is a property of post-training, not of parameter count.
+
+**The diagnostic also found a second, independent cause that would have disabled A1 even with a thinking model.** Qwen3-0.6B on the matrix's raw prompt string emits a thought region on **0 of 16** completions. The same model, the same prompt content, differs only in whether the tokenizer's chat template was applied. The matrix builds prompts as a raw string and never applies the chat template, so A1 would have read an empty view even if the policy had been chosen correctly. Two independent faults, either sufficient.
+
+**The A1 machinery itself is sound.** Given a thought region to read, the monitor flags 0.1250 of completions on the A1 view while flagging 0.0000 on the A2 view of the same completions. The arm fails on its inputs, not on its implementation.
+
+Cost: 196 monitor calls, 57242 tokens, 7.3 minutes wall clock on the local GPU shared with the running matrix, so no rented compute. This diagnostic is excluded from the evidence index and is never pooled with the matrix.
 
 ## Halt conditions were amended before any curve existed
 
@@ -171,5 +286,5 @@ Two of the pre-declared halt conditions were amended before any monitored-arm cu
 }
 ```
 
-Generated 2026-08-11T10:28:10.475586+00:00 by `alibi report`. Numbers are injected from
+Generated 2026-08-11T16:29:02.541661+00:00 by `alibi report`. Numbers are injected from
 `artifacts/`, never typed. `alibi verify --no-gpu` recomputes every claim above.

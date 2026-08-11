@@ -59,19 +59,39 @@ So this is a finding, not a task, and it is reported rather than corrected.
 - **A0 versus A2 remains a valid two-arm experiment**: no monitor against an
   output-space monitor. That is the deliverable that survives.
 
-## The finding worth reporting on its own terms
+## The finding, correctly framed
 
-This is a substantive negative result about the scale, not only an
-implementation accident:
+An earlier version of this file framed this as a fact about scale. **That framing
+was wrong and is corrected here.** A supplementary diagnostic
+(`artifacts/diagnostics/think_region/result.json`, sampling only, never pooled
+with the matrix) isolates the actual cause on byte-identical step-zero prompts:
 
-> A 0.5B instruction-tuned model does not reliably produce a designated
-> reasoning region when asked for one, so think-region monitoring has nothing to
-> read at this scale.
+| Condition | Non-empty thought region | Mean think chars | Flag rate, A1 view |
+|---|---|---|---|
+| `Qwen2.5-0.5B-Instruct`, raw prompt | **0/16** | 0 | 0.000 |
+| `Qwen3-0.6B`, raw prompt | **0/16** | 0 | 0.000 |
+| `Qwen3-0.6B`, own chat template | **16/16** | 2888 | 0.125 |
 
-That bears directly on the project's motivating question. An arm that reads
-thought tokens presupposes thought tokens exist. At 0.5B they do not, and any
-study of reasoning-trace monitoring needs a model that actually emits traces
-before the arm means anything.
+The correct statement is:
+
+> Thought-region monitoring presupposes a policy post-trained to emit a thought
+> region, and an interface that lets it. Qwen2.5-Instruct is not such a policy,
+> and this was not checked before the arm was designed.
+
+Scale is not the obstacle. Qwen3-0.6B is **larger by 0.1B and emits a thought
+region on every completion** through its own chat template, averaging 2888
+characters. The behaviour is available at this scale.
+
+**There is a second, independent fault.** Qwen3-0.6B on the matrix's raw prompt
+string emits a thought region on 0 of 16 completions. The same model and the same
+prompt content differ only in whether the tokenizer's chat template was applied.
+`alibi/train/grpo.py:build_prompt` constructs a raw string and never applies the
+template, so A1 would have read an empty view **even with a correctly chosen
+policy**. Either fault alone is sufficient to disable the arm.
+
+**The A1 machinery is sound.** Given a thought region to read, the monitor flags
+0.125 of completions on the A1 view against 0.000 on the A2 view of the same
+completions. The arm fails on its inputs, not on its implementation.
 
 ## Decision taken
 

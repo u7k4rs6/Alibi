@@ -11,6 +11,10 @@
     {
       "pattern": "calib-*",
       "reason": "calibration runs for timing and budget. Explicitly not evidence, per the unattended brief section 1."
+    },
+    {
+      "pattern": "diagnostics/*",
+      "reason": "supplementary declared diagnostics. Sampling only, no training, never pooled with the matrix."
     }
   ],
   "note": "Evidence is selected by explicit declaration, never by filename sort and never by mtime. A run that is not listed here does not back a published claim, even if it exists and looks fine. See docs/kickoff/02-technical-architecture.md section 8.",
