@@ -3,11 +3,11 @@
   "entries": [
     {
       "arm": "a0",
-      "detail": "",
-      "halt_reason": null,
-      "run_id": null,
+      "detail": "see queue.log",
+      "halt_reason": "exception",
+      "run_id": "a0-seed1-4581182c",
       "seed": 1,
-      "status": "running",
+      "status": "failed",
       "steps": 80
     },
     {
@@ -83,8 +83,10 @@
       "steps": 80
     }
   ],
-  "halt_reasons": [],
+  "halt_reasons": [
+    "exception"
+  ],
   "stopped": false,
   "stopped_reason": "",
-  "updated_utc": "2026-08-11T00:23:53.872194+00:00"
+  "updated_utc": "2026-08-11T00:24:41.930807+00:00"
 }
