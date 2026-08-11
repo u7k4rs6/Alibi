@@ -1,14 +1,14 @@
 # PROGRESS
 
-Updated 2026-08-11T16:00:58.187492+00:00
+Updated 2026-08-11T16:02:11.158974+00:00
 
 | Field | Value |
 |---|---|
-| Phase | queue stopped |
+| Phase | queue running |
 | Current run id | none |
-| Current entry | none |
+| Current entry | a2 seed 2 |
 | Runs complete | 4 of 9 |
-| Runs failed | 1 |
+| Runs failed | 2 |
 | Wall clock elapsed | 0.00 h |
 | Projected remaining | 0.00 h |
 | Monitor tokens | 483946 |
@@ -26,10 +26,10 @@ Updated 2026-08-11T16:00:58.187492+00:00
 | a1 | 2 | complete | a1-seed2-67fa65aa | 80 steps |
 | a2 | 2 | running |  |  |
 | a0 | 3 | pending |  |  |
-| a1 | 3 | pending |  |  |
+| a1 | 3 | failed |  | section_6_collision |
 | a2 | 3 | pending |  |  |
 
 Stop rule: all 9 complete, or more than half failed, or BLOCKED.md exists.
-Stopped: True. BLOCKED.md exists, a section 6 collision was recorded
+Stopped: False. 
 
 Log: `queue.log`. Status: `python -m alibi.cli queue status`.
