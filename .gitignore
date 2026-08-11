@@ -43,3 +43,4 @@ tmp/
 # Dataset cache. Rebuildable from the pinned revisions in alibi/data/manifest.json,
 # so it is not committed. The manifest is.
 data/cache/
+artifacts/queue.lock

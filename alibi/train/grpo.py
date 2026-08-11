@@ -329,6 +329,7 @@ def run(config: ArmConfig, run_id: str | None = None, resume: bool = True) -> di
 
             kl = _update(trainer, step_records, completions, config)
             state.kl_history.append(kl if kl is not None else 0.0)
+            state.indeterminate_window.append([step_stats.held_out_indeterminate, step_stats.held_out_executions])
             step_stats.kl = kl
 
             summary = step_summary(
@@ -353,7 +354,11 @@ def run(config: ArmConfig, run_id: str | None = None, resume: bool = True) -> di
             save_state(run_dir, state)
 
             try:
-                halt_module.check_step(step_stats, state.kl_history[:-1])
+                halt_module.check_step(
+                    step_stats,
+                    state.kl_history[:-1],
+                    indeterminate_window=[tuple(x) for x in state.indeterminate_window],
+                )
             except halt_module.Halt as halt:
                 halt_module.write_halt(halt, run_id, step)
                 state.status, state.halt_reason = "failed", halt.reason

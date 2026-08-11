@@ -80,6 +80,8 @@ class RunState:
     status: str = "running"  # running | complete | failed
     halt_reason: str | None = None
     kl_history: list[float] = field(default_factory=list)
+    # (indeterminate, executions) per step, for the lagging-window halt check.
+    indeterminate_window: list[list[int]] = field(default_factory=list)
     started_utc: str = ""
     updated_utc: str = ""
 
@@ -156,7 +158,10 @@ class HeldOutPool:
 
     def __init__(self, executor: Executor, workers: int | None = None) -> None:
         self.executor = executor
-        self.pool = ThreadPoolExecutor(max_workers=workers or _executor_workers())
+        # Half the cores, not all but one. The held-out pool competes with
+        # generation for CPU, and oversubscribing it is what turns a slow
+        # completion into a timeout, which is indeterminate, which is a halt.
+        self.pool = ThreadPoolExecutor(max_workers=workers or max(2, (os.cpu_count() or 4) // 2))
         self.pending: dict[str, object] = {}
 
     def submit(self, key: str, problem: Problem, code: str) -> None:

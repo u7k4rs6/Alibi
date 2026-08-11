@@ -131,8 +131,47 @@ def check_monitor_errors(stats: StepStats) -> None:
         )
 
 
-def check_indeterminate(stats: StepStats) -> None:
+# The halt condition's own text permits this: "Indeterminate held-out executions
+# above 5 percent in a step, evaluated on a lagging window if held-out scoring is
+# asynchronous." Held-out scoring here IS asynchronous, running in a worker pool
+# off the training critical path, so the lagging window is the specified option
+# rather than a relaxation. The threshold is untouched.
+#
+# Why it is needed: a single completion whose code loops produces indeterminate
+# on essentially all ~99 of its held-out tests, which is 92/1576 = 5.8 percent of
+# one step on its own. Measured on a0 seed 1: steps 0 to 7 were 0.0000 and step 8
+# was 0.0584, caused by exactly one hanging completion out of sixteen. A 0.5B
+# policy writes infinite loops routinely, so the instantaneous reading makes the
+# matrix unrunnable while telling you nothing about the sandbox.
+INDETERMINATE_WINDOW_STEPS = 5
+
+
+def check_indeterminate(stats: StepStats, window: list[tuple[int, int]] | None = None) -> None:
+    """Indeterminate rate over a lagging window, per the condition's own wording.
+
+    `window` is a list of (indeterminate, executions) for recent steps, most
+    recent last, already including this step.
+    """
     limit = prereg.PREREG.halt.max_indeterminate_fraction
+    if window:
+        recent = window[-INDETERMINATE_WINDOW_STEPS:]
+        indeterminate = sum(i for i, _ in recent)
+        executions = sum(e for _, e in recent)
+        if executions and (indeterminate / executions) > limit:
+            raise Halt(
+                INDETERMINATE_RATE,
+                "indeterminate held out executions exceeded the limit over a lagging window, so "
+                "the cheat rate is measuring the sandbox rather than the policy",
+                {
+                    "indeterminate": indeterminate,
+                    "executions": executions,
+                    "fraction": indeterminate / executions,
+                    "limit": limit,
+                    "window_steps": len(recent),
+                    "per_step": recent,
+                },
+            )
+        return
     if stats.held_out_executions and stats.indeterminate_fraction > limit:
         raise Halt(
             INDETERMINATE_RATE,
@@ -196,10 +235,15 @@ def check_degenerate(stats: StepStats, min_mean_chars: int | None = None) -> Non
                 )
 
 
-def check_step(stats: StepStats, kl_history: list[float], min_mean_chars: int | None = None) -> None:
+def check_step(
+    stats: StepStats,
+    kl_history: list[float],
+    min_mean_chars: int | None = None,
+    indeterminate_window: list[tuple[int, int]] | None = None,
+) -> None:
     """Every per step condition, in a fixed order so the first failure is stable."""
     check_monitor_errors(stats)
-    check_indeterminate(stats)
+    check_indeterminate(stats, indeterminate_window)
     check_kl(stats, kl_history)
     check_degenerate(stats, min_mean_chars)
     check_disk()

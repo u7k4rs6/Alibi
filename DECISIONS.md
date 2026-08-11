@@ -325,3 +325,43 @@ tokens: two steps complete, KL finite, indeterminate 0.00.
 **Rejected: reducing group size or the number of prompts.** Group size is fixed
 by the PRD. Reducing prompts per step would have hidden the bug rather than
 fixed it, and would have cut the completions per step that H1 needs.
+
+### D-22 Queue stopped after five failures. Three distinct causes, all mine.
+The first real launch stopped at 00:40 with 5 of 9 failed. Diagnosis:
+
+**a) a0 seed 1, `indeterminate_held_out_rate` at step 8.** Steps 0 to 7 were
+0.0000. Step 8 was 0.0584. Cause: exactly **one** completion out of sixteen hung,
+and its held-out execution hit the wall clock, so 92 of its ~99 tests were
+indeterminate. 92/1576 = 5.84 percent of the whole step from a single bad
+completion.
+
+This is not sandbox drift, and the threshold may not change. The resolution is
+in the halt condition's own wording: "evaluated on a lagging window if held-out
+scoring is asynchronous". Held-out scoring here **is** asynchronous, so the
+lagging window is the specified option and not a relaxation. Implemented over 5
+steps, threshold untouched at 0.05. Over that window the same data is
+92/8280 = 1.1 percent, and genuine sustained degradation still fires.
+
+Without this the matrix is unrunnable: a 0.5B policy writes infinite loops
+routinely, so roughly one completion in sixteen hanging is the normal condition,
+not an anomaly.
+
+**b) a1 seed 1, CUDA OOM.** The runner called each arm in-process, so a0's model
+was still referenced when a1 loaded its own. Two 0.5B models in 7.6 GB. Each run
+is now a **subprocess**, which guarantees the memory is returned and also means a
+hard crash or an OOM kill fails one run rather than taking the queue down.
+
+**c) a2 s1, a0 s2, a1 s2, `dirty_git_tree`.** The monitor writes verdict cache
+files during a monitored arm, and `alibi/monitor/cache` was not in the runner's
+staged allowlist, so the tree stayed dirty and three consecutive runs halted
+before starting. The architecture doc says the cache is committed, so staging it
+is correct independently of this bug.
+
+**Also added:** a single-instance lock. An earlier stray runner raced a new one
+and produced a false stop, and nothing prevented that recurring.
+
+**On the discarded partial runs:** a0 seed 1 reached 9 steps and a1 seed 1
+reached 8, under contention and under the instantaneous halt rule. Neither ever
+entered the evidence index. They were discarded rather than resumed, because
+resuming would mix steps measured under a different halt implementation into one
+run. Nothing that was ever declared as evidence was touched.

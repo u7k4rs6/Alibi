@@ -62,7 +62,19 @@ def _git(*args: str) -> tuple[int, str]:
 # if the runner committed everything, an uncommitted source change would be
 # swept in and the dirty-tree halt could never fire, which would defeat the
 # control rather than satisfy it.
-RUNNER_OWNED = ("PROGRESS.md", "HALT.md", "BLOCKED.md", "artifacts", "report", "DECISIONS.md", "BUDGET.md")
+RUNNER_OWNED = (
+    "PROGRESS.md",
+    "HALT.md",
+    "BLOCKED.md",
+    "artifacts",
+    "report",
+    "DECISIONS.md",
+    "BUDGET.md",
+    # The monitor writes verdict cache files during a monitored arm. The
+    # architecture doc says the cache is committed, and leaving it unstaged is
+    # what made the tree dirty and halted three consecutive runs.
+    "alibi/monitor/cache",
+)
 
 
 def commit_and_push(message: str) -> None:
@@ -118,6 +130,65 @@ def declare_in_index(run_id: str, arm: str, seed: int, steps: int) -> None:
     )
     document["runs_absent_reason"] = None
     index_path.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def run_subprocess(config: ArmConfig, run_id: str) -> dict:
+    """Run one arm in its own process and read back its result."""
+    result_path = runlog.ARTIFACTS / "runs" / run_id / "run_result.json"
+    result_path.parent.mkdir(parents=True, exist_ok=True)
+    if result_path.exists():
+        result_path.unlink()
+
+    code = (
+        "import json,sys\n"
+        "from alibi.train.grpo import run\n"
+        "from alibi.train.loop import ArmConfig\n"
+        f"cfg=ArmConfig(**{config.to_dict()!r})\n"
+        f"r=run(cfg, run_id={run_id!r})\n"
+        "r.pop('summaries', None)\n"
+        f"open({str(result_path)!r},'w').write(json.dumps(r))\n"
+    )
+    env = dict(os.environ)
+    env.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
+    try:
+        proc = subprocess.run(
+            [sys.executable, "-u", "-c", code],
+            cwd=str(runlog.REPO_ROOT),
+            env=env,
+            capture_output=False,
+            timeout=6 * 3600,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return {"run_id": run_id, "status": "failed", "halt_reason": "run_timeout", "message": "run exceeded 6 hours"}
+
+    if result_path.exists():
+        try:
+            return json.loads(result_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            pass
+    return {
+        "run_id": run_id,
+        "status": "failed",
+        "halt_reason": "subprocess_exit",
+        "message": f"run subprocess exited {proc.returncode} without writing a result",
+    }
+
+
+def acquire_lock() -> bool:
+    """One runner at a time. Two racing runners caused an earlier false stop."""
+    lock = runlog.ARTIFACTS / "queue.lock"
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    if lock.exists():
+        try:
+            existing = int(lock.read_text(encoding="utf-8").strip())
+            os.kill(existing, 0)
+            log(f"another runner is alive with pid {existing}, refusing to start a second")
+            return False
+        except (ValueError, ProcessLookupError, PermissionError, OSError):
+            log("stale lock found, taking it over")
+    lock.write_text(str(os.getpid()), encoding="utf-8")
+    return True
 
 
 def rebuild_report() -> None:
@@ -199,6 +270,8 @@ def write_progress(state: queue_module.QueueState, current: dict | None, started
 def main() -> int:
     started = time.monotonic()
     log("queue runner starting")
+    if not acquire_lock():
+        return 0
     log(f"prereg {prereg.PREREG_HASH[:16]} eligibility {prereg.provenance()['eligibility_hash'][:16]}")
 
     state = queue_module.load_queue()
