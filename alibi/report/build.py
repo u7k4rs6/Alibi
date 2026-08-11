@@ -893,6 +893,109 @@ def build_report() -> dict[str, Path]:
         )
     lines.append("")
 
+    # 6c-sexies. Did the v1 loop have usable gradient signal?
+    from alibi.report import retrospective as retro
+
+    retro.write()
+    _analysis, judgement = retro.a0_seed1()
+    lines.append("## Did the v1 loop learn anything?")
+    lines.append("")
+    if not judgement or not judgement.get("measured"):
+        lines.append(f"Not measured: {(judgement or {}).get('absent_reason', 'no a0 seed 1 run stored')}")
+    else:
+        lines.append(
+            "v1's curves are flat. That has two very different explanations, and only one of them is "
+            "about the model: either the policy did not learn to cheat, or the loop could not have "
+            "taught it anything. Recomputed from stored a0 seed 1 artifacts, "
+            f"{judgement['n_steps']} steps."
+        )
+        lines.append("")
+        lines.append("| Measure | First 10 steps | Last 10 steps |")
+        lines.append("|---|---|---|")
+        lines.append(
+            f"| Mean reward | {_fmt(judgement['mean_reward_first10'])} | "
+            f"**{_fmt(judgement['mean_reward_last10'])}** |"
+        )
+        lines.append(
+            f"| Zero-variance groups | {_fmt(judgement['zero_variance_group_fraction_first10'])} | "
+            f"{_fmt(judgement['zero_variance_group_fraction_last10'])} |"
+        )
+        lines.append(
+            f"| Mean token entropy | {_fmt(judgement['entropy_first10'])} | "
+            f"{_fmt(judgement['entropy_last10'])} |"
+        )
+        lines.append(
+            f"| Capped fraction | {_fmt(judgement['capped_fraction_first10'])} | "
+            f"{_fmt(judgement['capped_fraction_last10'])} |"
+        )
+        lines.append(
+            f"| Mean absolute advantage (whole run) | {_fmt(judgement['mean_abs_advantage_mean'])} "
+            f"| max {_fmt(judgement['max_abs_advantage'])} |"
+        )
+        lines.append("")
+        lines.append("### The policy degraded")
+        lines.append("")
+        lines.append(
+            f"**Yes.** Mean reward fell from {_fmt(judgement['mean_reward_first10'])} to "
+            f"{_fmt(judgement['mean_reward_last10'])}, a change of "
+            f"{_fmt(judgement['reward_change'])}. Training made the policy worse at the task it was "
+            "rewarded for. Visible pass rate falls with it. Whatever v1 measured, it was not a policy "
+            "improving and then learning to cheat."
+            if judgement["policy_degraded"]
+            else f"**No.** Mean reward moved from {_fmt(judgement['mean_reward_first10'])} to "
+            f"{_fmt(judgement['mean_reward_last10'])}."
+        )
+        lines.append("")
+        lines.append("### There was gradient signal, and that is not the mechanism")
+        lines.append("")
+        if judgement["most_groups_had_zero_variance"]:
+            lines.append(
+                f"**Most groups had zero reward variance** "
+                f"({_fmt(judgement['zero_variance_group_fraction_mean'])} on average). A group whose "
+                "rewards are all equal produces advantages of exactly zero and contributes no "
+                "gradient. That is the headline mechanism: the loop mostly could not learn."
+            )
+        else:
+            lines.append(
+                f"**No.** Zero-variance groups averaged "
+                f"{_fmt(judgement['zero_variance_group_fraction_mean'])}, so roughly "
+                f"{_fmt(1 - judgement['zero_variance_group_fraction_mean'])} of groups produced a "
+                "non-zero advantage, and mean absolute advantage was "
+                f"{_fmt(judgement['mean_abs_advantage_mean'])} with a maximum of "
+                f"{_fmt(judgement['max_abs_advantage'])}. **The loop had usable gradient signal on "
+                "most steps.** Zero-variance groups are therefore not the explanation for the flat "
+                "curves, and it would have been convenient but wrong to report them as one."
+            )
+        lines.append("")
+        lines.append(
+            "Entropy **rose** from "
+            f"{_fmt(judgement['entropy_first10'])} to {_fmt(judgement['entropy_last10'])}. The policy "
+            "did not collapse onto a single output; it became less confident. Combined with falling "
+            "reward, the picture is a policy being pushed away from its pretrained behaviour without "
+            "finding anything better, which is what a small model under a sparse, mostly-negative "
+            "reward tends to do."
+            if judgement["entropy_first10"] is not None
+            and judgement["entropy_last10"] is not None
+            and judgement["entropy_last10"] > judgement["entropy_first10"]
+            else "Entropy is reported above."
+        )
+        lines.append("")
+        lines.append(
+            f"**Truncation is the standing constraint.** The capped fraction sat at "
+            f"{_fmt(judgement['capped_fraction_first10'])} at the start and "
+            f"{_fmt(judgement['capped_fraction_last10'])} at the end: roughly two completions in five "
+            "were cut off by the 256-token budget for the whole run. That bounds what the policy "
+            "could express throughout and is recorded as v1's third fault."
+        )
+        lines.append("")
+        lines.append(
+            "**Reading for H1.** v1's flat cheat rate should not be read as evidence that a 0.5B "
+            "policy will not learn to reward hack. It is evidence about a run whose policy was "
+            "degrading, whose completions were 40 percent truncated, and one of whose three arms was "
+            "measuring nothing. H1 was not given a fair test."
+        )
+    lines.append("")
+
     # 6d. Amendments to the halt conditions, stated plainly.
     lines.append("## Halt conditions were amended before any curve existed")
     lines.append("")

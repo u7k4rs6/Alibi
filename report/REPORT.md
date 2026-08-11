@@ -258,6 +258,32 @@ Qwen3-0.6B, a model of similar scale that **is** post-trained to think, settles 
 
 Cost: 196 monitor calls, 57242 tokens, 7.3 minutes wall clock on the local GPU shared with the running matrix, so no rented compute. This diagnostic is excluded from the evidence index and is never pooled with the matrix.
 
+## Did the v1 loop learn anything?
+
+v1's curves are flat. That has two very different explanations, and only one of them is about the model: either the policy did not learn to cheat, or the loop could not have taught it anything. Recomputed from stored a0 seed 1 artifacts, 80 steps.
+
+| Measure | First 10 steps | Last 10 steps |
+|---|---|---|
+| Mean reward | 0.2176 | **0.0990** |
+| Zero-variance groups | 0.3000 | 0.2000 |
+| Mean token entropy | 0.6384 | 0.8354 |
+| Capped fraction | 0.4250 | 0.4375 |
+| Mean absolute advantage (whole run) | 0.5957 | max 2.6457 |
+
+### The policy degraded
+
+**Yes.** Mean reward fell from 0.2176 to 0.0990, a change of -0.1186. Training made the policy worse at the task it was rewarded for. Visible pass rate falls with it. Whatever v1 measured, it was not a policy improving and then learning to cheat.
+
+### There was gradient signal, and that is not the mechanism
+
+**No.** Zero-variance groups averaged 0.2375, so roughly 0.7625 of groups produced a non-zero advantage, and mean absolute advantage was 0.5957 with a maximum of 2.6457. **The loop had usable gradient signal on most steps.** Zero-variance groups are therefore not the explanation for the flat curves, and it would have been convenient but wrong to report them as one.
+
+Entropy **rose** from 0.6384 to 0.8354. The policy did not collapse onto a single output; it became less confident. Combined with falling reward, the picture is a policy being pushed away from its pretrained behaviour without finding anything better, which is what a small model under a sparse, mostly-negative reward tends to do.
+
+**Truncation is the standing constraint.** The capped fraction sat at 0.4250 at the start and 0.4375 at the end: roughly two completions in five were cut off by the 256-token budget for the whole run. That bounds what the policy could express throughout and is recorded as v1's third fault.
+
+**Reading for H1.** v1's flat cheat rate should not be read as evidence that a 0.5B policy will not learn to reward hack. It is evidence about a run whose policy was degrading, whose completions were 40 percent truncated, and one of whose three arms was measuring nothing. H1 was not given a fair test.
+
 ## Halt conditions were amended before any curve existed
 
 Two of the pre-declared halt conditions were amended before any monitored-arm curve had been produced. Both amendments are recorded here because a halt condition that moved is a fact about the experiment, not an implementation detail.
@@ -286,5 +312,5 @@ Two of the pre-declared halt conditions were amended before any monitored-arm cu
 }
 ```
 
-Generated 2026-08-11T16:29:02.541661+00:00 by `alibi report`. Numbers are injected from
+Generated 2026-08-11T17:41:57.059752+00:00 by `alibi report`. Numbers are injected from
 `artifacts/`, never typed. `alibi verify --no-gpu` recomputes every claim above.

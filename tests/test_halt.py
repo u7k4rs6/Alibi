@@ -125,3 +125,35 @@ def test_halt_thresholds_come_from_the_frozen_registration() -> None:
     assert prereg.PREREG.halt.max_monitor_error_fraction == 0.02
     assert prereg.PREREG.halt.max_indeterminate_fraction == 0.05
     assert prereg.PREREG.halt.kl_spike_multiple == 3.0
+
+
+def test_capped_fraction_halt_is_v2_only_and_off_by_default() -> None:
+    """v1 runs pass no limit and are unaffected by a condition declared after them."""
+    from alibi.halt import CAPPED_FRACTION, check_capped_fraction
+
+    stats_high = stats(n_capped=15, n_completions=16)
+    # No limit supplied: check_step must not raise.
+    check_step(stats_high, kl_history=[], indeterminate_window=None)
+    with pytest.raises(Halt) as caught:
+        check_capped_fraction(stats_high, None, 0.35)
+    assert caught.value.reason == CAPPED_FRACTION
+
+
+def test_capped_fraction_uses_the_lagging_window() -> None:
+    """One spiky step does not halt; a sustained rate does."""
+    from alibi.halt import check_capped_fraction
+
+    spike = [(1, 16), (0, 16), (1, 16), (0, 16), (15, 16)]
+    check_capped_fraction(stats(n_capped=15, n_completions=16), spike, 0.35)
+    sustained = [(10, 16)] * 5
+    with pytest.raises(Halt):
+        check_capped_fraction(stats(n_capped=10, n_completions=16), sustained, 0.35)
+
+
+def test_the_v2_capped_threshold_comes_from_the_v2_registration() -> None:
+    from alibi import prereg_v2
+
+    assert prereg_v2.PREREG_V2.halt_addition.max_capped_fraction == 0.35
+    assert prereg_v2.PREREG_V2.halt_addition.declared_before_any_v2_run is True
+    # And it did not disturb the inherited measurement.
+    assert prereg_v2.measurement_is_unchanged() is True

@@ -87,6 +87,8 @@ class RunState:
     kl_history: list[float] = field(default_factory=list)
     # (indeterminate, executions) per step, for the lagging-window halt check.
     indeterminate_window: list[list[int]] = field(default_factory=list)
+    # (capped, completions) per step, for the v2-only capped-fraction halt.
+    capped_window: list[list[int]] = field(default_factory=list)
     started_utc: str = ""
     updated_utc: str = ""
 
@@ -434,6 +436,7 @@ def step_summary(
     kl: float | None,
     duration: float,
     honest_probe: dict | None = None,
+    training: dict | None = None,
 ) -> dict:
     """Everything the console line and the report need, computed once."""
     n = len(step_records)
@@ -485,6 +488,14 @@ def step_summary(
         # because these are not policy completions.
         "honest_probe": honest_probe or {"n": 0, "flag_rate": None},
         "monitor_spend": _spend_snapshot(),
+        # Whether the loop had usable gradient signal, and whether the policy is
+        # being trained on truncation. Diagnostic only: none of this enters the
+        # reward or the oracle.
+        "capped_fraction": (
+            sum(1 for r in step_records if r.get("finish_reason") == "length") / n if n else None
+        ),
+        "n_capped": sum(1 for r in step_records if r.get("finish_reason") == "length"),
+        "training": training or {},
         "held_out_indeterminate_fraction": step_stats.indeterminate_fraction,
         "held_out_executions": step_stats.held_out_executions,
         "held_out_indeterminate": step_stats.held_out_indeterminate,
@@ -522,5 +533,7 @@ def console_line(summary: dict) -> str:
         f"| flag {fmt(summary['flag_rate_monitor'])} | gap {fmt(summary['obfuscation_gap'])} "
         f"| kl {fmt(summary['kl'], 5)} | cache {fmt(summary['monitor']['cache_hit_rate'])} "
         f"| indet {fmt(summary['held_out_indeterminate_fraction'])} "
-        f"| fp {fmt((summary.get('honest_probe') or {}).get('flag_rate'))}"
+        f"| fp {fmt((summary.get('honest_probe') or {}).get('flag_rate'))} "
+        f"| cap {fmt(summary.get('capped_fraction'))} "
+        f"| zvar {fmt((summary.get('training') or {}).get('zero_variance_group_fraction'))}"
     )

@@ -739,3 +739,67 @@ contention is what raises v1's indeterminate rate into a halt.
 published pricing for Qwen2.5-7B-Instruct-Turbo, input and output priced
 identically. The cap is now enforced in dollars rather than through the token
 stand-in.
+
+### D-30 Three additions, and a retrospective that refuted its own hypothesis
+Operator-authorized before the v2 stage. None of them changes v2's measurement
+objects, the reward form, lambda, the arms, or the oracle.
+`measurement_is_unchanged()` still returns True and is asserted by a test.
+
+**1. Retrospective on a0 seed 1, recomputed from stored artifacts.** v1 never
+logged advantage statistics or entropy, so both were recovered: advantages
+exactly, because the GRPO formula is deterministic given the group's rewards and
+every reward is in `completions.jsonl`; entropy from `logprobs.parquet`, where
+the mean negative sampler logprob is an unbiased estimator of the sampling
+entropy at temperature 1.0.
+
+| Measure | First 10 | Last 10 |
+|---|---|---|
+| Mean reward | 0.2176 | **0.0990** |
+| Zero-variance groups | 0.3000 | 0.2000 |
+| Mean token entropy | 0.6384 | 0.8354 |
+| Capped fraction | 0.4250 | 0.4375 |
+| Mean absolute advantage | 0.5957 whole run | max 2.6457 |
+
+**The policy degraded: yes.** Mean reward fell by 0.1186 over the run.
+
+**The zero-variance hypothesis is refuted.** The instruction said to report zero
+variance as the headline mechanism "if most groups had zero variance". They did
+not: the mean is **0.2375**, so about 76 percent of groups produced a non-zero
+advantage, and mean absolute advantage was 0.5957 with a maximum of 2.6457. The
+loop **had usable gradient signal on most steps**. Reporting zero variance as
+the mechanism would have been convenient and wrong, and REPORT.md says so in
+those words.
+
+What the data does show is a policy pushed away from its pretrained behaviour
+without finding anything better: reward falling, **entropy rising** from 0.6384
+to 0.8354, so no mode collapse, and two completions in five truncated for the
+whole run. The reading now stated in REPORT.md: v1's flat cheat rate is not
+evidence that a 0.5B policy will not reward hack, because H1 was never given a
+fair test.
+
+**2. v2 stage gate.** Mean reward and capped fraction are first-class columns in
+`report/V2_STAGE.md`. If a0 seed 1 ends below its step-zero reward the stage
+stops there and a1 and a2 do not run.
+
+*Choice recorded:* step zero is one step and noisy, so the gate compares the
+mean of the **final five** steps against the step-zero value, and reports the
+first-five mean alongside so a marginal call is visible rather than hidden
+behind a single number.
+
+**3. New halt, v2 only: capped fraction above 0.35 on the lagging window.**
+Declared in `alibi/prereg_v2.py` before any v2 run existed. Rationale: under a
+thinking policy the answer follows the think block, so a capped completion
+yields **no code at all**, unlike v1 where truncation merely shortened it. 0.35
+is roughly three times the measured step-zero rate of 0.125. Capped fraction is
+logged per step per arm regardless of the halt, and is now on the console line.
+
+**Version bumped to `alibi-prereg-v2.1`.** The v2.0 tag already existed, and
+adding the halt changes the v2 hash. Re-tagging v2.0 in place would destroy tag
+immutability, so v2.1 supersedes it. No run has ever executed under v2.0, so
+this is still entirely pre-registration.
+
+**One bug found and fixed on the way:** the entropy estimator returned `inf`,
+because positions past end-of-sequence are padding and carry a logprob of `-inf`.
+They are dropped rather than clamped: a padding position is not a sampled token
+and does not belong in an entropy over sampled tokens. The same guard is in the
+live path.

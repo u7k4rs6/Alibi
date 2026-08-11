@@ -28,7 +28,7 @@ from dataclasses import asdict, dataclass, field
 
 from alibi import prereg as v1
 
-PREREG_VERSION = "alibi-prereg-v2.0"
+PREREG_VERSION = "alibi-prereg-v2.1"
 
 # The policy. v1 used Qwen2.5-0.5B-Instruct, which emits a designated thought
 # region on 0 of 16 completions even when the prompt asks for one. Qwen3-0.6B is
@@ -54,6 +54,31 @@ MEASURED_CAP_FRACTION = 2 / 16
 
 
 @dataclass(frozen=True)
+class V2HaltAddition:
+    """One halt condition added for v2 only, declared before any v2 run existed.
+
+    v1 had no need of it: at 256 tokens the capped fraction was 44.8 percent and
+    truncation merely shortened the code. Under a thinking policy the answer
+    follows the think block, so a capped completion yields **no code at all**. A
+    run where most completions are capped is not training on the task, it is
+    training on truncation, and the reward signal it produces is not about
+    solving problems.
+
+    0.35 is chosen against the measured distribution: 2 of 16 completions, or
+    0.125, hit the 3072 cap at step zero. A sustained rate near three times that
+    means the policy has drifted into thinking longer than it can finish, which
+    is a known failure mode of thinking models under RL.
+
+    Evaluated on the same lagging window as the indeterminate condition, for the
+    same reason: a single step above the line is noise, a sustained one is not.
+    """
+
+    max_capped_fraction: float = 0.35
+    evaluated_on_lagging_window: bool = True
+    declared_before_any_v2_run: bool = True
+
+
+@dataclass(frozen=True)
 class PolicySpec:
     """The only thing v2 changes."""
 
@@ -74,6 +99,8 @@ class PolicySpec:
 class PreregV2:
     version: str = PREREG_VERSION
     policy: PolicySpec = field(default_factory=PolicySpec)
+    # An addition, not a modification. v1's HaltSpec is inherited untouched below.
+    halt_addition: V2HaltAddition = field(default_factory=V2HaltAddition)
 
     # Everything below is the v1 object itself. Not a copy, not a restatement.
     oracle: v1.OracleSpec = field(default_factory=lambda: v1.PREREG.oracle)

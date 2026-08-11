@@ -33,6 +33,7 @@ DEGENERATE_POLICY = "degenerate_policy"
 DIRTY_TREE = "dirty_git_tree"
 HASH_MISMATCH = "prereg_or_eligibility_hash_mismatch"
 DISK_LOW = "disk_below_floor"
+CAPPED_FRACTION = "capped_completion_fraction"
 
 MIN_FREE_DISK_BYTES = 10 * 1024**3
 
@@ -61,6 +62,8 @@ class StepStats:
     held_out_indeterminate: int = 0
     kl: float | None = None
     completion_texts: list[str] = field(default_factory=list)
+    n_capped: int = 0
+    n_completions: int = 0
     group_size: int = 1
     mean_completion_chars: float | None = None
 
@@ -71,6 +74,11 @@ class StepStats:
     @property
     def indeterminate_fraction(self) -> float:
         return self.held_out_indeterminate / self.held_out_executions if self.held_out_executions else 0.0
+
+    @property
+    def capped_fraction(self) -> float:
+        """Completions that hit the token budget rather than stopping."""
+        return self.n_capped / self.n_completions if self.n_completions else 0.0
 
 
 def check_dirty_tree() -> None:
@@ -186,6 +194,36 @@ def check_indeterminate(stats: StepStats, window: list[tuple[int, int]] | None =
         )
 
 
+def check_capped_fraction(stats: StepStats, window: list[tuple[int, int]] | None, limit: float) -> None:
+    """v2 only. A run where most completions are truncated is training on truncation.
+
+    Declared in alibi/prereg_v2.py before any v2 run existed. Evaluated on the
+    same lagging window as the indeterminate condition, because a single step
+    above the line is noise.
+    """
+    recent = (window or [])[-INDETERMINATE_WINDOW_STEPS:]
+    if recent:
+        capped = sum(c for c, _ in recent)
+        total = sum(t for _, t in recent)
+        fraction = capped / total if total else 0.0
+    else:
+        fraction, capped, total = stats.capped_fraction, stats.n_capped, stats.n_completions
+    if total and fraction > limit:
+        raise Halt(
+            CAPPED_FRACTION,
+            "too many completions hit the token budget over a lagging window, so the policy is "
+            "being trained on truncation rather than on the task",
+            {
+                "capped": capped,
+                "completions": total,
+                "fraction": fraction,
+                "limit": limit,
+                "window_steps": len(recent),
+                "per_step": recent,
+            },
+        )
+
+
 def check_kl(stats: StepStats, kl_history: list[float]) -> None:
     """KL above a multiple of the median of the first N steps."""
     spec = prereg.PREREG.halt
@@ -240,10 +278,14 @@ def check_step(
     kl_history: list[float],
     min_mean_chars: int | None = None,
     indeterminate_window: list[tuple[int, int]] | None = None,
+    capped_window: list[tuple[int, int]] | None = None,
+    max_capped_fraction: float | None = None,
 ) -> None:
     """Every per step condition, in a fixed order so the first failure is stable."""
     check_monitor_errors(stats)
     check_indeterminate(stats, indeterminate_window)
+    if max_capped_fraction is not None:
+        check_capped_fraction(stats, capped_window, max_capped_fraction)
     check_kl(stats, kl_history)
     check_degenerate(stats, min_mean_chars)
     check_disk()

@@ -338,9 +338,13 @@ def run(config: ArmConfig, run_id: str | None = None, resume: bool = True) -> di
             step_stats.monitor_errors = stats.errors
             step_stats.monitor_judgements = stats.total
 
-            kl = _update(trainer, step_records, completions, config)
+            training = _update(trainer, step_records, completions, config) or {}
+            kl = training.get("kl")
             state.kl_history.append(kl if kl is not None else 0.0)
             state.indeterminate_window.append([step_stats.held_out_indeterminate, step_stats.held_out_executions])
+            step_stats.n_capped = sum(1 for r in step_records if r.get("finish_reason") == "length")
+            step_stats.n_completions = len(step_records)
+            state.capped_window.append([step_stats.n_capped, step_stats.n_completions])
             step_stats.kl = kl
 
             summary = step_summary(
@@ -353,6 +357,7 @@ def run(config: ArmConfig, run_id: str | None = None, resume: bool = True) -> di
                 kl=kl,
                 duration=time.monotonic() - started,
                 honest_probe=honest.to_dict(),
+                training=training,
             )
             step_dir = write_step(run_dir, step, step_records, summary)
             for row in logprob_rows:
@@ -365,10 +370,19 @@ def run(config: ArmConfig, run_id: str | None = None, resume: bool = True) -> di
             save_state(run_dir, state)
 
             try:
+                # The capped-fraction halt is v2 only and is declared in
+                # alibi/prereg_v2.py. v1 runs pass None and are unaffected.
+                max_capped = None
+                if config.policy_version.startswith("alibi-prereg-v2"):
+                    from alibi import prereg_v2
+
+                    max_capped = prereg_v2.PREREG_V2.halt_addition.max_capped_fraction
                 halt_module.check_step(
                     step_stats,
                     state.kl_history[:-1],
                     indeterminate_window=[tuple(x) for x in state.indeterminate_window],
+                    capped_window=[tuple(x) for x in state.capped_window],
+                    max_capped_fraction=max_capped,
                 )
             except halt_module.Halt as halt:
                 halt_module.write_halt(halt, run_id, step)
@@ -445,6 +459,19 @@ def _update(trainer, step_records: list[dict], completions, config: ArmConfig) -
         advantages.append(centred / (spread + 1e-6))
     advantage = torch.cat(advantages) if advantages else rewards
 
+    # A group whose rewards are all equal has zero variance, so every advantage
+    # in it is zero and it contributes no gradient. If most groups are like that
+    # the loop is not learning, whatever the reward curve says.
+    zero_variance_groups = 0
+    n_groups = 0
+    for start in range(0, len(rewards), group):
+        chunk = rewards[start : start + group]
+        if len(chunk) < 2:
+            continue
+        n_groups += 1
+        if float(chunk.std(unbiased=False)) < 1e-8:
+            zero_variance_groups += 1
+
     device = next(model.parameters()).device
 
     # Only completions long enough to have a next token target. A one token
@@ -495,7 +522,29 @@ def _update(trainer, step_records: list[dict], completions, config: ArmConfig) -
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
-    return sum(kl_terms) / len(kl_terms) if kl_terms else None
+    magnitudes = [abs(float(advantage[i])) for i, _ in usable] if len(advantage) else []
+    # Padding positions past end-of-sequence carry -inf and are not sampled
+    # tokens, so they are dropped rather than clamped.
+    entropies = []
+    for _, completion in usable:
+        finite = [lp for lp in completion.sampler_logprobs if math.isfinite(lp)]
+        if finite:
+            entropies.append(-sum(finite) / len(finite))
+    return {
+        "kl": sum(kl_terms) / len(kl_terms) if kl_terms else None,
+        "mean_reward": float(rewards.mean()) if len(rewards) else None,
+        "reward_std": float(rewards.std(unbiased=False)) if len(rewards) > 1 else None,
+        "n_groups": n_groups,
+        "zero_variance_groups": zero_variance_groups,
+        "zero_variance_group_fraction": (zero_variance_groups / n_groups) if n_groups else None,
+        "mean_abs_advantage": (sum(magnitudes) / len(magnitudes)) if magnitudes else None,
+        "max_abs_advantage": max(magnitudes) if magnitudes else None,
+        # Single-sample-per-position estimate of the sampling entropy. Tokens are
+        # drawn from the policy at temperature 1.0, so the mean negative logprob
+        # of the sampled tokens is an unbiased estimator of H(policy).
+        "mean_token_entropy": (sum(entropies) / len(entropies)) if entropies else None,
+        "n_updated": counted,
+    }
 
 
 def smoke(steps: int = 3, prompts: int = 2, group: int = 2) -> dict:

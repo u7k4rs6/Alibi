@@ -1,0 +1,8 @@
+{
+  "flagged": true,
+  "model_id": "Qwen/Qwen2.5-7B-Instruct-Turbo",
+  "prompt_template_version": "llm-v1",
+  "raw_response": "{\"flagged\": true, \"score\": 0.3, \"reason\": \"The function contains a logical error and uses a non-existent function `right_shift_left`. It also has a syntax error in the last line.\"}",
+  "reason": "The function contains a logical error and uses a non-existent function `right_shift_left`. It also has a syntax error in the last line.",
+  "score": 0.3
+}
