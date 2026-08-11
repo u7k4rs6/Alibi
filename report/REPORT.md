@@ -178,6 +178,50 @@ Limits of this estimate, all of which keep it an estimate:
 - Zero events means the point estimate is 0.0 and uninformative on its own. The upper confidence bound is the number worth quoting.
 - This is measured on the same held-out harness and timeouts the experiment uses, so a systematic harness problem would be invisible to it.
 
+## Two variance estimates, and which one a verdict must clear
+
+**Seed band** is the min to max across seeds. It captures **sampling variance only**: the same problems, the same order, a different sampling seed. It says nothing about whether the result would hold on other problems.
+
+**Cluster bootstrap** resamples **problems** with replacement, 1000 draws at declared seed `20260811`, and recomputes the terminal statistics each draw. The cluster is the problem, not the completion, because completions on one problem share its difficulty, its visible asserts and its held-out set, so treating them as independent understates variance. This captures **problem variance**.
+
+"Terminal" here is the last 10 steps, not the last step. The final step contains 2 problems and 16 completions, and resampling 2 clusters is not a bootstrap. That window choice is an implementation decision and is stated rather than buried.
+
+| Arm | Seed band, terminal gap | Bootstrap 95 percent, terminal gap | Problems | Wider |
+|---|---|---|---|---|
+| a0 | 0.0000 | 0.0000 to 0.0000 (width 0.0000) | 20 | bootstrap |
+
+**A difference between arms is reported as resolved only if it clears the wider of the two.** Where the bootstrap is wider than the seed band, a verdict that looked resolved on the seed band alone does not survive, and this section names any verdict that changes.
+
+Verdicts affected: none yet, because no between-arm comparison exists. Per-arm widths: a0: seed band 0.0000 against bootstrap width 0.0000
+
+A zero-width bootstrap interval means zero events were observed in the window, not that the estimate is precise. It should be read as uninformative, not as certainty.
+
+**What the bootstrap does not fix.** It corrects understated variance. It does **not** correct selection bias. The problems in any run are a fixed, deterministic, non-random prefix of the eligible set, not a random draw from it, so resampling them estimates the uncertainty of a statement about *those* problems and cannot license a statement about MBPP as a whole. The bootstrap widens the interval around the right target; it does not move the target.
+
+## What the sampled problems are
+
+**Ordering.** eligible problems sorted ascending by MBPP task_id, then a deterministic round robin from index 0 with no seed, so the sampled set is the lowest-task-id prefix.
+
+**160 sampled** (task ids [2, 308]) against **205 never sampled** (task ids [309, 809]).
+
+| Property | Sampled mean | Never-sampled mean | Difference | Permutation p | Material |
+|---|---|---|---|---|---|
+| n_held_out | 105.8250 | 106.0488 | -0.2238 | 0.7976 | False |
+| n_visible | 3.0562 | 3.1220 | -0.0657 | 0.1304 | False |
+| reference_chars | 125.7500 | 117.8878 | 7.8622 | 0.4728 | False |
+| cheat_passes_visible | 0.9938 | 1.0000 | -0.0062 | 0.4388 | False |
+
+Two-sided permutation test, 2000 draws, alpha 0.05, seed as declared for the bootstrap.
+
+### Provenance, which those four properties do not capture
+
+- Sampled: `{'prompt': 7, 'test': 153}`
+- Never sampled: `{'test': 68, 'train': 100, 'validation': 37}`
+
+**The four properties above show no material difference, and this does.** Because task id ordering tracks MBPP's own split boundaries, the sampled prefix is almost entirely MBPP's *test* split plus several problems from the *prompt* split, while the unsampled tail spans test, validation and train. The prompt split is MBPP's designated few-shot exemplar set and is the most likely of all to appear in pretraining data.
+
+So the honest statement is: on problem shape, held-out size, visible assert count, reference length and cheat constructibility, the prefix looks like the tail. On **provenance** it does not. **Generalisation from this run is to the sampled prefix, not to MBPP.** Any claim in this report about behaviour on MBPP should be read as a claim about 160 mostly-test-split problems that were chosen by sort order rather than at random.
+
 ## Halt conditions were amended before any curve existed
 
 Two of the pre-declared halt conditions were amended before any monitored-arm curve had been produced. Both amendments are recorded here because a halt condition that moved is a fact about the experiment, not an implementation detail.
@@ -206,5 +250,5 @@ Two of the pre-declared halt conditions were amended before any monitored-arm cu
 }
 ```
 
-Generated 2026-08-11T06:38:08.992682+00:00 by `alibi report`. Numbers are injected from
+Generated 2026-08-11T06:45:24.949987+00:00 by `alibi report`. Numbers are injected from
 `artifacts/`, never typed. `alibi verify --no-gpu` recomputes every claim above.

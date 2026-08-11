@@ -509,3 +509,66 @@ The honest comparison, now in REPORT.md: the structural rate is measured at
 0.0137 and above the near zero bar, while the behavioural rate is bounded above
 by 0.0101 and is consistent with zero. Weaker than the withdrawn claim, and it is
 what the data supports.
+
+### D-26 Cluster bootstrap and prefix characterisation, declared mid-queue
+Operator-declared while a1 seed 1 was running and only a0 seed 1 had completed.
+Report time only. `prereg.py` untouched, queue untouched.
+
+**1. Cluster bootstrap over problems.** Resamples **problems** with replacement,
+1000 draws at declared seed 20260811, recomputing terminal cheat rate and gap
+each draw. The cluster is the problem because completions on one problem share
+its difficulty, visible asserts and held-out set, so treating them as
+independent understates variance.
+
+*Choice I had to make and am recording:* "terminal" is the **last 10 steps**, not
+the last step. The final step contains 2 problems and 16 completions, and
+resampling 2 clusters is not a bootstrap. Ten steps gives 20 distinct problems,
+which is still small and is reported as such.
+
+REPORT.md now states both estimates side by side: seed band is sampling variance
+only, bootstrap is problem variance, and a difference is resolved only if it
+clears the wider of the two. It also states plainly that the bootstrap corrects
+understated variance and does **not** correct selection bias, because the
+sampled problems are a fixed deterministic prefix rather than a random draw.
+The bootstrap widens the interval around the right target; it does not move the
+target.
+
+On a0 seed 1 the interval is zero width, because zero cheat events were observed
+in the terminal window. Reported as uninformative rather than as precision.
+
+**2. Prefix characterisation. This produced a finding the obvious tests missed.**
+
+Ordering: eligible problems sorted ascending by MBPP task_id, then a
+deterministic unseeded round robin from index 0, so the sampled set is the
+lowest-task-id prefix. Sampled 160 (ids 2 to 308) against 205 never sampled
+(ids 309 to 809).
+
+On the four requested properties, two-sided permutation test, 2000 draws,
+alpha 0.05:
+
+| Property | Sampled | Unsampled | p | Material |
+|---|---|---|---|---|
+| held-out test count | 105.83 | 106.05 | 0.798 | no |
+| visible assert count | 3.06 | 3.12 | 0.130 | no |
+| reference solution chars | 125.75 | 117.89 | 0.473 | no |
+| synthetic cheat passes visible | 0.99 | 1.00 | 0.439 | no |
+
+None differ materially. **But those four are all about problem shape and miss
+provenance.** Because task_id ordering tracks MBPP's own split boundaries:
+
+- sampled: `{prompt: 7, test: 153}`
+- never sampled: `{test: 68, validation: 37, train: 100}`
+
+The sampled prefix is almost entirely MBPP's **test** split plus seven problems
+from the **prompt** split, which is MBPP's designated few-shot exemplar set and
+the most likely of all to sit in pretraining data. The tail spans all three
+splits.
+
+So: on shape the prefix looks like the tail; on provenance it does not.
+REPORT.md now states that generalisation from this run is to the sampled prefix
+and not to MBPP, and that any claim about MBPP should be read as a claim about
+160 mostly-test-split problems chosen by sort order rather than at random.
+
+I would not have found this from the four requested properties alone. It is
+worth noting that the requested comparison came back clean and the finding came
+from asking what the four properties could not see.

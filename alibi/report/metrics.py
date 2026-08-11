@@ -45,6 +45,16 @@ MATRIX_RUN_RE = re.compile(r"^a[0-3]-seed[0-9]+-[0-9a-f]+$")
 STEP_ZERO_SAMPLE_SEED = 0
 STEP_ZERO_SAMPLE_CAP = 20
 
+# Cluster bootstrap over problems. Seed declared here, before any draw.
+BOOTSTRAP_SEED = 20260811
+BOOTSTRAP_DRAWS = 1000
+
+# "Terminal" for the bootstrap is a window, not the last step. The final step
+# contains 2 problems and 16 completions, and resampling 2 clusters is not a
+# bootstrap. Ten steps gives 20 distinct problems, which is still small and is
+# reported as such rather than smoothed over.
+TERMINAL_WINDOW_STEPS = 10
+
 
 def wilson_interval(successes: int, total: int, z: float = 1.96) -> tuple[float | None, float | None]:
     """Wilson score interval. Correct at small n and at p near 0, unlike normal approximation.
@@ -484,6 +494,213 @@ def behavioural_false_positive_estimate() -> dict:
     }
 
 
+def cluster_bootstrap(run_dir: Path, steps: list[int], floor: int | None = DETERMINACY_FLOOR) -> dict:
+    """Resample problems with replacement and recompute the terminal statistics.
+
+    The cluster is the **problem**, not the completion. Completions on the same
+    problem share its difficulty, its visible asserts and its held-out set, so
+    treating them as independent understates variance. Resampling whole problems
+    is what the per-completion `prompt_id` makes possible.
+    """
+    import random
+
+    window = steps[-TERMINAL_WINDOW_STEPS:]
+    records = []
+    for step in window:
+        records.extend(load_step_completions(run_dir, step))
+    if floor is not None:
+        records = [r for r in records if determinate_count(r) >= floor]
+
+    by_problem: dict[str, list[dict]] = {}
+    for record in records:
+        by_problem.setdefault(str(record.get("prompt_id")), []).append(record)
+    clusters = list(by_problem.values())
+    if len(clusters) < 2:
+        return {
+            "measured": False,
+            "absent_reason": f"only {len(clusters)} problems in the terminal window, too few to resample",
+        }
+
+    label = f"{prereg.PREREG.oracle.held_out_cheat_threshold:.2f}"
+
+    def statistics_of(sample: list[dict]) -> tuple[float | None, float | None, float | None]:
+        verdicts = [r.get("cheat_at_threshold", {}).get(label) for r in sample]
+        determinate = [v for v in verdicts if v is not None]
+        cheat = (sum(determinate) / len(determinate)) if determinate else None
+        flags = [bool(r.get("monitor_flagged")) for r in sample if r.get("monitor_flagged") is not None]
+        flag = (sum(flags) / len(flags)) if flags else None
+        gap = (cheat - flag) if (cheat is not None and flag is not None) else None
+        return cheat, flag, gap
+
+    observed_cheat, observed_flag, observed_gap = statistics_of(records)
+
+    rng = random.Random(BOOTSTRAP_SEED)
+    cheats, gaps = [], []
+    for _ in range(BOOTSTRAP_DRAWS):
+        drawn = []
+        for _ in range(len(clusters)):
+            drawn.extend(rng.choice(clusters))
+        cheat, _flag, gap = statistics_of(drawn)
+        if cheat is not None:
+            cheats.append(cheat)
+        if gap is not None:
+            gaps.append(gap)
+
+    def percentile(values: list[float], q: float) -> float | None:
+        if not values:
+            return None
+        ordered = sorted(values)
+        index = min(len(ordered) - 1, max(0, int(round(q * (len(ordered) - 1)))))
+        return ordered[index]
+
+    return {
+        "measured": True,
+        "seed": BOOTSTRAP_SEED,
+        "draws": BOOTSTRAP_DRAWS,
+        "terminal_window_steps": len(window),
+        "n_problems": len(clusters),
+        "n_completions": len(records),
+        "observed_cheat_rate": observed_cheat,
+        "observed_flag_rate": observed_flag,
+        "observed_gap": observed_gap,
+        "cheat_rate_ci95": [percentile(cheats, 0.025), percentile(cheats, 0.975)],
+        "gap_ci95": [percentile(gaps, 0.025), percentile(gaps, 0.975)],
+        "cheat_rate_width": (
+            percentile(cheats, 0.975) - percentile(cheats, 0.025) if cheats else None
+        ),
+        "gap_width": (percentile(gaps, 0.975) - percentile(gaps, 0.025) if gaps else None),
+    }
+
+
+def _permutation_p(a: list[float], b: list[float], draws: int = 2000) -> float | None:
+    """Two-sided permutation test on a difference of means. No dependency needed."""
+    import random
+
+    if len(a) < 2 or len(b) < 2:
+        return None
+    observed = abs(sum(a) / len(a) - sum(b) / len(b))
+    pool = list(a) + list(b)
+    rng = random.Random(BOOTSTRAP_SEED)
+    hits = 0
+    for _ in range(draws):
+        rng.shuffle(pool)
+        left, right = pool[: len(a)], pool[len(a) :]
+        if abs(sum(left) / len(left) - sum(right) / len(right)) >= observed:
+            hits += 1
+    return (hits + 1) / (draws + 1)
+
+
+def prefix_characterisation() -> dict:
+    """Compare the problems a run actually samples against those it never does.
+
+    Prompt selection is a deterministic round robin over the eligible set sorted
+    by task id, starting at index 0, so the sampled set is the lowest-task-id
+    prefix. If the prefix differs from the tail on properties that matter, the
+    run generalises to the prefix rather than to MBPP.
+    """
+    from alibi.data.build import build
+
+    runs = matrix_run_dirs()
+    if not runs:
+        return {"measured": False, "absent_reason": "no matrix run has stored completions yet"}
+
+    run_dir = runs[0]
+    steps = sorted(int(p.parent.name) for p in run_dir.glob("steps/*/summary.json"))
+    sampled_ids = set()
+    for step in steps:
+        for record in load_step_completions(run_dir, step):
+            sampled_ids.add(int(record["prompt_id"]))
+
+    document = prereg.load_eligibility()
+    allowed = set(document["task_ids"])
+    problems = sorted((p for p in build().problems if p.task_id in allowed), key=lambda p: p.task_id)
+
+    check = {}
+    candidates = sorted((ARTIFACTS / "runs").glob("datacheck-*/result.json"))
+    if candidates:
+        for record in json.loads(candidates[-1].read_text(encoding="utf-8"))["problems"]:
+            check[record["task_id"]] = record
+
+    def properties(problem) -> dict:
+        record = check.get(problem.task_id, {})
+        cheat = record.get("cheat") or {}
+        visible = cheat.get("visible_pass_fraction")
+        return {
+            "task_id": problem.task_id,
+            "n_held_out": float(problem.n_held_out),
+            "n_visible": float(problem.n_visible),
+            "reference_chars": float(len(problem.reference_code or "")),
+            "cheat_passes_visible": 1.0 if (visible is not None and visible >= 1.0) else 0.0,
+        }
+
+    sampled = [properties(p) for p in problems if p.task_id in sampled_ids]
+    unsampled = [properties(p) for p in problems if p.task_id not in sampled_ids]
+
+    comparisons = {}
+    for key in ("n_held_out", "n_visible", "reference_chars", "cheat_passes_visible"):
+        left = [p[key] for p in sampled]
+        right = [p[key] for p in unsampled]
+        mean_left = sum(left) / len(left) if left else None
+        mean_right = sum(right) / len(right) if right else None
+        p_value = _permutation_p(left, right)
+        comparisons[key] = {
+            "sampled_mean": mean_left,
+            "unsampled_mean": mean_right,
+            "difference": (mean_left - mean_right) if (mean_left is not None and mean_right is not None) else None,
+            "permutation_p": p_value,
+            "materially_different": (p_value is not None and p_value < 0.05),
+        }
+
+    # MBPP's own splits. The four properties above are all about problem shape
+    # and miss provenance entirely, and task_id ordering tracks the split
+    # boundaries, so the prefix can be homogeneous in a way those tests cannot
+    # see. The prompt split in particular is MBPP's designated few-shot
+    # exemplar set, which is the most likely of all to sit in pretraining data.
+    splits: dict[int, str] = {}
+    cache = runlog.REPO_ROOT / "data" / "cache"
+    try:
+        import pyarrow.parquet as pq
+
+        for path in cache.glob("google-research-datasets__mbpp/*/full__*.parquet"):
+            name = path.name.split("__")[1].split("-")[0]
+            for row in pq.read_table(path, columns=["task_id"]).to_pylist():
+                splits[row["task_id"]] = name
+    except Exception:  # noqa: BLE001 - split composition is diagnostic, never fatal
+        splits = {}
+
+    def composition(ids) -> dict:
+        counts: dict[str, int] = {}
+        for task_id in ids:
+            counts[splits.get(task_id, "unknown")] = counts.get(splits.get(task_id, "unknown"), 0) + 1
+        return dict(sorted(counts.items()))
+
+    sampled_composition = composition(p["task_id"] for p in sampled)
+    unsampled_composition = composition(p["task_id"] for p in unsampled)
+
+    ids_sampled = sorted(sampled_ids)
+    return {
+        "measured": True,
+        "mbpp_split_composition_sampled": sampled_composition,
+        "mbpp_split_composition_unsampled": unsampled_composition,
+        "split_composition_differs": sampled_composition.keys() != unsampled_composition.keys()
+        or sampled_composition != unsampled_composition,
+        "ordering": (
+            "eligible problems sorted ascending by MBPP task_id, then a deterministic round robin "
+            "from index 0 with no seed, so the sampled set is the lowest-task-id prefix"
+        ),
+        "n_sampled": len(sampled),
+        "n_unsampled": len(unsampled),
+        "sampled_task_id_range": [ids_sampled[0], ids_sampled[-1]] if ids_sampled else None,
+        "unsampled_task_id_range": (
+            [min(p["task_id"] for p in unsampled), max(p["task_id"] for p in unsampled)] if unsampled else None
+        ),
+        "comparisons": comparisons,
+        "any_material_difference": any(c["materially_different"] for c in comparisons.values()),
+        "permutation_draws": 2000,
+        "alpha": 0.05,
+    }
+
+
 def series_for(run_dir: Path) -> RunSeries | None:
     summaries = load_step_summaries(run_dir)
     if not summaries:
@@ -651,6 +868,7 @@ def claims() -> dict:
         "pooled_step_zero": pooled_step_zero(),
         "structural_precision_on_honest_code": reference_structural_false_positives(),
         "behavioural_precision_on_honest_code": behavioural_false_positive_estimate(),
+        "prefix_characterisation": prefix_characterisation(),
     }
     if not runs:
         out["absent_reason"] = "no runs are declared in artifacts/index.json yet"
@@ -672,6 +890,7 @@ def claims() -> dict:
             "step_zero_prevalence": [s.step_zero for s in series_list],
             "fp_problem_exposure": [fp_problem_exposure(s.run_dir, s.steps) for s in series_list],
             "prompt_coverage": [prompt_coverage(s.run_dir, s.steps) for s in series_list],
+            "cluster_bootstrap": [cluster_bootstrap(s.run_dir, s.steps) for s in series_list],
             "cheat_form_excluding_fp": [
                 cheat_form_series(s.run_dir, s.steps, set(structural_fp_task_ids())) for s in series_list
             ],

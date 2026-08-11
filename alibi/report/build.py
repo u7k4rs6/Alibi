@@ -659,6 +659,150 @@ def build_report() -> dict[str, Path]:
             lines.append(f"- {caveat}")
     lines.append("")
 
+    # 6c-ter. Cluster bootstrap over problems, and what it does and does not fix.
+    lines.append("## Two variance estimates, and which one a verdict must clear")
+    lines.append("")
+    lines.append(
+        "**Seed band** is the min to max across seeds. It captures **sampling variance only**: the "
+        "same problems, the same order, a different sampling seed. It says nothing about whether the "
+        "result would hold on other problems."
+    )
+    lines.append("")
+    lines.append(
+        "**Cluster bootstrap** resamples **problems** with replacement, "
+        f"{metrics.BOOTSTRAP_DRAWS} draws at declared seed `{metrics.BOOTSTRAP_SEED}`, and recomputes "
+        "the terminal statistics each draw. The cluster is the problem, not the completion, because "
+        "completions on one problem share its difficulty, its visible asserts and its held-out set, so "
+        "treating them as independent understates variance. This captures **problem variance**."
+    )
+    lines.append("")
+    lines.append(
+        f"\"Terminal\" here is the last {metrics.TERMINAL_WINDOW_STEPS} steps, not the last step. The "
+        "final step contains 2 problems and 16 completions, and resampling 2 clusters is not a "
+        "bootstrap. That window choice is an implementation decision and is stated rather than buried."
+    )
+    lines.append("")
+    boots = {arm: (entry.get("cluster_bootstrap") or []) for arm, entry in computed.get("arms", {}).items()}
+    if not any(boots.values()):
+        lines.append("No declared runs yet, so neither interval is measurable.")
+    else:
+        lines.append("| Arm | Seed band, terminal gap | Bootstrap 95 percent, terminal gap | Problems | Wider |")
+        lines.append("|---|---|---|---|---|")
+        for arm, entries in sorted(boots.items()):
+            entries = [e for e in entries if e.get("measured")]
+            band = (computed["arms"][arm].get("terminal_gap") or {})
+            band_width = band.get("spread")
+            if not entries:
+                lines.append(f"| {arm} | {_fmt(band_width)} | not measurable | n/a | n/a |")
+                continue
+            widths = [e["gap_width"] for e in entries if e.get("gap_width") is not None]
+            boot_width = max(widths) if widths else None
+            lo = min(e["gap_ci95"][0] for e in entries if e["gap_ci95"][0] is not None)
+            hi = max(e["gap_ci95"][1] for e in entries if e["gap_ci95"][1] is not None)
+            wider = "bootstrap" if (boot_width or 0) >= (band_width or 0) else "seed band"
+            lines.append(
+                f"| {arm} | {_fmt(band_width)} | {_fmt(lo)} to {_fmt(hi)} (width {_fmt(boot_width)}) "
+                f"| {entries[0]['n_problems']} | {wider} |"
+            )
+        lines.append("")
+        lines.append(
+            "**A difference between arms is reported as resolved only if it clears the wider of the "
+            "two.** Where the bootstrap is wider than the seed band, a verdict that looked resolved on "
+            "the seed band alone does not survive, and this section names any verdict that changes."
+        )
+        lines.append("")
+        changed = [
+            f"{arm}: seed band {_fmt((computed['arms'][arm].get('terminal_gap') or {}).get('spread'))} "
+            f"against bootstrap width {_fmt(max((e['gap_width'] for e in entries if e.get('gap_width') is not None), default=None))}"
+            for arm, entries in sorted(boots.items())
+            if [e for e in entries if e.get("measured")]
+        ]
+        lines.append(
+            "Verdicts affected: none yet, because no between-arm comparison exists. Per-arm widths: "
+            + "; ".join(changed)
+            if changed
+            else "Verdicts affected: none yet."
+        )
+        lines.append("")
+        lines.append(
+            "A zero-width bootstrap interval means zero events were observed in the window, not that "
+            "the estimate is precise. It should be read as uninformative, not as certainty."
+        )
+    lines.append("")
+    lines.append(
+        "**What the bootstrap does not fix.** It corrects understated variance. It does **not** correct "
+        "selection bias. The problems in any run are a fixed, deterministic, non-random prefix of the "
+        "eligible set, not a random draw from it, so resampling them estimates the uncertainty of a "
+        "statement about *those* problems and cannot license a statement about MBPP as a whole. The "
+        "bootstrap widens the interval around the right target; it does not move the target."
+    )
+    lines.append("")
+
+    # 6c-quater. What the prefix actually is.
+    prefix = computed.get("prefix_characterisation") or {}
+    lines.append("## What the sampled problems are")
+    lines.append("")
+    if not prefix.get("measured"):
+        lines.append(f"Not measured: {prefix.get('absent_reason')}")
+    else:
+        lines.append(f"**Ordering.** {prefix['ordering']}.")
+        lines.append("")
+        lines.append(
+            f"**{prefix['n_sampled']} sampled** (task ids {prefix['sampled_task_id_range']}) against "
+            f"**{prefix['n_unsampled']} never sampled** (task ids {prefix['unsampled_task_id_range']})."
+        )
+        lines.append("")
+        lines.append("| Property | Sampled mean | Never-sampled mean | Difference | Permutation p | Material |")
+        lines.append("|---|---|---|---|---|---|")
+        for key, entry in prefix["comparisons"].items():
+            lines.append(
+                f"| {key} | {_fmt(entry['sampled_mean'])} | {_fmt(entry['unsampled_mean'])} "
+                f"| {_fmt(entry['difference'])} | {_fmt(entry['permutation_p'])} "
+                f"| {entry['materially_different']} |"
+            )
+        lines.append("")
+        lines.append(
+            f"Two-sided permutation test, {prefix['permutation_draws']} draws, alpha {prefix['alpha']}, "
+            "seed as declared for the bootstrap."
+        )
+        lines.append("")
+        sampled_split = prefix.get("mbpp_split_composition_sampled") or {}
+        unsampled_split = prefix.get("mbpp_split_composition_unsampled") or {}
+        if sampled_split and unsampled_split:
+            lines.append("### Provenance, which those four properties do not capture")
+            lines.append("")
+            lines.append(f"- Sampled: `{sampled_split}`")
+            lines.append(f"- Never sampled: `{unsampled_split}`")
+            lines.append("")
+            lines.append(
+                "**The four properties above show no material difference, and this does.** Because "
+                "task id ordering tracks MBPP's own split boundaries, the sampled prefix is almost "
+                "entirely MBPP's *test* split plus several problems from the *prompt* split, while the "
+                "unsampled tail spans test, validation and train. The prompt split is MBPP's designated "
+                "few-shot exemplar set and is the most likely of all to appear in pretraining data."
+            )
+            lines.append("")
+            lines.append(
+                "So the honest statement is: on problem shape, held-out size, visible assert count, "
+                "reference length and cheat constructibility, the prefix looks like the tail. On "
+                "**provenance** it does not. **Generalisation from this run is to the sampled prefix, "
+                "not to MBPP.** Any claim in this report about behaviour on MBPP should be read as a "
+                "claim about 160 mostly-test-split problems that were chosen by sort order rather than "
+                "at random."
+            )
+        elif prefix.get("any_material_difference"):
+            lines.append(
+                "At least one property differs materially, so **generalisation from this run is to the "
+                "sampled prefix, not to MBPP.**"
+            )
+        else:
+            lines.append(
+                "No measured property differs materially. That is not evidence the prefix is "
+                "representative on properties nobody measured, and the selection is still "
+                "deterministic rather than random."
+            )
+    lines.append("")
+
     # 6d. Amendments to the halt conditions, stated plainly.
     lines.append("## Halt conditions were amended before any curve existed")
     lines.append("")
