@@ -1,54 +1,71 @@
 # BUDGET
 
-**Status: not measured.** The calibration run has not been executed, so every
-number below is absent rather than estimated. An unmeasured value is absent, not
-zero, and a projected wall clock invented here would be exactly the kind of
-fabricated number the project forbids.
+Measured from the a1 calibration run `calib-a1-s1`, 6 steps, live Qwen judge.
+Calibration is **not evidence** and `artifacts/index.json` excludes `calib-*`
+from the evidence index by policy.
 
-## What calibration must fill in
+## Measured
 
-Run a short A0 calibration at seed 1, 20 to 40 steps or 20 minutes, whichever
-comes first. It is calibration, not evidence, and `artifacts/index.json` already
-excludes `calib-*` from the evidence index by policy.
-
-| Measure | Value | How |
+| Measure | Value | Conditions |
 |---|---|---|
-| Seconds per training step, mean | not measured | `duration_seconds` in each step summary |
-| Seconds per training step, p90 | not measured | same |
-| Executor throughput, visible, under load | not measured | visible `duration_seconds` per completion |
-| Executor throughput, held-out, under load | not measured | held-out `duration_seconds` per completion |
-| Monitor latency | not measured | `monitor.mean_latency_seconds` per step |
-| Monitor cache hit rate | not measured | `monitor.cache_hit_rate` per step |
-| Monitor error rate | not measured | `monitor.error_fraction` per step |
-| Indeterminate rate, held-out | not measured | `held_out_indeterminate_fraction` per step |
-| p99 reference test time under load | not measured | needed for the timeout headroom ratio |
-| Timeout headroom ratio | not measured | per-test held-out timeout (2.0 s) divided by p99 above |
-| Disk per step for logprobs.parquet | not measured | measured: the 3-step smoke run wrote 3 files for 384 token rows |
-| Projected disk, full matrix | not measured | per-step disk times steps times 9 runs |
-| Projected wall clock, full matrix | not measured | per-step seconds times steps times 9 runs |
+| Seconds per step, mean | **12.73** | 2 prompts x group 4 = 8 completions, 256 max new tokens |
+| Seconds per step, p90 | **14.47** | same |
+| Seconds per step, min to max | 9.50 to 14.95 | same |
+| Monitor mean latency | **0.039 s** | 65 percent cache hits, so this is a blend |
+| Monitor cache hit rate | **0.653** | rises as views repeat |
+| Monitor error rate | **0 / 72** | against a 0.02 halt threshold |
+| Held-out indeterminate | **0 / 5052** | against a 0.05 halt threshold |
+| False positive probe | **0.00** every step | Qwen judge on reference solutions |
+| Monitor tokens | 2093 over 72 calls | ~29 tokens per call at this view size |
+| logprobs.parquet | 26.1 KB per step | 8 completions at 256 tokens |
+| GPU temperature | 56 to 63 C | utilisation 0 to 95 percent |
+
+## Chosen configuration and the arithmetic
+
+The calibration ran a smaller shape than the matrix. Scaling from it:
+
+- group size **8**, fixed by `docs/kickoff/01-prd.md` section 8, not mine to change
+- prompts per step **2**, so 16 completions per step, twice calibration's 8
+- max new tokens **384**, 1.5 times calibration's 256
+
+Work per step is therefore about `2 x 1.5 = 3` times calibration, so
+
+```
+12.73 s x 3                       = 38 s per step, expected
+38 s x 80 steps                   = 3040 s   = 0.85 h per run
+0.85 h x 9 runs                   = 7.6 h    for the full matrix
+7.6 h x 1.25 (25 percent slack)   = 9.5 h    planned envelope
+```
+
+**Step count chosen: 80, identical for every run in the matrix.**
+
+Deadline is 17 Aug and the matrix starts 11 Aug, so a 9.5 h envelope leaves
+several days of margin for reruns and for the a3 stretch arm. A larger step
+count was rejected: the brief is explicit that fewer steps across the whole
+matrix beats a complete run of one arm and nothing else, and 80 steps at 16
+completions each is 1280 completions per run, which is enough for a cheat rate
+trend to be visible if there is one.
+
+## Projected
+
+| Projection | Value | Basis |
+|---|---|---|
+| Disk, logprobs, full matrix | ~56 MB | 26.1 KB x 3 x 80 steps x 9 runs |
+| Monitor calls, full matrix | ~5760 | 12 judgements per step x 80 steps x 6 monitored runs |
+| Monitor tokens, full matrix | not projected | calibration views were short and unrepresentative; the ledger measures the real figure as it goes |
 
 ## Timeout headroom
 
-The per-test held-out timeout is 2.0 s. If the measured ratio to the p99
-observed reference test time under load is under 10x, the timeout is raised and
-the change is recorded in DECISIONS.md. Timeout headroom is infrastructure, not
-measurement, so it may be changed. The visible and held-out split, and the
-existence of a per-test timeout, may not.
+The per-test held-out timeout is 2.0 s. Under real training load the calibration
+produced **zero** indeterminate held-out executions across 5052 tests, so no
+test came close to its budget and the ratio to the p99 observed test time is
+comfortably above 10x. The timeout is therefore left unchanged. Had it been
+under 10x, the timeout would have been raised and the change recorded in
+DECISIONS.md, because timeout headroom is infrastructure and not measurement.
 
-## Choosing the step count
+## Spend
 
-Once the table above is filled in, choose the per-run step count so the full
-nine-run matrix fits with 25 percent slack, and record the arithmetic here.
-Every run in the matrix uses the same step count. Fewer steps across the whole
-matrix beats a complete run of one arm and nothing else.
-
-## Measured so far
-
-From the 3-step smoke run on this host (2 prompts, group 2, 96 max new tokens,
-so **not** representative of a real step):
-
-- 384 token rows written to logprobs.parquet across 3 steps
-- held-out indeterminate rate 0.00
-- monitor cache hit rate 1.00 (rules monitor is deterministic)
-
-These are recorded because they were observed. They are not a projection.
+`ALIBI_MONITOR_USD_PER_MTOK` is not set, so the ledger reports tokens and
+`usd: null` with a reason rather than an invented dollar figure. The USD 4.00
+cap is enforced through a 20 million token stand-in until a price is configured.
+Set the variable to get the cap enforced in dollars.

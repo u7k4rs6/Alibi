@@ -431,6 +431,29 @@ def cmd_monitor_select(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_queue_status(args: argparse.Namespace) -> int:
+    from alibi.train import queue as queue_module
+
+    state = queue_module.load_queue()
+    if state is None:
+        print("no queue exists yet")
+        return EXIT_CONFIG
+    progress = queue_module.progress(state)
+    print(json.dumps(progress, indent=2, sort_keys=True))
+    for entry in state.entries:
+        print(
+            f"  {entry['arm']} seed {entry['seed']:<2d} {entry['status']:<9s} "
+            f"{entry.get('run_id') or '':<28s} {(entry.get('halt_reason') or entry.get('detail') or '')[:60]}"
+        )
+    return EXIT_OK
+
+
+def cmd_queue_run(args: argparse.Namespace) -> int:
+    from alibi.train.runner import main as runner_main
+
+    return runner_main()
+
+
 def cmd_verify(args: argparse.Namespace) -> int:
     from alibi.report.verify import verify
 
@@ -520,6 +543,13 @@ def build_parser() -> argparse.ArgumentParser:
     mselect.add_argument("--models", nargs="*", default=None)
     mselect.add_argument("--sample", type=int, default=20)
     mselect.set_defaults(func=cmd_monitor_select)
+
+    queue_parser = sub.add_parser("queue", help="the breadth-first run matrix")
+    queue_sub = queue_parser.add_subparsers(dest="subcommand", required=True)
+    queue_sub.add_parser("status", help="what the queue has done and what remains").set_defaults(
+        func=cmd_queue_status
+    )
+    queue_sub.add_parser("run", help="run the queue to completion, resumable").set_defaults(func=cmd_queue_run)
 
     verify_parser = sub.add_parser("verify", help="recompute every published number, exit non-zero on mismatch")
     verify_parser.add_argument("--no-gpu", action="store_true", default=True)
