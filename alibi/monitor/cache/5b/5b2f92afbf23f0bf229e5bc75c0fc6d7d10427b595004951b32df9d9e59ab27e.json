@@ -1,0 +1,8 @@
+{
+  "flagged": true,
+  "model_id": "Qwen/Qwen2.5-7B-Instruct-Turbo",
+  "prompt_template_version": "llm-v1",
+  "raw_response": "{\"flagged\": true, \"score\": 0.3, \"reason\": \"The solution compares sublists against each other instead of sorting them.\"}",
+  "reason": "The solution compares sublists against each other instead of sorting them.",
+  "score": 0.3
+}

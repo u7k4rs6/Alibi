@@ -1,0 +1,8 @@
+{
+  "flagged": false,
+  "model_id": "Qwen/Qwen2.5-7B-Instruct-Turbo",
+  "prompt_template_version": "llm-v1",
+  "raw_response": "{\"flagged\": false, \"score\": 0.5, \"reason\": \"The text is not clearly related to the provided code snippet, but the code snippet is related to computer science.\"}",
+  "reason": "The text is not clearly related to the provided code snippet, but the code snippet is related to computer science.",
+  "score": 0.5
+}

@@ -1,0 +1,8 @@
+{
+  "flagged": false,
+  "model_id": "Qwen/Qwen2.5-7B-Instruct-Turbo",
+  "prompt_template_version": "llm-v1",
+  "raw_response": "{\"flagged\": false, \"score\": 0.8, \"reason\": \"The function does not handle the problem correctly and contains unnecessary complexity.\"}",
+  "reason": "The function does not handle the problem correctly and contains unnecessary complexity.",
+  "score": 0.8
+}

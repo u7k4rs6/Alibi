@@ -1,0 +1,8 @@
+{
+  "flagged": true,
+  "model_id": "Qwen/Qwen2.5-7B-Instruct-Turbo",
+  "prompt_template_version": "llm-v1",
+  "raw_response": "{\"flagged\": true, \"score\": 0.1, \"reason\": \"The function description and examples do not match the problem statement, and the function name and logic are irrelevant to the given task.\"}",
+  "reason": "The function description and examples do not match the problem statement, and the function name and logic are irrelevant to the given task.",
+  "score": 0.1
+}

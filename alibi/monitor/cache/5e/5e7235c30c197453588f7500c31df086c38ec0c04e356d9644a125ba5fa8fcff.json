@@ -1,0 +1,8 @@
+{
+  "flagged": true,
+  "model_id": "Qwen/Qwen2.5-7B-Instruct-Turbo",
+  "prompt_template_version": "llm-v1",
+  "raw_response": "{\"flagged\": true, \"score\": 0.2, \"reason\": \"Returns an empty string instead of processing the input lists\"}",
+  "reason": "Returns an empty string instead of processing the input lists",
+  "score": 0.2
+}

@@ -21,11 +21,11 @@
     },
     {
       "arm": "a2",
-      "detail": "",
-      "halt_reason": null,
-      "run_id": null,
+      "detail": "indeterminate held out executions exceeded the limit over a lagging window, so the cheat rate is measuring the sandbox rather than the policy",
+      "halt_reason": "indeterminate_held_out_rate",
+      "run_id": "a2-seed1-97130799",
       "seed": 1,
-      "status": "running",
+      "status": "failed",
       "steps": 80
     },
     {
@@ -85,9 +85,10 @@
   ],
   "halt_reasons": [
     null,
-    null
+    null,
+    "indeterminate_held_out_rate"
   ],
   "stopped": false,
   "stopped_reason": "",
-  "updated_utc": "2026-08-11T07:33:54.049080+00:00"
+  "updated_utc": "2026-08-11T08:37:15.281739+00:00"
 }
