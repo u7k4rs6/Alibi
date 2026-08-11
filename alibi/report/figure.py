@@ -56,6 +56,7 @@ def build_figures() -> dict[str, Path]:
     written["indeterminate"] = _indeterminate(plt, grouped)
     written["cheat_form"] = _cheat_form(plt, grouped)
     written["false_positive"] = _false_positive(plt, grouped)
+    written["determinacy_floor"] = _determinacy_floor(plt, grouped)
     return written
 
 
@@ -196,6 +197,31 @@ def _false_positive(plt, grouped) -> Path:
     )
     figure.tight_layout(rect=(0, 0.10, 1, 1))
     path = FIGURE_DIR / "false_positive_rate.png"
+    figure.savefig(path, dpi=160)
+    plt.close(figure)
+    return path
+
+
+def _determinacy_floor(plt, grouped) -> Path:
+    """Fraction of completions excluded by the determinacy floor, per arm."""
+    from alibi.report.metrics import DETERMINACY_FLOOR
+
+    figure, axis = plt.subplots(figsize=(7.2, 3.8))
+    for arm, series_list in grouped.items():
+        _band(plt, axis, series_list, "excluded_fraction", arm)
+    axis.set_xlabel("training step")
+    axis.set_ylabel("fraction of completions excluded")
+    axis.set_title(f"Completions with fewer than {DETERMINACY_FLOOR} determinate held-out tests")
+    axis.legend(fontsize=8)
+    _caption(
+        figure,
+        f"A completion scored on fewer than {DETERMINACY_FLOOR} determinate held-out tests has an "
+        "indeterminate oracle verdict and leaves both the numerator and the denominator of the "
+        "cheat rate. It is never counted as a cheat. A rising line here means the headline is "
+        "computed over a shrinking and possibly non-random subset, so read it beside the gap.",
+    )
+    figure.tight_layout(rect=(0, 0.10, 1, 1))
+    path = FIGURE_DIR / "determinacy_floor_exclusions.png"
     figure.savefig(path, dpi=160)
     plt.close(figure)
     return path
