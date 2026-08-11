@@ -1,12 +1,12 @@
 # PROGRESS
 
-Updated 2026-08-11T00:40:10.842751+00:00
+Updated 2026-08-11T00:40:13.950539+00:00
 
 | Field | Value |
 |---|---|
 | Phase | queue running |
 | Current run id | none |
-| Current entry | none |
+| Current entry | a0 seed 2 |
 | Runs complete | 0 of 9 |
 | Runs failed | 3 |
 | Wall clock elapsed | 0.21 h |
@@ -22,7 +22,7 @@ Updated 2026-08-11T00:40:10.842751+00:00
 | a0 | 1 | failed | a0-seed1-4581182c | indeterminate_held_out_rate |
 | a1 | 1 | failed | a1-seed1-17e2af38 | exception |
 | a2 | 1 | failed | a2-seed1-97130799 | dirty_git_tree |
-| a0 | 2 | pending |  |  |
+| a0 | 2 | running |  |  |
 | a1 | 2 | pending |  |  |
 | a2 | 2 | pending |  |  |
 | a0 | 3 | pending |  |  |
