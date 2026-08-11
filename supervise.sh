@@ -39,7 +39,11 @@ if ! v1_done; then
   exit 1
 fi
 
-if [ ! -f artifacts/diagnostics/probes/result.json ]; then
+NEED_PROBES=1
+if [ -f artifacts/diagnostics/probes/result.json ]; then
+  NEED_PROBES=$($PY -c "import json;d=json.load(open('artifacts/diagnostics/probes/result.json'));print(1 if d.get('no_probe_ran') else 0)" 2>/dev/null || echo 1)
+fi
+if [ "$NEED_PROBES" = "1" ]; then
   echo "[$(stamp)] phase 2: hyperparameter probes"
   $PY -u -m alibi.diagnostics.probes || { echo "[$(stamp)] probes failed"; exit 1; }
 fi

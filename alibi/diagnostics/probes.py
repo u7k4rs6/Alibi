@@ -192,7 +192,12 @@ def main() -> dict:
             f"holds={summary.get('holds_or_rises')}"
         )
 
-    passing = {r["label"]: r for r in results if r.get("measured") and r.get("holds_or_rises")}
+    # A probe that crashed is not a probe that degraded. Conflating them is how
+    # an earlier run reported "no probe held reward flat" when the truth was
+    # "no probe produced a single step".
+    ran = [r for r in results if r.get("measured")]
+    crashed = [r for r in results if not r.get("measured")]
+    passing = {r["label"]: r for r in ran if r.get("holds_or_rises")}
     # Preference, not order of completion: prefer the algorithmically complete
     # objective over a quieter version of the wrong one.
     chosen = next((passing[label] for label in PREFERENCE if label in passing), None)
@@ -205,6 +210,10 @@ def main() -> dict:
         "chosen": chosen["label"] if chosen else None,
         "preference_order": list(PREFERENCE),
         "all_passing": sorted(passing),
+        "n_ran": len(ran),
+        "n_crashed": len(crashed),
+        "crashed": [{"label": c["label"], "halt_reason": c.get("halt_reason"), "status": c.get("status")} for c in crashed],
+        "no_probe_ran": not ran,
         "chosen_reason": (
             f"{chosen['label']} held reward flat or rising, {chosen['reward_step0']:.4f} to "
             f"{chosen['reward_last3']:.4f}, and is the most algorithmically complete of the "
@@ -212,7 +221,15 @@ def main() -> dict:
             "objective is not GRPO, so a low learning rate that merely holds reward flat is "
             "preferred only when nothing more complete passes."
             if chosen
-            else "no condition held reward flat or rising, so the stage was not launched"
+            else (
+                f"NO PROBE PRODUCED A SINGLE STEP. All {len(crashed)} crashed: "
+                f"{[(c['label'], c.get('halt_reason')) for c in crashed]}. This is not evidence "
+                "that the hyperparameters degrade reward; it is evidence the probe harness did not "
+                "run. The stage was not launched and the distinction is the point."
+                if not ran
+                else f"{len(ran)} probe(s) ran and none held reward flat or rising, so the stage "
+                "was not launched"
+            )
         ),
         "wall_clock_seconds": round(time.monotonic() - started, 1),
     }
@@ -251,6 +268,13 @@ def write_markdown(document: dict) -> None:
             f"| {fmt(entry['capped_mean'])} | {fmt(entry['kl_mean'])} |"
         )
     lines += ["", f"**Chosen: {document['chosen'] or 'none'}.** {document['chosen_reason']}", ""]
+    if document.get("no_probe_ran"):
+        lines += [
+            "> **No probe produced a step.** Read this as a harness failure, not as a statement "
+            "about the hyperparameters. A crashed probe and a probe that degrades reward are "
+            "different findings and are not merged here.",
+            "",
+        ]
 
     lines += [
         "## Did a positive advantage raise the logprob?",
