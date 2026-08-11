@@ -1,16 +1,16 @@
 # PROGRESS
 
-Updated 2026-08-11T08:37:21.443168+00:00
+Updated 2026-08-11T09:32:06.065701+00:00
 
 | Field | Value |
 |---|---|
 | Phase | queue running |
 | Current run id | none |
-| Current entry | a0 seed 2 |
-| Runs complete | 2 of 9 |
+| Current entry | none |
+| Runs complete | 3 of 9 |
 | Runs failed | 1 |
-| Wall clock elapsed | 2.95 h |
-| Projected remaining | 5.90 h |
+| Wall clock elapsed | 3.86 h |
+| Projected remaining | 4.83 h |
 | Monitor tokens | 417857 |
 | Monitor USD | not measured, no price configured |
 | Open blocker | none |
@@ -22,7 +22,7 @@ Updated 2026-08-11T08:37:21.443168+00:00
 | a0 | 1 | complete | a0-seed1-4581182c | 80 steps |
 | a1 | 1 | complete | a1-seed1-17e2af38 | 80 steps |
 | a2 | 1 | failed | a2-seed1-97130799 | indeterminate_held_out_rate |
-| a0 | 2 | running |  |  |
+| a0 | 2 | complete | a0-seed2-f83c2249 | 80 steps |
 | a1 | 2 | pending |  |  |
 | a2 | 2 | pending |  |  |
 | a0 | 3 | pending |  |  |

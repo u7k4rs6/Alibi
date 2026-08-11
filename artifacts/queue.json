@@ -30,11 +30,11 @@
     },
     {
       "arm": "a0",
-      "detail": "",
+      "detail": "80 steps",
       "halt_reason": null,
-      "run_id": null,
+      "run_id": "a0-seed2-f83c2249",
       "seed": 2,
-      "status": "running",
+      "status": "complete",
       "steps": 80
     },
     {
@@ -86,9 +86,10 @@
   "halt_reasons": [
     null,
     null,
-    "indeterminate_held_out_rate"
+    "indeterminate_held_out_rate",
+    null
   ],
   "stopped": false,
   "stopped_reason": "",
-  "updated_utc": "2026-08-11T08:37:21.442467+00:00"
+  "updated_utc": "2026-08-11T09:31:51.915601+00:00"
 }
