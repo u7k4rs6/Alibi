@@ -30,11 +30,11 @@
     },
     {
       "arm": "a0",
-      "detail": "",
-      "halt_reason": null,
-      "run_id": null,
+      "detail": "the working tree has uncommitted changes at run start",
+      "halt_reason": "dirty_git_tree",
+      "run_id": "a0-seed2-8c165e22",
       "seed": 2,
-      "status": "running",
+      "status": "failed",
       "steps": 80
     },
     {
@@ -86,9 +86,10 @@
   "halt_reasons": [
     "exception",
     "exception",
-    "exception"
+    "exception",
+    "dirty_git_tree"
   ],
   "stopped": false,
   "stopped_reason": "WARN three consecutive runs halted for the same reason: exception. The queue continues per the operator's stop rule, but the next run will likely fail too.",
-  "updated_utc": "2026-08-11T00:22:25.507975+00:00"
+  "updated_utc": "2026-08-11T00:22:28.609740+00:00"
 }
