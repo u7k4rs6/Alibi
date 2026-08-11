@@ -2,9 +2,9 @@
 
 **Reason:** `dirty_git_tree`
 
-**Run:** `a2-seed1-97130799`  **Step:** not started
+**Run:** `a0-seed2-f83c2249`  **Step:** not started
 
-**Written:** 2026-08-11T00:40:10.836478+00:00
+**Written:** 2026-08-11T00:40:17.073484+00:00
 
 the working tree has uncommitted changes at run start.
 
@@ -14,7 +14,7 @@ the working tree has uncommitted changes at run start.
 {
   "git": {
     "dirty": true,
-    "revision": "49c756b6e64ddee7bdcc12771fe7cbbdb2e6a909",
+    "revision": "1ad395f12bcffa5a0c235cd061ad7696704da9ff",
     "revision_absent_reason": null
   }
 }
@@ -37,7 +37,7 @@ the working tree has uncommitted changes at run start.
 ```json
 {
   "dirty": true,
-  "revision": "49c756b6e64ddee7bdcc12771fe7cbbdb2e6a909",
+  "revision": "1ad395f12bcffa5a0c235cd061ad7696704da9ff",
   "revision_absent_reason": null
 }
 ```
