@@ -1,12 +1,12 @@
 # PROGRESS
 
-Updated 2026-08-11T00:24:41.932202+00:00
+Updated 2026-08-11T00:24:44.959766+00:00
 
 | Field | Value |
 |---|---|
 | Phase | queue running |
 | Current run id | none |
-| Current entry | none |
+| Current entry | a1 seed 1 |
 | Runs complete | 0 of 9 |
 | Runs failed | 1 |
 | Wall clock elapsed | 0.01 h |
@@ -20,7 +20,7 @@ Updated 2026-08-11T00:24:41.932202+00:00
 | Arm | Seed | Status | Run id | Detail |
 |---|---|---|---|---|
 | a0 | 1 | failed | a0-seed1-4581182c | exception |
-| a1 | 1 | pending |  |  |
+| a1 | 1 | running |  |  |
 | a2 | 1 | pending |  |  |
 | a0 | 2 | pending |  |  |
 | a1 | 2 | pending |  |  |

@@ -16,7 +16,7 @@
       "halt_reason": null,
       "run_id": null,
       "seed": 1,
-      "status": "pending",
+      "status": "running",
       "steps": 80
     },
     {
@@ -88,5 +88,5 @@
   ],
   "stopped": false,
   "stopped_reason": "",
-  "updated_utc": "2026-08-11T00:24:41.930807+00:00"
+  "updated_utc": "2026-08-11T00:24:44.958755+00:00"
 }
