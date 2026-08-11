@@ -35,7 +35,9 @@ PROGRESS_PATH = runlog.REPO_ROOT / "PROGRESS.md"
 # matrix uses the same step count, so the arms are comparable.
 STEPS_PER_RUN = 80
 PROMPTS_PER_STEP = 2
-MAX_NEW_TOKENS = 384
+# Matches what calibration actually measured. 384 was an unmeasured
+# extrapolation and it put the 8 GB card into CUDA OOM.
+MAX_NEW_TOKENS = 256
 # Group size is fixed by docs/kickoff/01-prd.md section 8 and may not change.
 GROUP_SIZE = 8
 
@@ -246,7 +248,10 @@ def main() -> int:
 
             result = run_arm(config, run_id=run_id)
         except Exception:  # noqa: BLE001 - a crashed run is a failed run, not a stopped queue
-            log("run raised:\n" + traceback.format_exc()[:2000])
+            # Tail, not head: the exception message is at the end of a
+            # traceback, and slicing from the front threw away the only line
+            # that says what actually went wrong.
+            log("run raised:\n" + traceback.format_exc()[-2500:])
             result = {"run_id": run_id, "status": "failed", "halt_reason": "exception", "message": "see queue.log"}
 
         queue_module.record_result(state, entry, result)

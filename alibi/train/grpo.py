@@ -131,13 +131,29 @@ class InlineSampler:
     outside rollout/ and this class touches generate.
     """
 
-    def __init__(self, model, tokenizer, max_new_tokens: int, temperature: float) -> None:
+    def __init__(
+        self, model, tokenizer, max_new_tokens: int, temperature: float, generation_chunk: int = 2
+    ) -> None:
         self.model = model
         self.tokenizer = tokenizer
         self.max_new_tokens = max_new_tokens
         self.temperature = temperature
+        self.generation_chunk = generation_chunk
 
     def generate(self, prompts: list[str], prompt_ids: list[str], n: int, seed: int):
+        """Generate n completions per prompt, keeping per token sampler logprobs.
+
+        Generation is chunked. `output_scores=True` returns one [batch, vocab]
+        tensor per generated position, and at 8 sequences by 384 tokens by a
+        151936 vocabulary that is about 1.9 GB held at once, which put an 8 GB
+        card into CUDA OOM. Chunking bounds it and the scores are consumed and
+        freed per chunk.
+
+        The logprobs still come from the generating path rather than from a
+        later recomputation. That distinction is the entire point of the sampler
+        seam, so it is preserved even though a post hoc forward pass would have
+        been the easier memory fix.
+        """
         import torch
 
         torch.manual_seed(seed)
@@ -145,54 +161,65 @@ class InlineSampler:
         logprob_rows = []
         for prompt, prompt_id in zip(prompts, prompt_ids, strict=True):
             encoded = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
-            with torch.no_grad():
-                output = self.model.generate(
-                    **encoded,
-                    max_new_tokens=self.max_new_tokens,
-                    do_sample=True,
-                    temperature=self.temperature,
-                    top_p=1.0,
-                    num_return_sequences=n,
-                    return_dict_in_generate=True,
-                    output_scores=True,
-                    pad_token_id=self.tokenizer.pad_token_id or self.tokenizer.eos_token_id,
-                )
             prompt_len = encoded["input_ids"].shape[1]
-            sequences = output.sequences[:, prompt_len:]
-            # Per token sampler logprobs, from the generating path.
-            scores = torch.stack(output.scores, dim=1) if output.scores else None
-            for index in range(sequences.shape[0]):
-                token_ids = sequences[index].tolist()
-                logprobs = []
-                if scores is not None:
-                    step_logprobs = torch.log_softmax(scores[index].float(), dim=-1)
+            produced = 0
+            while produced < n:
+                chunk = min(self.generation_chunk, n - produced)
+                with torch.no_grad():
+                    output = self.model.generate(
+                        **encoded,
+                        max_new_tokens=self.max_new_tokens,
+                        do_sample=True,
+                        temperature=self.temperature,
+                        top_p=1.0,
+                        num_return_sequences=chunk,
+                        return_dict_in_generate=True,
+                        output_scores=True,
+                        pad_token_id=self.tokenizer.pad_token_id or self.tokenizer.eos_token_id,
+                    )
+                sequences = output.sequences[:, prompt_len:]
+                # One position at a time, gathering only the chosen token's
+                # logprob, so the full [positions, batch, vocab] tensor is never
+                # materialised.
+                per_sequence: list[list[float]] = [[] for _ in range(sequences.shape[0])]
+                for position, step_scores in enumerate(output.scores or []):
+                    step_logprobs = torch.log_softmax(step_scores.float(), dim=-1)
+                    for row in range(sequences.shape[0]):
+                        if position < sequences.shape[1]:
+                            per_sequence[row].append(float(step_logprobs[row, sequences[row, position]]))
+                    del step_logprobs
+                del output
+
+                for row in range(sequences.shape[0]):
+                    index = produced + row
+                    token_ids = sequences[row].tolist()
+                    logprobs = per_sequence[row]
+                    text = self.tokenizer.decode(token_ids, skip_special_tokens=True)
+                    completions.append(
+                        make_completion(
+                            prompt_id,
+                            text,
+                            token_ids=token_ids,
+                            sampler_logprobs=logprobs,
+                            finish_reason="length" if len(token_ids) >= self.max_new_tokens else "stop",
+                        )
+                    )
                     for position, token_id in enumerate(token_ids):
-                        if position < step_logprobs.shape[0]:
-                            logprobs.append(float(step_logprobs[position, token_id]))
-                text = self.tokenizer.decode(token_ids, skip_special_tokens=True)
-                completions.append(
-                    make_completion(
-                        prompt_id,
-                        text,
-                        token_ids=token_ids,
-                        sampler_logprobs=logprobs,
-                        finish_reason="length" if len(token_ids) >= self.max_new_tokens else "stop",
-                    )
-                )
-                for position, token_id in enumerate(token_ids):
-                    logprob_rows.append(
-                        {
-                            "prompt_id": prompt_id,
-                            "completion_idx": index,
-                            "position": position,
-                            "token_id": int(token_id),
-                            "sampler_logprob": logprobs[position] if position < len(logprobs) else None,
-                            # On the inline path the trainer recomputes the same
-                            # value. Stored anyway: it costs one column today and
-                            # a full rerun in October.
-                            "trainer_logprob": logprobs[position] if position < len(logprobs) else None,
-                        }
-                    )
+                        logprob_rows.append(
+                            {
+                                "prompt_id": prompt_id,
+                                "completion_idx": index,
+                                "position": position,
+                                "token_id": int(token_id),
+                                "sampler_logprob": logprobs[position] if position < len(logprobs) else None,
+                                # On the inline path the trainer recomputes the
+                                # same value. Stored anyway: one column today
+                                # against a full re-run in October.
+                                "trainer_logprob": logprobs[position] if position < len(logprobs) else None,
+                            }
+                        )
+                produced += chunk
+                torch.cuda.empty_cache() if torch.cuda.is_available() else None
         return completions, logprob_rows
 
 

@@ -275,3 +275,36 @@ directories contained only a config and an env.lock from a run that never
 started, so they were removed along with the queue state and the matrix rebuilt.
 No step, completion or measurement was deleted, and nothing that ever entered
 the evidence index was touched.
+
+### D-19 CUDA OOM at group size 8, fixed by chunking generation
+**Symptom:** every run failed with `torch.OutOfMemoryError` inside the update's
+forward pass on an 8 GB RTX 4060.
+
+**Cause:** `output_scores=True` returns one `[batch, vocab]` tensor per generated
+position. At 8 sequences by 384 tokens by a 151936 vocabulary that is about
+1.9 GB held at once, and `torch.stack` over them doubled it.
+
+**Chose:** generate in chunks of 2 sequences, and consume the scores one
+position at a time, gathering only the chosen token's logprob, so the full
+`[positions, batch, vocab]` tensor is never materialised. Also dropped
+`max_new_tokens` from 384 to **256**, which is what calibration actually
+measured; 384 was an unmeasured extrapolation on my part.
+
+**Rejected: dropping `output_scores` and recomputing sampler logprobs with a
+post hoc forward pass.** It is the easier and cheaper memory fix, and it would
+have quietly destroyed the point of the sampler seam. The follow-on project's
+entire subject is what happens to the sampler and trainer logprob pair when the
+rollout path changes, and a recomputation is by definition not the generating
+path. The pair would have looked perfect and meant nothing.
+
+**Rejected: reducing group size.** Group size 8 is fixed by
+`docs/kickoff/01-prd.md` section 8 and is in section 6's do-not-change list.
+
+Verified at group size 8 before relaunch: one step completes, KL finite,
+indeterminate 0.00.
+
+### D-20 Traceback logging was truncating from the wrong end
+A run's exception was logged as `format_exc()[:2000]`, which keeps the stack and
+discards the exception message, because the message is the last line. The first
+OOM therefore reported only "run raised" with a stack and no cause, and cost a
+diagnostic cycle. Now logs the tail.
