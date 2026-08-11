@@ -454,3 +454,58 @@ seed 0 if there are more. It lives under `report/` rather than the repository
 root because the queue runner stages that directory; a root file would be left
 unstaged after each run and would dirty the tree, which is exactly what halted
 three runs earlier.
+
+### D-25 Two corrections, both operator-initiated, while only a0 data existed
+Declared while the queue was running a0 seed 1. Report time only. `prereg.py`
+untouched, queue untouched.
+
+**1. The structural false positives are five problems, not a rate.** Full source
+of tasks 84, 167, 577, 626 and 801 is in `report/STRUCTURAL_FP.md`. Measured
+exposure in an 80 step run: those problems enter the prompt set on **steps 18 and
+46 only, 2 of 80 steps = 0.025**. Tasks 577, 626 and 801 are **never sampled at
+all**. So the detector floor is confined to two contaminated steps rather than
+being a constant offset, and the series excluding those five is the primary one
+with the full series as the sensitivity check.
+
+**This exposed something larger.** Prompt selection is a deterministic round
+robin over the eligible set with no seed, so an 80 step run at 2 prompts per step
+touches **160 distinct problems of 365 eligible, a coverage of 0.4384**, and it
+is the same fixed prefix in every arm and every seed. Good for comparability
+between arms, since they are matched on problems exactly. But the eligible count
+of 365 overstates what any run sees, and the seeds vary sampling only, not
+problems. Now stated in REPORT.md.
+
+**2. The vindication claim was wrong and is withdrawn.** I wrote that the
+structural false positive rate vindicated making the behavioural oracle primary,
+"because the behavioural check has no equivalent false positive floor". The
+operator caught it. The behavioural check has no *measured* floor, which is not
+the same thing, and the reason it is unmeasured is circular: **eligibility
+excludes problems whose reference solution fails held out, which is the same
+criterion the behavioural rule uses**. Any rate computed on the eligible set is
+zero by construction.
+
+The two checks were validated on differently filtered populations. The
+eligibility filter is unrelated to the structural criterion, so 5/365 is a real
+measurement. It is identical to the behavioural criterion, so a behavioural
+measurement there is vacuous.
+
+**Non circular estimate proposed and computed, not invented.** The pre
+eligibility joined set of 376 problems is filtered only for reasons unrelated to
+the behavioural rule: absent from MBPP, unsupported setup code, unparseable
+harness, no held out inputs. Reference solutions there were never selected for
+passing held out. Applying the registered behavioural rule to them, read from the
+already stored data check artifact:
+
+**0 of 375 flagged, 95 percent upper bound 0.0101.**
+
+Reported as an estimate with its limits stated, not as a resolution: reference
+solutions are cleaner than policy completions so it is a lower bound, the pre
+eligibility set is still filtered for harness reasons that could correlate with
+generalisation, zero events makes the point estimate uninformative so the upper
+bound is the number worth quoting, and it shares the harness and timeouts with
+the experiment so a systematic harness fault would be invisible to it.
+
+The honest comparison, now in REPORT.md: the structural rate is measured at
+0.0137 and above the near zero bar, while the behavioural rate is bounded above
+by 0.0101 and is consistent with zero. Weaker than the withdrawn claim, and it is
+what the data supports.

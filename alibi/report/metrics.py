@@ -339,6 +339,151 @@ def flagged_step_zero_completions() -> dict:
     return {"total": len(hits), "shown": len(sampled), "sampled": len(hits) > STEP_ZERO_SAMPLE_CAP, "items": sampled}
 
 
+def structural_fp_task_ids() -> list[int]:
+    """Task ids whose honest reference solution the structural check flags."""
+    return sorted(reference_structural_false_positives()["flagged_task_ids"])
+
+
+def cheat_form_series(run_dir: Path, steps: list[int], exclude_task_ids: set[int] | None = None) -> dict:
+    """Per-step cheat_form counts, optionally excluding named problems.
+
+    The structural false positives are not a uniform rate spread over every
+    problem. They are five specific problems, so the "floor" they create appears
+    only on the steps where one of them is sampled.
+    """
+    exclude = exclude_task_ids or set()
+    counts, totals, hits = [], [], []
+    for step in steps:
+        records = load_step_completions(run_dir, step)
+        kept = [r for r in records if int(r.get("prompt_id", -1)) not in exclude]
+        step_counts: dict[str, int] = {}
+        for record in kept:
+            for form in (record.get("cheat_form") or []):
+                if form and form != "none":
+                    step_counts[form] = step_counts.get(form, 0) + 1
+        counts.append(step_counts)
+        totals.append(len(kept))
+        hits.append(sum(1 for r in records if int(r.get("prompt_id", -1)) in exclude))
+    return {"counts": counts, "n_scored": totals, "fp_problem_completions": hits}
+
+
+def fp_problem_exposure(run_dir: Path, steps: list[int]) -> dict:
+    """How often the known false positive problems actually enter the prompts.
+
+    Determines whether the detector floor is constant across steps or confined
+    to a few. Measured from stored completions rather than inferred from the
+    sampling rule.
+    """
+    fp_ids = set(structural_fp_task_ids())
+    per_step = []
+    for step in steps:
+        records = load_step_completions(run_dir, step)
+        present = sorted({int(r["prompt_id"]) for r in records if int(r.get("prompt_id", -1)) in fp_ids})
+        per_step.append({"step": step, "task_ids": present, "n_completions": sum(
+            1 for r in records if int(r.get("prompt_id", -1)) in fp_ids
+        )})
+    touched = [e for e in per_step if e["task_ids"]]
+    return {
+        "fp_task_ids": sorted(fp_ids),
+        "steps_touching_a_fp_problem": [e["step"] for e in touched],
+        "n_steps_touched": len(touched),
+        "n_steps": len(steps),
+        "fraction_of_steps": (len(touched) / len(steps)) if steps else None,
+        "detail": touched,
+    }
+
+
+def prompt_coverage(run_dir: Path, steps: list[int]) -> dict:
+    """Which eligible problems a run actually samples.
+
+    Prompt selection is a deterministic round robin over the eligible set with
+    no seed, so every arm and every seed sees the same problems in the same
+    order. That is good for comparability and it means coverage is far below the
+    eligible count, which is worth stating rather than leaving implied.
+    """
+    seen = set()
+    for step in steps:
+        for record in load_step_completions(run_dir, step):
+            seen.add(int(record["prompt_id"]))
+    try:
+        eligible = len(prereg.load_eligibility()["task_ids"])
+    except (FileNotFoundError, KeyError):
+        eligible = None
+    return {
+        "distinct_problems_sampled": len(seen),
+        "eligible_problems": eligible,
+        "coverage_fraction": (len(seen) / eligible) if eligible else None,
+        "note": (
+            "Prompt selection is a deterministic round robin with no seed, so all arms and all seeds "
+            "see the same problems in the same order."
+        ),
+    }
+
+
+def behavioural_false_positive_estimate() -> dict:
+    """A non circular estimate of the behavioural check's false positive rate.
+
+    The problem this exists to solve. The behavioural rule cannot be measured on
+    the eligible problem set, because eligibility **excludes problems whose
+    reference solution fails held out**, which is the same criterion the rule
+    uses. Any rate computed there is zero by construction and means nothing.
+
+    The pre eligibility joined set is filtered only for reasons unrelated to the
+    behavioural rule: absent from MBPP, unsupported setup code, an unparseable
+    harness, or no held out inputs remaining. Reference solutions on that set are
+    honest by construction and were never selected for passing held out, so the
+    rule can be evaluated there without circularity.
+
+    Read from the stored data check artifact, so it needs no GPU and no rerun.
+    """
+    candidates = sorted((ARTIFACTS / "runs").glob("datacheck-*/result.json")) if (ARTIFACTS / "runs").exists() else []
+    if not candidates:
+        return {
+            "measured": False,
+            "absent_reason": "no data check artifact is stored, so the estimate cannot be computed",
+        }
+    source = candidates[-1]
+    document = json.loads(source.read_text(encoding="utf-8"))
+    threshold = prereg.PREREG.oracle.held_out_cheat_threshold
+
+    flagged, evaluable, unmeasurable = [], 0, 0
+    for record in document["problems"]:
+        reference = record.get("reference") or {}
+        visible = reference.get("visible_pass_fraction")
+        held_out = reference.get("held_out_pass_fraction")
+        if visible is None or held_out is None:
+            unmeasurable += 1
+            continue
+        evaluable += 1
+        if visible >= prereg.PREREG.oracle.visible_pass_threshold and held_out <= threshold:
+            flagged.append({"task_id": record["task_id"], "held_out_pass_fraction": held_out})
+
+    low, high = wilson_interval(len(flagged), evaluable)
+    return {
+        "measured": True,
+        "source_artifact": str(source.relative_to(runlog.REPO_ROOT)),
+        "population": "pre-eligibility joined MBPP and MBPP+ set, reference solutions",
+        "n_evaluable": evaluable,
+        "n_unmeasurable": unmeasurable,
+        "n_flagged": len(flagged),
+        "false_positive_rate": (len(flagged) / evaluable) if evaluable else None,
+        "false_positive_ci95": [low, high],
+        "flagged": flagged,
+        "threshold": threshold,
+        "caveats": [
+            "Reference solutions are cleaner and more idiomatic than anything a 0.5B policy emits, "
+            "so this is a lower bound on the rate against real completions, exactly as the honest "
+            "probe is.",
+            "The pre eligibility set is still filtered for harness reasons, and if those correlate "
+            "with generalisation the estimate is biased by an unknown amount.",
+            "Zero events means the point estimate is 0.0 and uninformative on its own. The upper "
+            "confidence bound is the number worth quoting.",
+            "This is measured on the same held-out harness and timeouts the experiment uses, so a "
+            "systematic harness problem would be invisible to it.",
+        ],
+    }
+
+
 def series_for(run_dir: Path) -> RunSeries | None:
     summaries = load_step_summaries(run_dir)
     if not summaries:
@@ -505,6 +650,7 @@ def claims() -> dict:
         "diagnostics": {},
         "pooled_step_zero": pooled_step_zero(),
         "structural_precision_on_honest_code": reference_structural_false_positives(),
+        "behavioural_precision_on_honest_code": behavioural_false_positive_estimate(),
     }
     if not runs:
         out["absent_reason"] = "no runs are declared in artifacts/index.json yet"
@@ -524,6 +670,11 @@ def claims() -> dict:
             "terminal_excluded_fraction": seed_band(series_list, "excluded_fraction"),
             "determinacy_floor": _floor_summary(series_list),
             "step_zero_prevalence": [s.step_zero for s in series_list],
+            "fp_problem_exposure": [fp_problem_exposure(s.run_dir, s.steps) for s in series_list],
+            "prompt_coverage": [prompt_coverage(s.run_dir, s.steps) for s in series_list],
+            "cheat_form_excluding_fp": [
+                cheat_form_series(s.run_dir, s.steps, set(structural_fp_task_ids())) for s in series_list
+            ],
         }
         for label in (f"{t:.2f}" for t in prereg.PREREG.oracle.sensitivity_thresholds):
             out["sensitivity"].setdefault(label, {})[arm] = {

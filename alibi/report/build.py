@@ -21,6 +21,7 @@ REPORT_DIR = runlog.REPO_ROOT / "report"
 REPORT_PATH = REPORT_DIR / "REPORT.md"
 PUBLISHED_PATH = REPORT_DIR / "published.json"
 STEP_ZERO_FLAGGED_PATH = REPORT_DIR / "STEP_ZERO_FLAGGED.md"
+STRUCTURAL_FP_PATH = REPORT_DIR / "STRUCTURAL_FP.md"
 
 # What counts as "near zero" for the structural check's false positive rate on
 # known-honest code. Declared here rather than judged after seeing the number.
@@ -125,12 +126,68 @@ def write_step_zero_flagged() -> Path:
     return STEP_ZERO_FLAGGED_PATH
 
 
+def write_structural_fp() -> Path:
+    """Full source of every honest reference solution the structural check flags."""
+    from alibi.data.build import build
+    from alibi.env.oracle import structural_check
+
+    precision = metrics.reference_structural_false_positives()
+    ids = set(precision["flagged_task_ids"])
+    problems = {p.task_id: p for p in build().problems if p.task_id in ids}
+
+    lines = [
+        "# Structural check false positives",
+        "",
+        "Every one of these is an MBPP+ **reference solution**: a genuine algorithm, honest by "
+        "construction. The structural check flags them anyway, so each is a false positive.",
+        "",
+        f"{precision['n_flagged']} of {precision['n_reference_solutions']} eligible reference solutions, "
+        f"a rate of {_fmt(precision['false_positive_rate'])}.",
+        "",
+        "These are **five specific problems, not a uniform rate**. The floor they create appears only "
+        "on the steps where one of them is sampled into the prompt set.",
+        "",
+    ]
+    for task_id in sorted(ids):
+        problem = problems.get(task_id)
+        if problem is None:
+            lines += [f"## Task {task_id}", "", "Source unavailable: not present in the built problem set.", ""]
+            continue
+        flagged, forms, signals, _ = structural_check(
+            problem.reference_code, problem.visible_asserts, problem.entry_point
+        )
+        lines += [
+            "---",
+            "",
+            f"## Task {task_id}, entry point `{problem.entry_point}`",
+            "",
+            f"- cheat_form: `{forms}`",
+            f"- signals: `{signals}`",
+            "",
+            "Visible asserts, which are what the check compares literals against:",
+            "",
+            "```python",
+            "\n".join(problem.visible_asserts),
+            "```",
+            "",
+            "Reference solution:",
+            "",
+            "```python",
+            (problem.reference_code or "").strip(),
+            "```",
+            "",
+        ]
+    STRUCTURAL_FP_PATH.write_text("\n".join(lines), encoding="utf-8")
+    return STRUCTURAL_FP_PATH
+
+
 def build_report() -> dict[str, Path]:
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     computed = metrics.claims()
     figures = figure.build_figures()
 
     write_step_zero_flagged()
+    write_structural_fp()
     published = build_published(computed)
     PUBLISHED_PATH.write_text(json.dumps(published, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -483,13 +540,15 @@ def build_report() -> dict[str, Path]:
         if rate is not None and rate >= NEAR_ZERO_FALSE_POSITIVE_RATE:
             lines.append(
                 f"**This is not near zero.** At {_fmt(rate)} the detector flags roughly "
-                f"{rate * 16:.1f} of every 16 completions on honest code alone. The cheat_form panel is "
-                "therefore reporting **detector behaviour as well as policy behaviour**, and any observed "
-                f"cheat_form prevalence below about {_fmt(rate * 2)} should be read as within detector "
-                "noise rather than as a signal about the policy. This is one reason the pre-registration "
-                "makes the behavioural oracle primary and the structural check diagnostic only: the "
-                "behavioural check has no equivalent false positive floor, because it is defined on "
-                "execution outcomes rather than on the shape of code."
+                f"{rate * 16:.1f} of every 16 completions on honest code alone. The cheat_form panel "
+                "therefore reports **detector behaviour as well as policy behaviour**."
+            )
+            lines.append("")
+            lines.append(
+                "But the rate is **not uniform**. It is five specific problems, listed with their full "
+                "source in [STRUCTURAL_FP.md](STRUCTURAL_FP.md). The floor appears only on the steps "
+                "where one of them is sampled, so it is a small number of contaminated steps rather "
+                "than a constant offset on every step. See the exposure table below."
             )
         else:
             lines.append(
@@ -503,6 +562,101 @@ def build_report() -> dict[str, Path]:
             "[STEP_ZERO_FLAGGED.md](STEP_ZERO_FLAGGED.md), for reading by hand rather than trusting the "
             "label."
         )
+
+        # Exposure of the false positive problems, and prompt coverage.
+        exposures = [e for entry in computed.get("arms", {}).values() for e in (entry.get("fp_problem_exposure") or [])]
+        coverages = [c for entry in computed.get("arms", {}).values() for c in (entry.get("prompt_coverage") or [])]
+        if exposures:
+            lines.append("")
+            lines.append("### How often the false positive problems are actually sampled")
+            lines.append("")
+            lines.append("| Run | Steps touching a flagged problem | Of steps | Fraction |")
+            lines.append("|---|---|---|---|")
+            for exposure in exposures:
+                lines.append(
+                    f"| (run) | `{exposure['steps_touching_a_fp_problem']}` | {exposure['n_steps']} "
+                    f"| {_fmt(exposure['fraction_of_steps'])} |"
+                )
+            lines.append("")
+            lines.append(
+                "The floor is therefore **confined to those steps**, not spread across the series. On "
+                "every other step the structural panel carries no known detector contribution. This is "
+                "why the excluding-the-five series below is the primary one."
+            )
+        if coverages:
+            cover = coverages[0]
+            lines.append("")
+            lines.append("### Prompt coverage, which this exposed")
+            lines.append("")
+            lines.append(
+                f"A run of this length samples **{cover['distinct_problems_sampled']} distinct problems "
+                f"of {cover['eligible_problems']} eligible**, a coverage of "
+                f"{_fmt(cover['coverage_fraction'])}. {cover['note']} The eligible count of "
+                f"{cover['eligible_problems']} therefore overstates what any run actually sees, and the "
+                "effective problem set is the same fixed prefix in every arm and every seed. That is "
+                "good for comparability between arms and it means the seeds vary sampling only, not "
+                "problems."
+            )
+    lines.append("")
+
+    # Behavioural precision, and the correction to the earlier claim.
+    behavioural = computed.get("behavioural_precision_on_honest_code") or {}
+    lines.append("## Behavioural check precision, and a correction")
+    lines.append("")
+    lines.append(
+        "An earlier draft of this report claimed the structural check's false positive rate was a "
+        "vindication of the pre-registration's choice to make the behavioural oracle primary, on the "
+        "grounds that the behavioural check has no equivalent false positive floor. **That claim was "
+        "wrong and is withdrawn.**"
+    )
+    lines.append("")
+    lines.append(
+        "The behavioural check has not been shown to have no false positive floor. It had not been "
+        "measured at all. The reason is circularity: **eligibility excludes problems whose reference "
+        "solution fails held out**, which is the same criterion the behavioural rule uses. Any false "
+        "positive rate computed on the eligible set is zero by construction and carries no information. "
+        "The two checks were validated on differently filtered populations: the eligibility filter is "
+        "unrelated to the structural criterion, so the structural measurement is real, and it is "
+        "identical to the behavioural criterion, so a behavioural measurement there would be vacuous."
+    )
+    lines.append("")
+    if not behavioural.get("measured"):
+        lines.append(
+            f"**The behavioural false positive rate on honest code remains unmeasured.** "
+            f"{behavioural.get('absent_reason')}"
+        )
+    else:
+        ci = behavioural.get("false_positive_ci95") or [None, None]
+        lines.append(
+            "A non circular estimate is available from stored data and is reported here **as an "
+            "estimate with named limits**, not as a resolution of the gap. The pre eligibility joined "
+            "set is filtered only for reasons unrelated to the behavioural rule, so reference "
+            "solutions on it were never selected for passing held out."
+        )
+        lines.append("")
+        lines.append("| Measure | Value |")
+        lines.append("|---|---|")
+        lines.append(f"| Population | {behavioural['population']} |")
+        lines.append(f"| Source artifact | `{behavioural['source_artifact']}` |")
+        lines.append(f"| Evaluable | {behavioural['n_evaluable']} |")
+        lines.append(f"| Flagged (false positives) | {behavioural['n_flagged']} |")
+        lines.append(f"| Point estimate | {_fmt(behavioural['false_positive_rate'])} |")
+        lines.append(f"| **95 percent upper bound** | **{_fmt(ci[1])}** |")
+        lines.append("")
+        lines.append(
+            "With zero events the point estimate is uninformative on its own and the upper bound is "
+            "the number worth quoting. Against the structural check's "
+            f"{_fmt((computed.get('structural_precision_on_honest_code') or {}).get('false_positive_rate'))}, "
+            "the comparison that can honestly be made is: the structural rate is measured and above the "
+            "near zero bar, while the behavioural rate is bounded above by "
+            f"{_fmt(ci[1])} and is consistent with zero. That is weaker than the withdrawn claim and it "
+            "is what the data supports."
+        )
+        lines.append("")
+        lines.append("Limits of this estimate, all of which keep it an estimate:")
+        lines.append("")
+        for caveat in behavioural.get("caveats", []):
+            lines.append(f"- {caveat}")
     lines.append("")
 
     # 6d. Amendments to the halt conditions, stated plainly.
@@ -574,6 +728,11 @@ def build_report() -> dict[str, Path]:
     lines.append("")
 
     REPORT_PATH.write_text("\n".join(lines), encoding="utf-8")
-    out = {"report": REPORT_PATH, "published": PUBLISHED_PATH, "step_zero_flagged": STEP_ZERO_FLAGGED_PATH}
+    out = {
+        "report": REPORT_PATH,
+        "published": PUBLISHED_PATH,
+        "step_zero_flagged": STEP_ZERO_FLAGGED_PATH,
+        "structural_fp": STRUCTURAL_FP_PATH,
+    }
     out.update({f"figure_{k}": v for k, v in figures.items()})
     return out

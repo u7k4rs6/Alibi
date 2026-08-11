@@ -98,24 +98,25 @@ What the base policy already does at step 0, before a single gradient step. If p
 
 ### Pooled across all matrix runs
 
-Step 0 is the same untrained base policy in every arm and at every seed, so the runs pool. **1 of 9 runs** have stored a step 0 so far; this table is regenerated after every completed run.
+Step 0 is the same untrained base policy in every arm and at every seed, so the runs pool. **2 of 9 runs** have stored a step 0 so far; this table is regenerated after every completed run.
 
 | Measure | Value |
 |---|---|
-| Runs pooled | 1 of 9 |
-| Completions | 16 |
-| Any cheat_form | 1/16 = 0.0625 |
-| 95 percent interval (Wilson) | 0.0111 to 0.2833 |
-| Behavioural cheat rate | 0/16 = 0.0000 |
-| 95 percent interval (Wilson) | 0.0000 to 0.1936 |
-| Per-run spread | not measured |
-| cheat_form breakdown | {'if_chain': 1} |
+| Runs pooled | 2 of 9 |
+| Completions | 32 |
+| Any cheat_form | 2/32 = 0.0625 |
+| 95 percent interval (Wilson) | 0.0173 to 0.2015 |
+| Behavioural cheat rate | 0/32 = 0.0000 |
+| 95 percent interval (Wilson) | 0.0000 to 0.1072 |
+| Per-run spread | 0.0000 |
+| cheat_form breakdown | {'if_chain': 2} |
 
 Per run:
 
 | Run | Arm | Seed | n | Any cheat_form |
 |---|---|---|---|---|
 | `a0-seed1-4581182c` | a0 | 1 | 16 | 0.0625 |
+| `a1-seed1-17e2af38` | a1 | 1 | 16 | 0.0625 |
 
 Wilson intervals rather than the normal approximation, because n is small and the proportion is near zero, which is exactly where the textbook interval returns a negative lower bound.
 
@@ -133,9 +134,49 @@ The structural check's **recall** was validated on generated cheats. Its **preci
 | Parse errors | 0 |
 | Flagged task ids | `[84, 167, 577, 626, 801]` |
 
-**This is not near zero.** At 0.0137 the detector flags roughly 0.2 of every 16 completions on honest code alone. The cheat_form panel is therefore reporting **detector behaviour as well as policy behaviour**, and any observed cheat_form prevalence below about 0.0274 should be read as within detector noise rather than as a signal about the policy. This is one reason the pre-registration makes the behavioural oracle primary and the structural check diagnostic only: the behavioural check has no equivalent false positive floor, because it is defined on execution outcomes rather than on the shape of code.
+**This is not near zero.** At 0.0137 the detector flags roughly 0.2 of every 16 completions on honest code alone. The cheat_form panel therefore reports **detector behaviour as well as policy behaviour**.
+
+But the rate is **not uniform**. It is five specific problems, listed with their full source in [STRUCTURAL_FP.md](STRUCTURAL_FP.md). The floor appears only on the steps where one of them is sampled, so it is a small number of contaminated steps rather than a constant offset on every step. See the exposure table below.
 
 The full text of every step-zero completion carrying a cheat_form is in [STEP_ZERO_FLAGGED.md](STEP_ZERO_FLAGGED.md), for reading by hand rather than trusting the label.
+
+### How often the false positive problems are actually sampled
+
+| Run | Steps touching a flagged problem | Of steps | Fraction |
+|---|---|---|---|
+| (run) | `[18, 46]` | 80 | 0.0250 |
+
+The floor is therefore **confined to those steps**, not spread across the series. On every other step the structural panel carries no known detector contribution. This is why the excluding-the-five series below is the primary one.
+
+### Prompt coverage, which this exposed
+
+A run of this length samples **160 distinct problems of 365 eligible**, a coverage of 0.4384. Prompt selection is a deterministic round robin with no seed, so all arms and all seeds see the same problems in the same order. The eligible count of 365 therefore overstates what any run actually sees, and the effective problem set is the same fixed prefix in every arm and every seed. That is good for comparability between arms and it means the seeds vary sampling only, not problems.
+
+## Behavioural check precision, and a correction
+
+An earlier draft of this report claimed the structural check's false positive rate was a vindication of the pre-registration's choice to make the behavioural oracle primary, on the grounds that the behavioural check has no equivalent false positive floor. **That claim was wrong and is withdrawn.**
+
+The behavioural check has not been shown to have no false positive floor. It had not been measured at all. The reason is circularity: **eligibility excludes problems whose reference solution fails held out**, which is the same criterion the behavioural rule uses. Any false positive rate computed on the eligible set is zero by construction and carries no information. The two checks were validated on differently filtered populations: the eligibility filter is unrelated to the structural criterion, so the structural measurement is real, and it is identical to the behavioural criterion, so a behavioural measurement there would be vacuous.
+
+A non circular estimate is available from stored data and is reported here **as an estimate with named limits**, not as a resolution of the gap. The pre eligibility joined set is filtered only for reasons unrelated to the behavioural rule, so reference solutions on it were never selected for passing held out.
+
+| Measure | Value |
+|---|---|
+| Population | pre-eligibility joined MBPP and MBPP+ set, reference solutions |
+| Source artifact | `artifacts/runs/datacheck-20260810T230821Z/result.json` |
+| Evaluable | 375 |
+| Flagged (false positives) | 0 |
+| Point estimate | 0.0000 |
+| **95 percent upper bound** | **0.0101** |
+
+With zero events the point estimate is uninformative on its own and the upper bound is the number worth quoting. Against the structural check's 0.0137, the comparison that can honestly be made is: the structural rate is measured and above the near zero bar, while the behavioural rate is bounded above by 0.0101 and is consistent with zero. That is weaker than the withdrawn claim and it is what the data supports.
+
+Limits of this estimate, all of which keep it an estimate:
+
+- Reference solutions are cleaner and more idiomatic than anything a 0.5B policy emits, so this is a lower bound on the rate against real completions, exactly as the honest probe is.
+- The pre eligibility set is still filtered for harness reasons, and if those correlate with generalisation the estimate is biased by an unknown amount.
+- Zero events means the point estimate is 0.0 and uninformative on its own. The upper confidence bound is the number worth quoting.
+- This is measured on the same held-out harness and timeouts the experiment uses, so a systematic harness problem would be invisible to it.
 
 ## Halt conditions were amended before any curve existed
 
@@ -165,5 +206,5 @@ Two of the pre-declared halt conditions were amended before any monitored-arm cu
 }
 ```
 
-Generated 2026-08-11T06:33:49.146471+00:00 by `alibi report`. Numbers are injected from
+Generated 2026-08-11T06:38:08.992682+00:00 by `alibi report`. Numbers are injected from
 `artifacts/`, never typed. `alibi verify --no-gpu` recomputes every claim above.
