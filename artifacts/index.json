@@ -28,6 +28,19 @@
       "seed": 1,
       "steps": 80,
       "why": "completed a0 run at seed 1, 80 steps, no halt"
+    },
+    {
+      "arm": "a1",
+      "declared_utc": "2026-08-11T07:33:35.814137+00:00",
+      "digests": {
+        "artifacts/runs/a1-seed1-17e2af38/config.json": "f78869a069a203f90973a86a56ad68ec54ff19aaa9ddac87eba0ad52450f7631",
+        "artifacts/runs/a1-seed1-17e2af38/env.lock": "50c8146db81b2a38b44cfa66ccffc335eb3b5a68bcb45fd41faaf23deff1a6d5",
+        "artifacts/runs/a1-seed1-17e2af38/state.json": "47303b062284fae56382862fec6b2361034841713d420ad0cac40f167505dcf3"
+      },
+      "run_id": "a1-seed1-17e2af38",
+      "seed": 1,
+      "steps": 80,
+      "why": "completed a1 run at seed 1, 80 steps, no halt"
     }
   ],
   "runs_absent_reason": null,
