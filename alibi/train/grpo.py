@@ -1,4 +1,9 @@
-"""TRL GRPOTrainer wiring, and the smoke test that proves the loop is real.
+"""Hand-written GRPO-style training loop. TRL is pinned but never instantiated.
+
+An audit found the previous first line of this docstring called the module
+"TRL GRPOTrainer wiring", which is the exact claim REPORT.md denies above the
+fold. The update here is a hand-written policy gradient; `trl.GRPOTrainer` is
+not used anywhere in this repository.
 
 Kept separate from alibi/train/loop.py so that everything except the trainer
 itself is importable and testable on a host with no torch, which is what lets CI

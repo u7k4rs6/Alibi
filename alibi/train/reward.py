@@ -14,7 +14,7 @@ The form is registered in alibi/prereg.py and hashed into every run:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from alibi import prereg
 
@@ -45,7 +45,12 @@ class ScoredCompletion:
     monitor_state: str
     extracted_code: str = ""
     think: str | None = None
-    metadata: dict = field(default_factory=dict)
+    # There is deliberately no dict-typed field here. An audit smuggled oracle
+    # data into the reward through a generic `metadata` dict without tripping a
+    # single isolation test, because the AST guards inspect names at the call
+    # site and a dict's contents have no names there. A generic container on
+    # this type is an oracle field waiting for an assignment, so the channel is
+    # removed rather than guarded.
 
 
 def format_penalty(scored: ScoredCompletion) -> float:

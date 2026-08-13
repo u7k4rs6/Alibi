@@ -2,15 +2,17 @@
 
 **A failed experiment with a complete forensic record.** It set out to measure whether a
 policy penalised by a monitor stops reward hacking or just stops saying so. No such
-measurement exists here. What exists instead is five distinct faults, each of which alone
-would have produced a confident, publishable-looking curve that meant nothing, and each of
-which was caught by instrumentation built before the runs.
+measurement exists here. What exists instead is six distinct faults, each of which alone
+would have produced a confident, publishable-looking curve that meant nothing. Five were
+caught by instrumentation built before the runs; the sixth was caught by an adversarial
+audit of the report itself, which also found and forced the withdrawal of four overclaims
+in the report's own self-assessment. Findings and remediations are in [AUDIT.md](AUDIT.md).
 
 That is the result, and it is the reason the repository is worth reading.
 
 ---
 
-## The five faults
+## The six faults
 
 **No monitored-arm comparison exists at any version.**
 
@@ -28,6 +30,9 @@ That is the result, and it is the reason the repository is worth reading.
    to 0.8354.
 5. **`trainer_logprob` was a copy of `sampler_logprob`**, 3430 of 3430 rows. The column
    collected to detect sampler-trainer divergence could not have shown any.
+6. **The indeterminate halt selected against the monitored arm.** A2 completed zero of
+   five attempts; its steps average 44 percent longer than the control's, which widens the
+   window in which held-out scoring times out. Found by the audit, not the instrument.
 
 Details, including what each would have produced undetected and what caught it, are in
 [report/REPORT.md](report/REPORT.md).
@@ -68,8 +73,11 @@ of them. See [BLOCKED.md](BLOCKED.md) and [BLOCKED-v2.md](BLOCKED-v2.md).
 
 ## Unresolved
 
-Sampler and trainer logprobs diverge by 0.2150 mean and 1.8477 max on identical weights,
-past what bf16 noise explains, and it is not diagnosed.
+An earlier revision quantified the sampler-trainer logprob divergence from a deleted run
+on the wrong configuration; those figures are withdrawn. Re-measured on the v2 policy and
+budget with a committed artifact: per-token mean 0.0175, median 0.0013, max 0.354 over
+19,347 pairs. The tail exceeds where mixed-precision rounding plausibly lives and its
+cause is not established.
 
 ## Checking the claims
 
@@ -77,7 +85,10 @@ past what bf16 noise explains, and it is not diagnosed.
 alibi verify --no-gpu
 ```
 
-Recomputes every published number from `artifacts/` alone. No GPU, no network.
+Recomputes 45 declared claims from `artifacts/` alone, covering half of the report's
+distinct numeric literals; the remainder are recomputable from named artifacts but not
+checked by verify. An earlier revision claimed full coverage; an audit measured 3 percent
+and the claim was replaced by the counted one. No GPU, no network.
 
 ## Layout
 

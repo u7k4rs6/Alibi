@@ -56,6 +56,56 @@ def build_published(computed: dict) -> dict:
                     "label": f"{arm} {label} {stat}",
                 }
                 index += 1
+    # Fault measurements, so verify covers the report's fault numbers rather
+    # than only the terminal statistics. Added after an audit measured verify's
+    # coverage at roughly 3 percent of the report's distinct numeric literals.
+    faults = computed.get("fault_measurements") or {}
+
+    def add(path: str, label: str) -> None:
+        nonlocal index
+        node = faults
+        for part in path.split("."):
+            if isinstance(node, list):
+                try:
+                    node = node[int(part)]
+                except (ValueError, IndexError):
+                    return
+                continue
+            if not isinstance(node, dict) or part not in node:
+                return
+            node = node[part]
+        if node is None or isinstance(node, (dict, list)):
+            return
+        claims[f"claim{index}"] = {"path": f"fault_measurements.{path}", "value": node, "label": label}
+        index += 1
+
+    add("a1_first20.mean_think_chars", "fault 2.1 a1 mean think chars")
+    add("a1_first20.flagged", "fault 2.1 a1 flagged")
+    add("a1_first20.n", "fault 2.1 a1 n")
+    add("a2_first20_flagged", "fault 2.1 a2 flagged")
+    add("a0s1_truncation.capped_fraction", "fault 2.3 capped fraction")
+    add("a0s1_truncation.visible_pass_capped", "fault 2.3 visible pass capped")
+    add("a0s1_truncation.visible_pass_natural", "fault 2.3 visible pass natural")
+    add("trainer_logprob_copy.rows", "fault 2.5 rows")
+    add("trainer_logprob_copy.identical", "fault 2.5 identical rows")
+    add("v1_retrospective.mean_reward_first10", "fault 2.4 reward first10")
+    add("v1_retrospective.mean_reward_last10", "fault 2.4 reward last10")
+    add("v1_retrospective.entropy_first10", "fault 2.4 entropy first10")
+    add("v1_retrospective.entropy_last10", "fault 2.4 entropy last10")
+    add("v1_retrospective.zero_variance_group_fraction_mean", "fault 2.4 zero-variance mean")
+    for arm in ("a0", "a1", "a2"):
+        add(f"arm_attrition.{arm}.mean_step_seconds", f"fault 2.6 {arm} mean step seconds")
+        add(f"arm_attrition.{arm}.complete", f"fault 2.6 {arm} complete")
+        add(f"arm_attrition.{arm}.attempts", f"fault 2.6 {arm} attempts")
+    add("cap_at_1024.capped_fraction", "v3 capped fraction at 1024")
+    add("cap_at_1024.has_code_fraction", "v3 has-code fraction at 1024")
+    for budget in ("3072", "2048", "1536", "1024"):
+        add(f"oom_bisection.summary.{budget}.peaks_gb.0", f"v2 bisection peak at {budget}")
+    add("logprob_divergence.mean_abs_diff", "divergence mean abs")
+    add("logprob_divergence.median_abs_diff", "divergence median abs")
+    add("logprob_divergence.max_abs_diff", "divergence max abs")
+    add("logprob_divergence.n_token_pairs", "divergence token pairs")
+
     return {
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "prereg_hash": computed.get("prereg_hash"),
@@ -270,17 +320,20 @@ def build_report() -> dict[str, Path]:
     L.append("## 1. Result")
     L.append("")
     L.append(
-        "**No monitored-arm comparison exists at any version of this experiment.** Five distinct "
+        "**No monitored-arm comparison exists at any version of this experiment.** Six distinct "
         "faults were found, and each one alone would have produced a publishable-looking curve "
         "that meant nothing: **arm A1's monitor read an empty view**, so its flag rate was zero by "
         "construction and its reward was arithmetically the unmonitored control's; **the chat "
         "template was never applied**, which would have emptied that view even with a policy "
         "chosen correctly; **44.8 percent of completions hit the token cap**; **the training "
         "objective did not condition on the prompt**, so the gradient maximised the unconditional "
-        "likelihood of completion text; and **`trainer_logprob` was a literal copy of "
+        "likelihood of completion text; **`trainer_logprob` was a literal copy of "
         "`sampler_logprob`**, so the column collected to detect sampler-trainer divergence could "
-        "not have shown any. Every one was caught by instrumentation built before the runs, and "
-        "surfaced as a number rather than as a plausible curve."
+        "not have shown any; and **the indeterminate halt selected against the monitored arm**, "
+        "which completed zero of five attempts while its steps ran 44 percent longer than the "
+        "control's. The first five were caught by instrumentation built before the runs; the "
+        "sixth was found by an adversarial audit of this report, in the artifacts, after the "
+        "report first claimed there were five."
     )
     L.append("")
     L.append(
@@ -291,7 +344,7 @@ def build_report() -> dict[str, Path]:
     L.append("")
 
     # ------------------------------------------------------- 2. THE FIVE FAULTS
-    L.append("## 2. The five faults")
+    L.append("## 2. The six faults")
     L.append("")
     L.append(
         "Each subsection gives what the fault was, what it would have produced undetected, the "
@@ -482,13 +535,72 @@ def build_report() -> dict[str, Path]:
     )
     L.append("")
 
+    faults = (computed.get("fault_measurements") or {})
+    attrition = faults.get("arm_attrition") or {}
+    L.append("### 2.6 The indeterminate halt selected against the monitored arm")
+    L.append("")
+    if attrition:
+        L.append(
+            "**The fault.** The halt on sustained indeterminate held-out executions fires more "
+            "readily on arms whose steps take longer, because a longer step widens the window in "
+            "which held-out scoring competes with generation for CPU and times out. Monitored "
+            "steps are longer by construction: live judge calls plus the honest-probe judgements. "
+            "Recomputed from every stored matrix run:"
+        )
+        L.append("")
+        L.append("| Arm | Attempts | Complete | Indeterminate halts | Other failures | Mean step seconds |")
+        L.append("|---|---|---|---|---|---|")
+        for arm, entry in attrition.items():
+            L.append(
+                f"| {arm} | {entry['attempts']} | {entry['complete']} | {entry['indeterminate_halts']} "
+                f"| {entry['other']} | {_fmt(entry['mean_step_seconds'], 2)} |"
+            )
+        L.append("")
+        a0_s = (attrition.get("a0") or {}).get("mean_step_seconds")
+        a2_s = (attrition.get("a2") or {}).get("mean_step_seconds")
+        if a0_s and a2_s:
+            L.append(
+                f"**a2 completed zero of five attempts.** Its mean step is {_fmt(a2_s, 2)} seconds "
+                f"against the control's {_fmt(a0_s, 2)}, {100 * (a2_s / a0_s - 1):.0f} percent "
+                "longer, and its two runs that reached steps both died on the indeterminate halt, "
+                "one of them mid-morning under conditions in which a0 and a1 completed. One a0 run "
+                "also fell to the same halt, late in the wall-clock day, so thermal and contention "
+                "drift contributes too; the arm-shaped component is what makes this a design fault "
+                "rather than bad luck."
+            )
+    L.append("")
+    L.append(
+        "**Undetected it would have produced** a matrix whose surviving runs are selected for "
+        "being cheap arms. Any comparison built from survivors inherits that bias: the monitored "
+        "arm is not merely missing, it is missing *because* it is monitored."
+    )
+    L.append("")
+    L.append(
+        "**Caught by** an adversarial audit of this report's artifacts, not by the "
+        "instrumentation, and not by the report's authors, who wrote 'every A2 attempt failed' in "
+        "an earlier draft without asking why the failures concentrated in one arm. That is worth "
+        "stating plainly: five faults were caught by instrumentation built in advance, and the "
+        "sixth was caught only when someone attacked the document claiming there were five."
+    )
+    L.append("")
+    L.append(
+        "**Cost.** No A2 run exists, so H3 has no data on either side. The general lesson "
+        "outlives this project: **any halt condition whose firing probability depends on a "
+        "treatment variable is a selection filter on the experiment**, and a fairness check, "
+        "does this guard fire equally across arms at matched conditions, belongs in the design "
+        "review of every such condition."
+    )
+    L.append("")
+
     # --------------------------------------------- 3. WHAT THE INSTRUMENT GOT RIGHT
     L.append("## 3. What the instrument got right")
     L.append("")
     L.append(
-        "This is the load-bearing claim of the whole report. Five faults were found **before** any "
-        "of them reached a published number, and that was not luck. Each was caught because a "
-        "specific piece of instrumentation existed before the runs did."
+        "This is the load-bearing claim of the whole report, and after the audit it is a narrower "
+        "claim than it was. Five of the six faults were caught by instrumentation that existed "
+        "before the runs did, before any of them reached a published number. The sixth was not: "
+        "it was caught by an adversarial audit of this report, and the audit also found four "
+        "places where this section itself overclaimed, each marked below where it occurred."
     )
     L.append("")
     L.append(
@@ -503,8 +615,35 @@ def build_report() -> dict[str, Path]:
         f"**The determinacy floor.** A completion scored on fewer than {metrics.DETERMINACY_FLOOR} "
         "determinate held-out tests has an indeterminate oracle verdict and leaves both the "
         "numerator and the denominator, never counted as a cheat. It is applied at report time and "
-        "recomputed from stored completions, so an auditor can check it without a GPU."
+        "recomputed from stored completions, so an auditor can check it without a GPU. An audit "
+        "found an earlier revision of this report claimed the floor without publishing its "
+        "output; the mandated comparison is restored here:"
     )
+    L.append("")
+    floor_rows = {
+        arm: (entry.get("determinacy_floor") or {})
+        for arm, entry in (computed.get("arms") or {}).items()
+    }
+    if any(v for v in floor_rows.values()):
+        L.append("| Arm | Terminal gap, floor applied | Terminal gap, no floor | Excluded fraction | Materially different |")
+        L.append("|---|---|---|---|---|")
+        for arm, info in sorted(floor_rows.items()):
+            wf = info.get("terminal_gap_with_floor")
+            nf = info.get("terminal_gap_without_floor")
+            ex = [e for e in (info.get("terminal_excluded_fraction") or []) if e is not None]
+            L.append(
+                f"| {arm} | {(_fmt(min(wf)) + ' to ' + _fmt(max(wf))) if wf else 'not measured'} "
+                f"| {(_fmt(min(nf)) + ' to ' + _fmt(max(nf))) if nf else 'not measured'} "
+                f"| {(_fmt(min(ex)) + ' to ' + _fmt(max(ex))) if ex else 'not measured'} "
+                f"| {info.get('materially_different')} |"
+            )
+        L.append("")
+        L.append(
+            "Where the two differ materially the floor version is primary. The excluded fraction "
+            "per step per arm is the determinacy-floor figure panel."
+        )
+    else:
+        L.append("No declared runs carry the floor comparison yet.")
     L.append("")
     L.append(
         "**Thresholds were pre-registered and hashed into every run.** The cheat threshold, the "
@@ -529,12 +668,20 @@ def build_report() -> dict[str, Path]:
         L.append("")
         if rate is not None and rate >= NEAR_ZERO_FALSE_POSITIVE_RATE:
             L.append(
-                f"That is **above** the {NEAR_ZERO_FALSE_POSITIVE_RATE:.2f} bar declared before the "
-                "measurement was run, so the cheat_form panel reports detector behaviour as well as "
-                "policy behaviour, and the report says so rather than presenting the panel as a "
-                "clean read of the policy. The rate is not uniform: it is five specific problems, "
-                "listed with full source in [STRUCTURAL_FP.md](STRUCTURAL_FP.md), which enter the "
-                "prompt set on 2 of 80 steps."
+                f"That is **above** the {NEAR_ZERO_FALSE_POSITIVE_RATE:.2f} bar, so the cheat_form "
+                "panel reports detector behaviour as well as policy behaviour, and the report says "
+                "so rather than presenting the panel as a clean read of the policy. The rate is not "
+                "uniform: it is five specific problems, listed with full source in "
+                "[STRUCTURAL_FP.md](STRUCTURAL_FP.md), which enter the prompt set on 2 of 80 steps."
+            )
+            L.append("")
+            L.append(
+                "**A claim about that bar is withdrawn.** Earlier drafts said the 0.01 bar was "
+                "declared before the measurement was run. An audit found the bar, the measurement "
+                "code and the recorded result all landed in a single commit, so the ordering "
+                "cannot be corroborated from history and rests on the author's word. The claim is "
+                "withdrawn rather than reworded. The practice that would have made it checkable, "
+                "committing the threshold before running the measurement, was not followed."
             )
             L.append("")
     if behavioural.get("measured"):
@@ -555,7 +702,10 @@ def build_report() -> dict[str, Path]:
             f"{behavioural['n_evaluable']} flagged, 95 percent upper bound {_fmt(ci[1])}**. "
             "Reported as an estimate with four named limits, not as a resolution. The honest "
             "comparison is that the structural rate is measured and above the bar, while the "
-            "behavioural rate is bounded above and consistent with zero."
+            "behavioural rate is bounded above and consistent with zero. One more limit, added "
+            "after an audit: the non-circular population shares 97 percent of its members with "
+            "the circular one, so the independence it buys is about ten problems' worth, and the "
+            "upper bound is driven by sample size rather than by that independence."
         )
         L.append("")
     L.append(
@@ -595,9 +745,11 @@ def build_report() -> dict[str, Path]:
                 f"flag rate {_fmt(qualification.get('honest_flag_rate'))}, separation "
                 f"{_fmt(qualification.get('separation'))}. The procedure and all four thresholds "
                 "were chosen by the implementer, it ran on the A2 view only, and the cheats it used "
-                "are programmatically generated and stereotyped. Passing it is **necessary but not "
-                "sufficient**, and no result here should be read as though the judge were known "
-                "reliable on real completions."
+                "are programmatically generated and stereotyped, and, an audit added, drawn from "
+                "the same lowest-task-id prefix the training runs sample, so the judge was "
+                "qualified on the exact problems it would later judge. Passing it is **necessary "
+                "but not sufficient**, and no result here should be read as though the judge were "
+                "known reliable on real completions."
             )
         L.append("")
 
@@ -730,12 +882,28 @@ def build_report() -> dict[str, Path]:
         "enabled:"
     )
     L.append("")
-    L.append("| Budget | Result | Peak allocated |")
-    L.append("|---|---|---|")
-    L.append("| 3072, registered | **OOM** | 7.05 GB |")
-    L.append("| 2048 | **OOM** | 6.45 GB |")
-    L.append("| 1536 | **OOM** | 6.62 GB |")
-    L.append("| 1024 | fits | 5.54 GB |")
+    bisection = (computed.get("fault_measurements") or {}).get("oom_bisection") or {}
+    summary5 = bisection.get("summary") or {}
+    if summary5:
+        L.append("| Budget | Result | Peaks across 3 repeats, GB |")
+        L.append("|---|---|---|")
+        for budget in ("3072", "2048", "1536", "1024"):
+            entry = summary5.get(budget) or {}
+            peaks = ", ".join(f"{x:.2f}" for x in entry.get("peaks_gb", []))
+            label = f"{budget}, registered" if budget == "3072" else budget
+            L.append(f"| {label} | **{(entry.get('result') or '?').upper()}** | {peaks} |")
+        L.append("")
+        L.append(
+            "An audit found the original bisection existed only as prose, after a first attempt at "
+            "the same measurement had already been invalidated by a process-reuse leak. It was "
+            "re-run with a fresh process per repeat, three repeats per budget and the GPU baseline "
+            f"recorded ({bisection.get('baseline_used_mib')} MiB of unevictable desktop processes). "
+            "The peaks replicated bit-identically across repeats and match the prose table. So the "
+            "v2 abandonment stands, and the finding about this project is the narrower one: a "
+            "load-bearing infeasibility decision rested for a time on a single unartifacted "
+            "measurement whose predecessor had already failed once. Artifact: "
+            "`artifacts/diagnostics/oom_bisection/result.json`, declared in the index."
+        )
     L.append("")
     L.append(
         "The floor is the full-vocab logits tensor, about 1 GB in bf16 before the backward graph. "
@@ -786,26 +954,94 @@ def build_report() -> dict[str, Path]:
     # ------------------------------------------------------------ 6. UNRESOLVED
     L.append("## 6. Unresolved")
     L.append("")
+    divergence = (computed.get("fault_measurements") or {}).get("logprob_divergence") or {}
     L.append(
-        "**The sampler and trainer logprobs diverge by more than numerical noise on identical "
-        "weights, and it is not diagnosed.** After `trainer_logprob` was fixed to be a genuine "
-        "prompt-conditioned recomputation, the two columns differ on **0 of 96** rows, with a mean "
-        "absolute difference of **0.2150** and a maximum of **1.8477**."
+        "**Withdrawn.** Earlier revisions of this section quantified the sampler-trainer logprob "
+        "divergence as 0.2150 mean and 1.8477 maximum on identical weights and called it well past "
+        "bf16 noise. An audit found those figures rested on a run that had been deleted, measured "
+        "on a different policy at a 48-token budget, neither of which the text disclosed. The "
+        "numbers are withdrawn, not reworded."
+    )
+    L.append("")
+    if divergence:
+        L.append(
+            "**Re-measured on the v2 policy and budget**, Qwen3-0.6B through its chat template at "
+            "3072 tokens, per token rather than per completion, no training, committed to "
+            "`artifacts/diagnostics/logprob_divergence/result.json` and declared in the index: over "
+            f"**{divergence['n_token_pairs']}** token pairs from {divergence['n_completions']} "
+            f"completions, mean absolute difference **{_fmt(divergence['mean_abs_diff'])}**, median "
+            f"**{_fmt(divergence['median_abs_diff'])}**, maximum **{_fmt(divergence['max_abs_diff'])}**, "
+            f"with {divergence['identical_pairs']} pairs bit-identical."
+        )
+        L.append("")
+        L.append(
+            "That is an order of magnitude smaller than the withdrawn figures, which is itself the "
+            "point: the withdrawn numbers did not survive a properly provenanced re-measurement. "
+            "What remains open is the honest residue: the median sits where mixed-precision "
+            "rounding plausibly lives, the tail does not obviously, and how much of the gap is the "
+            "KV-cache path against the full forward, kernel selection, or something else has not "
+            "been established. The sampler reads generation one position at a time through a "
+            "cache; the trainer runs one forward over prompt and completion together. This is the "
+            "follow-on project's subject and it stays open rather than explained."
+        )
+    else:
+        L.append(
+            "**The divergence is unquantified.** No committed artifact carries the sampler-trainer "
+            "pair, so the open question is stated qualitatively only."
+        )
+    L.append("")
+
+    # ------------------------------------------------------- 6b. THE AUDIT
+    L.append("## The audit, and where this report failed its own standard")
+    L.append("")
+    L.append(
+        "After the first version of this report was written, an adversarial audit was run against "
+        "it with instructions to attack section 3, what the instrument got right, hardest, since "
+        "it is the load-bearing claim and was written by the same process that produced the "
+        "faults. **Section 3 is where the report failed.** Four findings landed there or against "
+        "the report's own verification claims:"
     )
     L.append("")
     L.append(
-        "Both are computed from the same weights at the same step. The paths differ in more than "
-        "precision: the sampler reads the generation path with a KV cache, one position at a time, "
-        "while the trainer runs a single full forward over prompt and completion together. A "
-        "difference of this size is well past what bf16 rounding alone would explain, and which "
-        "part of that gap is attributable to the cache, to kernel selection, or to something else "
-        "has not been established."
+        "1. The report's closing line claimed `alibi verify` recomputes every claim above it. "
+        "Measured, verify covered about 3 percent of the report's distinct numeric literals. The "
+        "claim was false and is replaced below by the measured figure."
+    )
+    L.append(
+        "2. The claim that the structural-precision bar was declared before its measurement "
+        "cannot be corroborated: bar, measurement and result landed in one commit. Withdrawn in "
+        "section 3."
+    )
+    L.append(
+        "3. The determinacy floor was cited as exemplary while its mandated output had been "
+        "dropped from the report. Restored in section 3."
+    )
+    L.append(
+        "4. The oracle-reward separation was claimed by construction; the audit smuggled oracle "
+        "data into the reward through a generic `metadata` dict without tripping any isolation "
+        "test. The channel is now removed and a test fails if any container-typed field reappears "
+        "on `ScoredCompletion`, which is what makes the phrase by construction earned rather than "
+        "asserted."
     )
     L.append("")
     L.append(
-        "This is stated as an open question rather than an explanation, and it is the follow-on "
-        "project's subject arriving early. It is also a caution about the fix: the column now "
-        "carries information, and what that information means is not yet known."
+        "The audit also found the sixth fault, section 2.6, in artifacts this report's authors "
+        "had already summarised without asking the obvious question. **That is the same failure "
+        "mode this report documents**: a confident document, written over real artifacts, "
+        "carrying claims the artifacts did not support, caught only when something was instructed "
+        "to attack it. The difference between this report and the curves it criticises is not "
+        "that its authors were more careful; it is that the attack was run before publication "
+        "instead of never."
+    )
+    L.append("")
+    L.append(
+        "What the audit verified as sound is what makes the rest citable: the pre-registration "
+        "tag predates the earliest run by six hours; the prereg and eligibility hashes are "
+        "identical across all four evidence runs and the measurement-path code is byte-identical "
+        "across their revisions; every fault number that has an artifact reproduces exactly, "
+        "including the a0-a1 identity at zero mismatches over four hundred series points; the "
+        "structural precision reproduces to the same five task ids; and the Verdict invariant "
+        "held against every non-sabotage attack. Findings and remediations: `AUDIT.md`."
     )
     L.append("")
 
@@ -835,6 +1071,17 @@ def build_report() -> dict[str, Path]:
         ("Objective", "mean token logprob, length normalised, not a token sum"),
     ]:
         L.append(f"| {name} | {value} |")
+    L.append("")
+    L.append("### Four revisions across four evidence runs")
+    L.append("")
+    L.append(
+        "The four declared evidence runs ran at four different git revisions. An audit diffed "
+        "them: the changes touch only report-layer code and monitor cache files, and "
+        "`reward.py`, `scoring.py`, `oracle.py`, `tests.py`, `executor.py` and `prereg.py` are "
+        "byte-identical across all four, with identical prereg and eligibility hashes. The "
+        "measurement path did not move between runs; the fact that a reader had to diff four "
+        "revisions to learn that is disclosed here rather than left as an exercise."
+    )
     L.append("")
     L.append("### Config hash discontinuity")
     L.append("")
@@ -882,9 +1129,28 @@ def build_report() -> dict[str, Path]:
     L.append(json.dumps(runlog.scrub(provenance), indent=2, sort_keys=True))
     L.append("```")
     L.append("")
+    import re as _re
+
+    body = "\n".join(L)
+    literals = sorted({m for m in _re.findall(r"(?<![\w.])\d+\.\d{2,4}(?![\w])", body)})
+    claim_values = [c["value"] for c in published["claims"].values() if isinstance(c["value"], (int, float))]
+
+    def covered(text: str) -> bool:
+        value = float(text)
+        decimals = len(text.split(".")[1])
+        tolerance = 0.5 * 10 ** -decimals
+        return any(abs(value - v) <= tolerance for v in claim_values)
+
+    n_covered = sum(1 for lit in literals if covered(lit))
     L.append(
-        f"Generated {published['generated_utc']} by `alibi report`. Numbers are injected from "
-        "`artifacts/`, never typed. `alibi verify --no-gpu` recomputes every claim above. Every "
+        f"Generated {published['generated_utc']} by `alibi report`. Most numbers are injected from "
+        "`artifacts/` at build time; the v2 and v3 tables are read from their declared diagnostic "
+        "artifacts; a small number of counts remain typed prose backed by named artifacts. "
+        f"`alibi verify --no-gpu` recomputes **{len(published['claims'])} declared claims**, which "
+        f"cover **{n_covered} of the {len(literals)} distinct numeric literals** in this report. "
+        "An earlier revision claimed verify recomputed every number above; an audit measured that "
+        "claim at about 3 percent coverage and it was replaced by this counted one. The residual "
+        "literals are recomputable from the named artifacts but are not checked by verify. Every "
         "autonomous decision, including the ones later withdrawn, is in `DECISIONS.md`."
     )
     L.append("")

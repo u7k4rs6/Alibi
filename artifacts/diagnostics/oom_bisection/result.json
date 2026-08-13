@@ -1,0 +1,105 @@
+{
+  "baseline_note": "613 MiB held by three desktop processes that cannot be evicted on this host; recorded rather than pretended away. Peaks below are torch allocations only.",
+  "baseline_used_mib": 613,
+  "budgets": {
+    "1024": [
+      {
+        "peak_gb": 5.5411712,
+        "result": "ok"
+      },
+      {
+        "peak_gb": 5.5411712,
+        "result": "ok"
+      },
+      {
+        "peak_gb": 5.5411712,
+        "result": "ok"
+      }
+    ],
+    "1536": [
+      {
+        "peak_gb": 6.621042688,
+        "result": "oom"
+      },
+      {
+        "peak_gb": 6.621042688,
+        "result": "oom"
+      },
+      {
+        "peak_gb": 6.621042688,
+        "result": "oom"
+      }
+    ],
+    "2048": [
+      {
+        "peak_gb": 6.448147456,
+        "result": "oom"
+      },
+      {
+        "peak_gb": 6.448147456,
+        "result": "oom"
+      },
+      {
+        "peak_gb": 6.448147456,
+        "result": "oom"
+      }
+    ],
+    "3072": [
+      {
+        "peak_gb": 6.977014272,
+        "result": "oom"
+      },
+      {
+        "peak_gb": 6.977014272,
+        "result": "oom"
+      },
+      {
+        "peak_gb": 6.977014272,
+        "result": "oom"
+      }
+    ]
+  },
+  "conclusion": "Replicates the original prose table exactly: 3072, 2048 and 1536 OOM; 1024 fits at 5.54 GB. Peaks are bit-identical across repeats, as expected for a fixed allocation pattern. The audit's best-guess that this table was the number most likely wrong did not survive its own re-measurement.",
+  "declared": "Re-run of the v2 memory bisection after an audit found the original existed only as prose. Fresh process per repeat, three repeats per budget, GPU baseline recorded. The workload is the update's shape: one forward over prompt(200)+completion(budget) random tokens, chunked float32 log_softmax, backward, optimiser step. Qwen3-0.6B, LoRA r16, gradient checkpointing on.",
+  "diagnostic": "oom_bisection",
+  "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU, 8188 MiB total",
+  "repeats_per_budget": 3,
+  "summary": {
+    "1024": {
+      "peaks_gb": [
+        5.5411712,
+        5.5411712,
+        5.5411712
+      ],
+      "replicated": true,
+      "result": "ok"
+    },
+    "1536": {
+      "peaks_gb": [
+        6.621042688,
+        6.621042688,
+        6.621042688
+      ],
+      "replicated": true,
+      "result": "oom"
+    },
+    "2048": {
+      "peaks_gb": [
+        6.448147456,
+        6.448147456,
+        6.448147456
+      ],
+      "replicated": true,
+      "result": "oom"
+    },
+    "3072": {
+      "peaks_gb": [
+        6.977014272,
+        6.977014272,
+        6.977014272
+      ],
+      "replicated": true,
+      "result": "oom"
+    }
+  }
+}

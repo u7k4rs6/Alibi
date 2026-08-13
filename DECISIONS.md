@@ -1004,3 +1004,36 @@ run because the arms it would tune for cannot be compared at this budget.
 
 **Where this leaves the report:** it stands on the five faults and on v1's
 control data. No monitored-arm comparison exists at any version.
+
+### D-37 Audit remediation
+Operator instruction: remediate AUDIT.md without softening any finding,
+withdrawing what cannot be supported.
+
+**Withdrawn:** the section 6 divergence figures (deleted artifact, wrong
+configuration; re-measured an order of magnitude smaller on the right one), the
+"verify recomputes every claim" line (measured at 3 percent; replaced by a
+counted 21 of 42), and the "bar declared before measurement" claim (one commit,
+uncorroborable).
+
+**Re-measured with artifacts, both declared in the index:** the OOM bisection,
+three repeats per budget in fresh processes with the GPU baseline recorded,
+which replicated the prose table bit-identically, so the v2 abandonment stands
+and the audit's own best-guess was wrong; and the sampler-trainer divergence on
+the v2 policy and budget, 19,347 token pairs, mean 0.0175, median 0.0013, max
+0.354.
+
+**F6 choice:** the metadata channel was removed rather than guarded, and the
+smuggling path is now a failing test. "By construction" was the claim; deleting
+the field is what makes it true rather than asserted. The alternative, keeping
+the field and adding a content scanner, would have re-created the same class of
+enumerable-hole guard the audit already defeated once.
+
+**F8 choice:** promoted to fault 2.6 with recomputed numbers (a2: 0 of 5
+complete, mean step 58.97 s against a0's 40.85 s), attributed to the audit
+rather than the instrument, because that attribution is the report's own thesis
+applied to itself.
+
+**Coverage mechanics:** 33 fault-measurement claims added to published.json via
+a new `fault_measurements()` in metrics, recomputed from artifacts so verify
+checks them. The closing line now counts its own coverage against the generated
+text at build time, so the number cannot drift from the prose it describes.

@@ -848,6 +848,135 @@ def _floor_summary(series_list: list[RunSeries]) -> dict:
     }
 
 
+def fault_measurements() -> dict:
+    """Every fault number the report publishes, recomputed from artifacts here.
+
+    Exists so `alibi verify` can cover the fault numbers instead of only the
+    terminal statistics. An audit measured verify's coverage at roughly 3
+    percent of the report's distinct numeric literals; everything computable
+    from stored artifacts now flows through this function into published.json.
+    """
+    out: dict = {}
+
+    # Fault 2.1: A1 read an empty view. First 20 steps, both arms.
+    a1 = sorted((ARTIFACTS / "runs").glob("a1-seed1-*"))
+    a2 = sorted((ARTIFACTS / "runs").glob("a2-seed1-*"))
+    if a1:
+        think_chars, flagged, n = [], 0, 0
+        for step in sorted(int(p.parent.name) for p in a1[0].glob("steps/*/summary.json"))[:20]:
+            for record in load_step_completions(a1[0], step):
+                think_chars.append(record["think_chars"])
+                flagged += bool(record["monitor_flagged"])
+                n += 1
+        out["a1_first20"] = {
+            "n": n,
+            "mean_think_chars": (sum(think_chars) / len(think_chars)) if think_chars else None,
+            "flagged": flagged,
+        }
+    if a2:
+        flagged = sum(
+            bool(record["monitor_flagged"])
+            for step in sorted(int(p.parent.name) for p in a2[0].glob("steps/*/summary.json"))[:20]
+            for record in load_step_completions(a2[0], step)
+        )
+        out["a2_first20_flagged"] = flagged
+
+    # Fault 2.3: truncation. Whole of a0 seed 1.
+    a0 = sorted((ARTIFACTS / "runs").glob("a0-seed1-*"))
+    if a0:
+        by: dict[str, list] = {}
+        for step in sorted(int(p.parent.name) for p in a0[0].glob("steps/*/summary.json")):
+            for record in load_step_completions(a0[0], step):
+                by.setdefault(record["finish_reason"], []).append(record["visible_pass_fraction"])
+        total = sum(len(v) for v in by.values())
+        capped = len(by.get("length", []))
+        def mean_of(key):
+            vals = [v for v in by.get(key, []) if v is not None]
+            return sum(vals) / len(vals) if vals else None
+        out["a0s1_truncation"] = {
+            "n": total,
+            "capped": capped,
+            "capped_fraction": capped / total if total else None,
+            "visible_pass_capped": mean_of("length"),
+            "visible_pass_natural": mean_of("stop"),
+        }
+
+    # Fault 2.5 premise: the copy. Step 0 of a0 seed 1.
+    if a0:
+        path = a0[0] / "steps" / "00000" / "logprobs.parquet"
+        if path.exists():
+            try:
+                import pyarrow.parquet as pq
+
+                rows = pq.read_table(path, columns=["sampler_logprob", "trainer_logprob"]).to_pylist()
+                both = [r for r in rows if r["sampler_logprob"] is not None and r["trainer_logprob"] is not None]
+                out["trainer_logprob_copy"] = {
+                    "rows": len(both),
+                    "identical": sum(1 for r in both if r["sampler_logprob"] == r["trainer_logprob"]),
+                }
+            except Exception:  # noqa: BLE001
+                pass
+
+    # Fault 2.6: the halt selected against the monitored arm.
+    attempts: dict[str, dict] = {}
+    durations: dict[str, list] = {}
+    for run_dir in sorted((ARTIFACTS / "runs").glob("a[0-2]-seed*")):
+        arm = run_dir.name.split("-")[0]
+        state_path = run_dir / "state.json"
+        if not state_path.exists():
+            continue
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        entry = attempts.setdefault(arm, {"attempts": 0, "complete": 0, "indeterminate_halts": 0, "other": 0})
+        entry["attempts"] += 1
+        if state.get("status") == "complete":
+            entry["complete"] += 1
+        elif state.get("halt_reason") == "indeterminate_held_out_rate":
+            entry["indeterminate_halts"] += 1
+        else:
+            entry["other"] += 1
+        for summary_path in sorted(run_dir.glob("steps/*/summary.json")):
+            duration = json.loads(summary_path.read_text(encoding="utf-8")).get("duration_seconds")
+            if duration is not None:
+                durations.setdefault(arm, []).append(duration)
+    out["arm_attrition"] = {
+        arm: {**counts, "mean_step_seconds": (sum(durations.get(arm, [])) / len(durations[arm])) if durations.get(arm) else None}
+        for arm, counts in sorted(attempts.items())
+    }
+
+    # v3's qualifying measurement, from its artifact.
+    cap_path = ARTIFACTS / "diagnostics" / "cap_at_1024" / "result.json"
+    if cap_path.exists():
+        cap = json.loads(cap_path.read_text(encoding="utf-8"))
+        out["cap_at_1024"] = {k: cap[k] for k in ("capped_fraction", "has_code_fraction", "closed_think", "has_code", "n_completions")}
+
+    # The re-run OOM bisection, from its artifact.
+    bis_path = ARTIFACTS / "diagnostics" / "oom_bisection" / "result.json"
+    if bis_path.exists():
+        out["oom_bisection"] = json.loads(bis_path.read_text(encoding="utf-8"))
+
+    # The v1 retrospective, from its artifact.
+    retro_path = ARTIFACTS / "diagnostics" / "v1_retrospective.json"
+    if retro_path.exists():
+        verdict = (json.loads(retro_path.read_text(encoding="utf-8")).get("verdict") or {})
+        if verdict.get("measured"):
+            out["v1_retrospective"] = {
+                k: verdict[k] for k in ("mean_reward_first10", "mean_reward_last10",
+                                         "entropy_first10", "entropy_last10",
+                                         "zero_variance_group_fraction_mean",
+                                         "mean_abs_advantage_mean", "max_abs_advantage")
+            }
+
+    # The re-measured divergence, from its artifact.
+    div_path = ARTIFACTS / "diagnostics" / "logprob_divergence" / "result.json"
+    if div_path.exists():
+        div = json.loads(div_path.read_text(encoding="utf-8"))
+        out["logprob_divergence"] = {
+            k: div[k] for k in ("n_completions", "n_token_pairs", "identical_pairs",
+                                "mean_abs_diff", "median_abs_diff", "max_abs_diff")
+        }
+    return out
+
+
 def claims() -> dict:
     """Every published number, keyed by claim id.
 
@@ -869,6 +998,7 @@ def claims() -> dict:
         "structural_precision_on_honest_code": reference_structural_false_positives(),
         "behavioural_precision_on_honest_code": behavioural_false_positive_estimate(),
         "prefix_characterisation": prefix_characterisation(),
+        "fault_measurements": fault_measurements(),
     }
     if not runs:
         out["absent_reason"] = "no runs are declared in artifacts/index.json yet"

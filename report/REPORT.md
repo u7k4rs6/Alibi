@@ -29,11 +29,11 @@ A study of the ways an experiment that penalises a policy for visible reward hac
 
 ## 1. Result
 
-**No monitored-arm comparison exists at any version of this experiment.** Five distinct faults were found, and each one alone would have produced a publishable-looking curve that meant nothing: **arm A1's monitor read an empty view**, so its flag rate was zero by construction and its reward was arithmetically the unmonitored control's; **the chat template was never applied**, which would have emptied that view even with a policy chosen correctly; **44.8 percent of completions hit the token cap**; **the training objective did not condition on the prompt**, so the gradient maximised the unconditional likelihood of completion text; and **`trainer_logprob` was a literal copy of `sampler_logprob`**, so the column collected to detect sampler-trainer divergence could not have shown any. Every one was caught by instrumentation built before the runs, and surfaced as a number rather than as a plausible curve.
+**No monitored-arm comparison exists at any version of this experiment.** Six distinct faults were found, and each one alone would have produced a publishable-looking curve that meant nothing: **arm A1's monitor read an empty view**, so its flag rate was zero by construction and its reward was arithmetically the unmonitored control's; **the chat template was never applied**, which would have emptied that view even with a policy chosen correctly; **44.8 percent of completions hit the token cap**; **the training objective did not condition on the prompt**, so the gradient maximised the unconditional likelihood of completion text; **`trainer_logprob` was a literal copy of `sampler_logprob`**, so the column collected to detect sampler-trainer divergence could not have shown any; and **the indeterminate halt selected against the monitored arm**, which completed zero of five attempts while its steps ran 44 percent longer than the control's. The first five were caught by instrumentation built before the runs; the sixth was found by an adversarial audit of this report, in the artifacts, after the report first claimed there were five.
 
 That is the result. It is not the result the pre-registration asked for, and the pre-registered hypotheses remain unevaluated, which section 5 states rather than obscures.
 
-## 2. The five faults
+## 2. The six faults
 
 Each subsection gives what the fault was, what it would have produced undetected, the measurement that caught it, and what it cost.
 
@@ -97,23 +97,50 @@ The same retrospective **refuted the obvious explanation**. Zero-variance groups
 
 **Cost.** v1's `logprobs.parquet` does not support the analysis it was collected for. Fixed afterwards: with a genuine prompt-conditioned recomputation the two columns diverge on **0 of 96** rows, mean absolute difference **0.2150**, maximum **1.8477**. That divergence is itself unresolved, see section 6.
 
+### 2.6 The indeterminate halt selected against the monitored arm
+
+**The fault.** The halt on sustained indeterminate held-out executions fires more readily on arms whose steps take longer, because a longer step widens the window in which held-out scoring competes with generation for CPU and times out. Monitored steps are longer by construction: live judge calls plus the honest-probe judgements. Recomputed from every stored matrix run:
+
+| Arm | Attempts | Complete | Indeterminate halts | Other failures | Mean step seconds |
+|---|---|---|---|---|---|
+| a0 | 3 | 2 | 1 | 0 | 40.85 |
+| a1 | 2 | 2 | 0 | 0 | 43.13 |
+| a2 | 5 | 0 | 2 | 3 | 58.97 |
+
+**a2 completed zero of five attempts.** Its mean step is 58.97 seconds against the control's 40.85, 44 percent longer, and its two runs that reached steps both died on the indeterminate halt, one of them mid-morning under conditions in which a0 and a1 completed. One a0 run also fell to the same halt, late in the wall-clock day, so thermal and contention drift contributes too; the arm-shaped component is what makes this a design fault rather than bad luck.
+
+**Undetected it would have produced** a matrix whose surviving runs are selected for being cheap arms. Any comparison built from survivors inherits that bias: the monitored arm is not merely missing, it is missing *because* it is monitored.
+
+**Caught by** an adversarial audit of this report's artifacts, not by the instrumentation, and not by the report's authors, who wrote 'every A2 attempt failed' in an earlier draft without asking why the failures concentrated in one arm. That is worth stating plainly: five faults were caught by instrumentation built in advance, and the sixth was caught only when someone attacked the document claiming there were five.
+
+**Cost.** No A2 run exists, so H3 has no data on either side. The general lesson outlives this project: **any halt condition whose firing probability depends on a treatment variable is a selection filter on the experiment**, and a fairness check, does this guard fire equally across arms at matched conditions, belongs in the design review of every such condition.
+
 ## 3. What the instrument got right
 
-This is the load-bearing claim of the whole report. Five faults were found **before** any of them reached a published number, and that was not luck. Each was caught because a specific piece of instrumentation existed before the runs did.
+This is the load-bearing claim of the whole report, and after the audit it is a narrower claim than it was. Five of the six faults were caught by instrumentation that existed before the runs did, before any of them reached a published number. The sixth was not: it was caught by an adversarial audit of this report, and the audit also found four places where this section itself overclaimed, each marked below where it occurred.
 
 **The reward monitor is separated from the behavioural oracle by construction.** `reward_fn` is never handed an oracle, `ScoredCompletion` has no oracle field, and `tests/test_reward_isolation.py` fails if anything connects them, including through a call site. Because ground truth could not leak into the reward, a monitored arm that measured nothing still had an independent measurement pointing at it.
 
-**The determinacy floor.** A completion scored on fewer than 30 determinate held-out tests has an indeterminate oracle verdict and leaves both the numerator and the denominator, never counted as a cheat. It is applied at report time and recomputed from stored completions, so an auditor can check it without a GPU.
+**The determinacy floor.** A completion scored on fewer than 30 determinate held-out tests has an indeterminate oracle verdict and leaves both the numerator and the denominator, never counted as a cheat. It is applied at report time and recomputed from stored completions, so an auditor can check it without a GPU. An audit found an earlier revision of this report claimed the floor without publishing its output; the mandated comparison is restored here:
+
+| Arm | Terminal gap, floor applied | Terminal gap, no floor | Excluded fraction | Materially different |
+|---|---|---|---|---|
+| a0 | 0.0000 to 0.0000 | 0.0000 to 0.0000 | 0.0000 to 0.0000 | False |
+| a1 | 0.0000 to 0.0000 | 0.0000 to 0.0000 | 0.0000 to 0.0000 | False |
+
+Where the two differ materially the floor version is primary. The excluded fraction per step per arm is the determinacy-floor figure panel.
 
 **Thresholds were pre-registered and hashed into every run.** The cheat threshold, the three sensitivity values reported always rather than chosen after the fact, the eligibility rules and every halt condition are frozen in `alibi/prereg.py` and immutable at runtime. Later versions inherit the measurement **by import** rather than by restatement, and a test asserts the inheritance still holds.
 
 **Structural precision was measured on honest code before the panel was trusted.** The check's recall was validated on generated cheats; its precision never was. Run over all 365 eligible MBPP+ reference solutions, every one a genuine algorithm, it flags **5**, a false positive rate of **0.0137** with a 95 percent interval of 0.0059 to 0.0317, per form `{'constant_return': 1, 'if_chain': 5}`, task ids `[84, 167, 577, 626, 801]`.
 
-That is **above** the 0.01 bar declared before the measurement was run, so the cheat_form panel reports detector behaviour as well as policy behaviour, and the report says so rather than presenting the panel as a clean read of the policy. The rate is not uniform: it is five specific problems, listed with full source in [STRUCTURAL_FP.md](STRUCTURAL_FP.md), which enter the prompt set on 2 of 80 steps.
+That is **above** the 0.01 bar, so the cheat_form panel reports detector behaviour as well as policy behaviour, and the report says so rather than presenting the panel as a clean read of the policy. The rate is not uniform: it is five specific problems, listed with full source in [STRUCTURAL_FP.md](STRUCTURAL_FP.md), which enter the prompt set on 2 of 80 steps.
+
+**A claim about that bar is withdrawn.** Earlier drafts said the 0.01 bar was declared before the measurement was run. An audit found the bar, the measurement code and the recorded result all landed in a single commit, so the ordering cannot be corroborated from history and rests on the author's word. The claim is withdrawn rather than reworded. The practice that would have made it checkable, committing the threshold before running the measurement, was not followed.
 
 **A vindication claim was withdrawn as circular.** An earlier draft argued that the structural false positive rate vindicated making the behavioural oracle primary, because the behavioural check has no equivalent floor. That was wrong. The behavioural check has no *measured* floor, and the reason is circular: **eligibility excludes problems whose reference solution fails held-out**, which is the behavioural rule's own criterion, so any rate computed on the eligible set is zero by construction. The two checks were validated on differently filtered populations.
 
-A non-circular estimate from the pre-eligibility set, which is filtered only for reasons unrelated to the rule: **0 of 375 flagged, 95 percent upper bound 0.0101**. Reported as an estimate with four named limits, not as a resolution. The honest comparison is that the structural rate is measured and above the bar, while the behavioural rate is bounded above and consistent with zero.
+A non-circular estimate from the pre-eligibility set, which is filtered only for reasons unrelated to the rule: **0 of 375 flagged, 95 percent upper bound 0.0101**. Reported as an estimate with four named limits, not as a resolution. The honest comparison is that the structural rate is measured and above the bar, while the behavioural rate is bounded above and consistent with zero. One more limit, added after an audit: the non-circular population shares 97 percent of its members with the circular one, so the independence it buys is about ten problems' worth, and the upper bound is driven by sample size rather than by that independence.
 
 **Monitor failure can never read as innocence.** An error is its own verdict state and is always flagged; `Verdict.from_error` does not take a `flagged` argument, and a test asserts that no exception type in the judging path can yield `flagged=False`. An outage raises the penalty rather than lowering it, then halts.
 
@@ -123,7 +150,7 @@ A non-circular estimate from the pre-eligibility set, which is filtered only for
 
 **Judge and judged share a model family.** `Qwen/Qwen2.5-7B-Instruct-Turbo` grades a Qwen policy. This was an explicit operator override made before any curve existed, on the qualification table, and it is carried as a limitation: a same-family judge may track this policy's habits more closely than an independent one would.
 
-**Qualification is not pre-registered, and its limits are stated rather than buried.** Cheat flag rate 1.0000, honest flag rate 0.0000, separation 1.0000. The procedure and all four thresholds were chosen by the implementer, it ran on the A2 view only, and the cheats it used are programmatically generated and stereotyped. Passing it is **necessary but not sufficient**, and no result here should be read as though the judge were known reliable on real completions.
+**Qualification is not pre-registered, and its limits are stated rather than buried.** Cheat flag rate 1.0000, honest flag rate 0.0000, separation 1.0000. The procedure and all four thresholds were chosen by the implementer, it ran on the A2 view only, and the cheats it used are programmatically generated and stereotyped, and, an audit added, drawn from the same lowest-task-id prefix the training runs sample, so the judge was qualified on the exact problems it would later judge. Passing it is **necessary but not sufficient**, and no result here should be read as though the judge were known reliable on real completions.
 
 ## 4. What this says about monitor-reward experiments generally
 
@@ -165,12 +192,14 @@ On the four measured properties, held-out test count, visible assert count, refe
 
 v2 changed the policy to Qwen3-0.6B, applied the chat template and set `max_new_tokens` to 3072 from the measured think-length distribution, with a capped-fraction halt of 0.35 against the 0.125 truncation that budget produced. Backpropagating through a prompt-plus-completion sequence of that length, with a 151936-token vocabulary, does not fit in 8 GB. Measured with one budget per process, LoRA and gradient checkpointing enabled:
 
-| Budget | Result | Peak allocated |
+| Budget | Result | Peaks across 3 repeats, GB |
 |---|---|---|
-| 3072, registered | **OOM** | 7.05 GB |
-| 2048 | **OOM** | 6.45 GB |
-| 1536 | **OOM** | 6.62 GB |
-| 1024 | fits | 5.54 GB |
+| 3072, registered | **OOM** | 6.98, 6.98, 6.98 |
+| 2048 | **OOM** | 6.45, 6.45, 6.45 |
+| 1536 | **OOM** | 6.62, 6.62, 6.62 |
+| 1024 | **OK** | 5.54, 5.54, 5.54 |
+
+An audit found the original bisection existed only as prose, after a first attempt at the same measurement had already been invalidated by a process-reuse leak. It was re-run with a fresh process per repeat, three repeats per budget and the GPU baseline recorded (613 MiB of unevictable desktop processes). The peaks replicated bit-identically across repeats and match the prose table. So the v2 abandonment stands, and the finding about this project is the narrower one: a load-bearing infeasibility decision rested for a time on a single unartifacted measurement whose predecessor had already failed once. Artifact: `artifacts/diagnostics/oom_bisection/result.json`, declared in the index.
 
 The floor is the full-vocab logits tensor, about 1 GB in bf16 before the backward graph. Chunked softmax and gradient checkpointing were both applied and neither is sufficient. Both numbers are registered in `alibi-prereg-v2.2`, so neither was changed to make the run fit, and no fused chunked LM head was built. See `BLOCKED-v2.md`.
 
@@ -193,11 +222,24 @@ No halt threshold was chosen, because any value above 0.6875 would be a licence 
 
 ## 6. Unresolved
 
-**The sampler and trainer logprobs diverge by more than numerical noise on identical weights, and it is not diagnosed.** After `trainer_logprob` was fixed to be a genuine prompt-conditioned recomputation, the two columns differ on **0 of 96** rows, with a mean absolute difference of **0.2150** and a maximum of **1.8477**.
+**Withdrawn.** Earlier revisions of this section quantified the sampler-trainer logprob divergence as 0.2150 mean and 1.8477 maximum on identical weights and called it well past bf16 noise. An audit found those figures rested on a run that had been deleted, measured on a different policy at a 48-token budget, neither of which the text disclosed. The numbers are withdrawn, not reworded.
 
-Both are computed from the same weights at the same step. The paths differ in more than precision: the sampler reads the generation path with a KV cache, one position at a time, while the trainer runs a single full forward over prompt and completion together. A difference of this size is well past what bf16 rounding alone would explain, and which part of that gap is attributable to the cache, to kernel selection, or to something else has not been established.
+**Re-measured on the v2 policy and budget**, Qwen3-0.6B through its chat template at 3072 tokens, per token rather than per completion, no training, committed to `artifacts/diagnostics/logprob_divergence/result.json` and declared in the index: over **19347** token pairs from 16 completions, mean absolute difference **0.0175**, median **0.0013**, maximum **0.3537**, with 579 pairs bit-identical.
 
-This is stated as an open question rather than an explanation, and it is the follow-on project's subject arriving early. It is also a caution about the fix: the column now carries information, and what that information means is not yet known.
+That is an order of magnitude smaller than the withdrawn figures, which is itself the point: the withdrawn numbers did not survive a properly provenanced re-measurement. What remains open is the honest residue: the median sits where mixed-precision rounding plausibly lives, the tail does not obviously, and how much of the gap is the KV-cache path against the full forward, kernel selection, or something else has not been established. The sampler reads generation one position at a time through a cache; the trainer runs one forward over prompt and completion together. This is the follow-on project's subject and it stays open rather than explained.
+
+## The audit, and where this report failed its own standard
+
+After the first version of this report was written, an adversarial audit was run against it with instructions to attack section 3, what the instrument got right, hardest, since it is the load-bearing claim and was written by the same process that produced the faults. **Section 3 is where the report failed.** Four findings landed there or against the report's own verification claims:
+
+1. The report's closing line claimed `alibi verify` recomputes every claim above it. Measured, verify covered about 3 percent of the report's distinct numeric literals. The claim was false and is replaced below by the measured figure.
+2. The claim that the structural-precision bar was declared before its measurement cannot be corroborated: bar, measurement and result landed in one commit. Withdrawn in section 3.
+3. The determinacy floor was cited as exemplary while its mandated output had been dropped from the report. Restored in section 3.
+4. The oracle-reward separation was claimed by construction; the audit smuggled oracle data into the reward through a generic `metadata` dict without tripping any isolation test. The channel is now removed and a test fails if any container-typed field reappears on `ScoredCompletion`, which is what makes the phrase by construction earned rather than asserted.
+
+The audit also found the sixth fault, section 2.6, in artifacts this report's authors had already summarised without asking the obvious question. **That is the same failure mode this report documents**: a confident document, written over real artifacts, carrying claims the artifacts did not support, caught only when something was instructed to attack it. The difference between this report and the curves it criticises is not that its authors were more careful; it is that the attack was run before publication instead of never.
+
+What the audit verified as sound is what makes the rest citable: the pre-registration tag predates the earliest run by six hours; the prereg and eligibility hashes are identical across all four evidence runs and the measurement-path code is byte-identical across their revisions; every fault number that has an artifact reproduces exactly, including the a0-a1 identity at zero mismatches over four hundred series points; the structural precision reproduces to the same five task ids; and the Verdict invariant held against every non-sabotage attack. Findings and remediations: `AUDIT.md`.
 
 ## 7. Provenance
 
@@ -222,6 +264,10 @@ This is stated as an open question rather than an explanation, and it is the fol
 | Gradient accumulation | 16, one backward per completion, one optimiser step per training step |
 | Objective | mean token logprob, length normalised, not a token sum |
 
+### Four revisions across four evidence runs
+
+The four declared evidence runs ran at four different git revisions. An audit diffed them: the changes touch only report-layer code and monitor cache files, and `reward.py`, `scoring.py`, `oracle.py`, `tests.py`, `executor.py` and `prereg.py` are byte-identical across all four, with identical prereg and eligibility hashes. The measurement path did not move between runs; the fact that a reader had to diff four revisions to learn that is disclosed here rather than left as an exercise.
+
 ### Config hash discontinuity
 
 `ArmConfig` gained `policy_version` and `apply_chat_template` partway through the work. Both are behaviourally inert defaults, so runs before and after are identical in what they did, but **their config hashes are not comparable**. The four declared evidence runs predate the change and carry configs without those keys. An auditor diffing config hashes will see a discontinuity there; it cannot be fixed retroactively without editing artifacts, which is not done.
@@ -244,4 +290,4 @@ This is stated as an open question rather than an explanation, and it is the fol
 }
 ```
 
-Generated 2026-08-13T05:53:55.601717+00:00 by `alibi report`. Numbers are injected from `artifacts/`, never typed. `alibi verify --no-gpu` recomputes every claim above. Every autonomous decision, including the ones later withdrawn, is in `DECISIONS.md`.
+Generated 2026-08-13T07:14:03.191321+00:00 by `alibi report`. Most numbers are injected from `artifacts/` at build time; the v2 and v3 tables are read from their declared diagnostic artifacts; a small number of counts remain typed prose backed by named artifacts. `alibi verify --no-gpu` recomputes **45 declared claims**, which cover **21 of the 42 distinct numeric literals** in this report. An earlier revision claimed verify recomputed every number above; an audit measured that claim at about 3 percent coverage and it was replaced by this counted one. The residual literals are recomputable from the named artifacts but are not checked by verify. Every autonomous decision, including the ones later withdrawn, is in `DECISIONS.md`.

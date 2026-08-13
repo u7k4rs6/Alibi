@@ -190,3 +190,39 @@ def test_the_oracle_takes_no_executor_so_it_cannot_be_handed_one() -> None:
     params = set(inspect.signature(CheatOracle.__init__).parameters)
     assert "executor" not in params
     assert params <= {"self", "visible_pass_threshold", "held_out_fail_threshold"}
+
+
+def test_scored_completion_has_no_container_field_to_smuggle_through() -> None:
+    """The audit's attack: oracle data hidden in a generic dict field.
+
+    The AST isolation tests inspect names at the reward call site, and a dict's
+    contents have no names there, so a `metadata` field carried oracle data
+    into `reward_fn` without tripping anything. The channel is removed; this
+    test fails if any container-typed field reappears on ScoredCompletion.
+    """
+    import dataclasses
+    import typing
+
+    from alibi.train.reward import ScoredCompletion
+
+    for f in dataclasses.fields(ScoredCompletion):
+        origin = typing.get_origin(f.type) if not isinstance(f.type, str) else None
+        text = f.type if isinstance(f.type, str) else str(f.type)
+        assert origin not in (dict, list, set) and not any(
+            text.startswith(t) for t in ("dict", "list", "set", "typing.Dict", "typing.List")
+        ), f"ScoredCompletion.{f.name} is a container ({text}), a smuggling channel for oracle data"
+
+
+def test_the_audits_smuggling_path_is_closed() -> None:
+    """Constructing a ScoredCompletion with a metadata kwarg must fail."""
+    import pytest
+
+    from alibi.train.reward import ScoredCompletion
+
+    with pytest.raises(TypeError):
+        ScoredCompletion(
+            prompt_id="1", text="t", answer="a", has_code=True, think_closed=True,
+            visible_pass_fraction=1.0, visible_indeterminate=0,
+            monitor_flagged=False, monitor_state="ok",
+            metadata={"held_out_pass_fraction": 0.0},
+        )

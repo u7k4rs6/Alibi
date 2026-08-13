@@ -1,4 +1,16 @@
 {
+  "diagnostics": [
+    {
+      "path": "artifacts/diagnostics/oom_bisection/result.json",
+      "sha256": "6f186623a575618cef6d04a1a65260ac0cc78797ae291ced9f502609ee9e0c4a",
+      "why": "backs the v2 abandonment table in REPORT.md section 5, previously prose-only (audit F3)"
+    },
+    {
+      "path": "artifacts/diagnostics/logprob_divergence/result.json",
+      "sha256": "3e12a1edca7c645220ebfdad16c68950360a1f76d6f20e2417127f317a3d9d31",
+      "why": "backs REPORT.md section 6 after the audit found the prior numbers rested on a deleted run (audit F1)"
+    }
+  ],
   "excluded_by_policy": [
     {
       "pattern": "smoke-*",

@@ -1,0 +1,113 @@
+{
+  "declared": "No training, no backward. Sampler path is the generation-time streaming recorder; trainer path is the prompt-conditioned no-grad forward the update uses. Same weights.",
+  "diagnostic": "logprob_divergence",
+  "identical_pairs": 579,
+  "lora": "attached, zero-initialised, for path fidelity with the run configuration",
+  "max_abs_diff": 0.35368871688842773,
+  "max_new_tokens": 3072,
+  "mean_abs_diff": 0.01745590162342733,
+  "median_abs_diff": 0.0012603718787431717,
+  "model": "Qwen/Qwen3-0.6B",
+  "n_completions": 16,
+  "n_token_pairs": 19347,
+  "per_completion": [
+    {
+      "identical": 32,
+      "max_abs": 0.34218716621398926,
+      "mean_abs": 0.015014455950375677,
+      "n_tokens": 627
+    },
+    {
+      "identical": 45,
+      "max_abs": 0.33217382431030273,
+      "mean_abs": 0.019868521494136,
+      "n_tokens": 606
+    },
+    {
+      "identical": 50,
+      "max_abs": 0.24866724014282227,
+      "mean_abs": 0.019520524826800903,
+      "n_tokens": 890
+    },
+    {
+      "identical": 39,
+      "max_abs": 0.2365732192993164,
+      "mean_abs": 0.01512136742650605,
+      "n_tokens": 640
+    },
+    {
+      "identical": 37,
+      "max_abs": 0.23966646194458008,
+      "mean_abs": 0.017110334161523497,
+      "n_tokens": 527
+    },
+    {
+      "identical": 34,
+      "max_abs": 0.23360109329223633,
+      "mean_abs": 0.01907665592133326,
+      "n_tokens": 758
+    },
+    {
+      "identical": 30,
+      "max_abs": 0.24407005310058594,
+      "mean_abs": 0.018757535033853204,
+      "n_tokens": 638
+    },
+    {
+      "identical": 37,
+      "max_abs": 0.17090630531311035,
+      "mean_abs": 0.01685499411447323,
+      "n_tokens": 680
+    },
+    {
+      "identical": 33,
+      "max_abs": 0.35368871688842773,
+      "mean_abs": 0.01673372403597026,
+      "n_tokens": 1217
+    },
+    {
+      "identical": 26,
+      "max_abs": 0.3451499938964844,
+      "mean_abs": 0.019683093057094498,
+      "n_tokens": 3072
+    },
+    {
+      "identical": 54,
+      "max_abs": 0.3064713478088379,
+      "mean_abs": 0.015944407859553266,
+      "n_tokens": 2974
+    },
+    {
+      "identical": 25,
+      "max_abs": 0.24579477310180664,
+      "mean_abs": 0.016095329962392345,
+      "n_tokens": 874
+    },
+    {
+      "identical": 32,
+      "max_abs": 0.2576003074645996,
+      "mean_abs": 0.017729499855071735,
+      "n_tokens": 1086
+    },
+    {
+      "identical": 35,
+      "max_abs": 0.3028993606567383,
+      "mean_abs": 0.018392020353421502,
+      "n_tokens": 2487
+    },
+    {
+      "identical": 26,
+      "max_abs": 0.211151123046875,
+      "mean_abs": 0.01302392087444644,
+      "n_tokens": 755
+    },
+    {
+      "identical": 44,
+      "max_abs": 0.34614062309265137,
+      "mean_abs": 0.016597889713706838,
+      "n_tokens": 1516
+    }
+  ],
+  "per_completion_mean_abs": 0.01722026716504117,
+  "seed": 1
+}

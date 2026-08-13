@@ -20,20 +20,185 @@
       "path": "arms.a1.terminal_gap.max",
       "value": 0.0
     },
+    "claim13": {
+      "label": "fault 2.1 a1 mean think chars",
+      "path": "fault_measurements.a1_first20.mean_think_chars",
+      "value": 3.1625
+    },
+    "claim14": {
+      "label": "fault 2.1 a1 flagged",
+      "path": "fault_measurements.a1_first20.flagged",
+      "value": 0
+    },
+    "claim15": {
+      "label": "fault 2.1 a1 n",
+      "path": "fault_measurements.a1_first20.n",
+      "value": 320
+    },
+    "claim16": {
+      "label": "fault 2.1 a2 flagged",
+      "path": "fault_measurements.a2_first20_flagged",
+      "value": 21
+    },
+    "claim17": {
+      "label": "fault 2.3 capped fraction",
+      "path": "fault_measurements.a0s1_truncation.capped_fraction",
+      "value": 0.4484375
+    },
+    "claim18": {
+      "label": "fault 2.3 visible pass capped",
+      "path": "fault_measurements.a0s1_truncation.visible_pass_capped",
+      "value": 0.10529377545084352
+    },
+    "claim19": {
+      "label": "fault 2.3 visible pass natural",
+      "path": "fault_measurements.a0s1_truncation.visible_pass_natural",
+      "value": 0.22542735042735043
+    },
     "claim2": {
       "label": "a0 terminal cheat rate max",
       "path": "arms.a0.terminal_cheat_rate.max",
       "value": 0.0
+    },
+    "claim20": {
+      "label": "fault 2.5 rows",
+      "path": "fault_measurements.trainer_logprob_copy.rows",
+      "value": 3430
+    },
+    "claim21": {
+      "label": "fault 2.5 identical rows",
+      "path": "fault_measurements.trainer_logprob_copy.identical",
+      "value": 3430
+    },
+    "claim22": {
+      "label": "fault 2.4 reward first10",
+      "path": "fault_measurements.v1_retrospective.mean_reward_first10",
+      "value": 0.21760416666666665
+    },
+    "claim23": {
+      "label": "fault 2.4 reward last10",
+      "path": "fault_measurements.v1_retrospective.mean_reward_last10",
+      "value": 0.09895833333333334
+    },
+    "claim24": {
+      "label": "fault 2.4 entropy first10",
+      "path": "fault_measurements.v1_retrospective.entropy_first10",
+      "value": 0.6384019294514501
+    },
+    "claim25": {
+      "label": "fault 2.4 entropy last10",
+      "path": "fault_measurements.v1_retrospective.entropy_last10",
+      "value": 0.8353959466965014
+    },
+    "claim26": {
+      "label": "fault 2.4 zero-variance mean",
+      "path": "fault_measurements.v1_retrospective.zero_variance_group_fraction_mean",
+      "value": 0.2375
+    },
+    "claim27": {
+      "label": "fault 2.6 a0 mean step seconds",
+      "path": "fault_measurements.arm_attrition.a0.mean_step_seconds",
+      "value": 40.85040792459633
+    },
+    "claim28": {
+      "label": "fault 2.6 a0 complete",
+      "path": "fault_measurements.arm_attrition.a0.complete",
+      "value": 2
+    },
+    "claim29": {
+      "label": "fault 2.6 a0 attempts",
+      "path": "fault_measurements.arm_attrition.a0.attempts",
+      "value": 3
     },
     "claim3": {
       "label": "a0 terminal flag rate min",
       "path": "arms.a0.terminal_flag_rate.min",
       "value": 0.0
     },
+    "claim30": {
+      "label": "fault 2.6 a1 mean step seconds",
+      "path": "fault_measurements.arm_attrition.a1.mean_step_seconds",
+      "value": 43.12966183848762
+    },
+    "claim31": {
+      "label": "fault 2.6 a1 complete",
+      "path": "fault_measurements.arm_attrition.a1.complete",
+      "value": 2
+    },
+    "claim32": {
+      "label": "fault 2.6 a1 attempts",
+      "path": "fault_measurements.arm_attrition.a1.attempts",
+      "value": 2
+    },
+    "claim33": {
+      "label": "fault 2.6 a2 mean step seconds",
+      "path": "fault_measurements.arm_attrition.a2.mean_step_seconds",
+      "value": 58.96641886835479
+    },
+    "claim34": {
+      "label": "fault 2.6 a2 complete",
+      "path": "fault_measurements.arm_attrition.a2.complete",
+      "value": 0
+    },
+    "claim35": {
+      "label": "fault 2.6 a2 attempts",
+      "path": "fault_measurements.arm_attrition.a2.attempts",
+      "value": 5
+    },
+    "claim36": {
+      "label": "v3 capped fraction at 1024",
+      "path": "fault_measurements.cap_at_1024.capped_fraction",
+      "value": 0.6875
+    },
+    "claim37": {
+      "label": "v3 has-code fraction at 1024",
+      "path": "fault_measurements.cap_at_1024.has_code_fraction",
+      "value": 0.421875
+    },
+    "claim38": {
+      "label": "v2 bisection peak at 3072",
+      "path": "fault_measurements.oom_bisection.summary.3072.peaks_gb.0",
+      "value": 6.977014272
+    },
+    "claim39": {
+      "label": "v2 bisection peak at 2048",
+      "path": "fault_measurements.oom_bisection.summary.2048.peaks_gb.0",
+      "value": 6.448147456
+    },
     "claim4": {
       "label": "a0 terminal flag rate max",
       "path": "arms.a0.terminal_flag_rate.max",
       "value": 0.0
+    },
+    "claim40": {
+      "label": "v2 bisection peak at 1536",
+      "path": "fault_measurements.oom_bisection.summary.1536.peaks_gb.0",
+      "value": 6.621042688
+    },
+    "claim41": {
+      "label": "v2 bisection peak at 1024",
+      "path": "fault_measurements.oom_bisection.summary.1024.peaks_gb.0",
+      "value": 5.5411712
+    },
+    "claim42": {
+      "label": "divergence mean abs",
+      "path": "fault_measurements.logprob_divergence.mean_abs_diff",
+      "value": 0.01745590162342733
+    },
+    "claim43": {
+      "label": "divergence median abs",
+      "path": "fault_measurements.logprob_divergence.median_abs_diff",
+      "value": 0.0012603718787431717
+    },
+    "claim44": {
+      "label": "divergence max abs",
+      "path": "fault_measurements.logprob_divergence.max_abs_diff",
+      "value": 0.35368871688842773
+    },
+    "claim45": {
+      "label": "divergence token pairs",
+      "path": "fault_measurements.logprob_divergence.n_token_pairs",
+      "value": 19347
     },
     "claim5": {
       "label": "a0 terminal gap min",
@@ -62,7 +227,7 @@
     }
   },
   "eligibility_hash": "ffdce1c3e4744a9fee2f5b7ee25f7da7ceb667c0042fbc0056bd7e542fcd7b10",
-  "generated_utc": "2026-08-13T05:53:55.601717+00:00",
+  "generated_utc": "2026-08-13T07:14:03.191321+00:00",
   "n_declared_runs": 4,
   "prereg_hash": "84c43a5085a5b6c036572f1d0308e1359a51afa281f31c996a62c06ce5ba2a16"
 }

@@ -276,3 +276,65 @@ artifact, and a peak-memory measurement on a shared consumer GPU with a
 fragmenting allocator is exactly the kind of number that fails to reproduce.
 If any number in this repository is wrong, it is probably one of the four in
 that table.
+
+---
+
+## Remediation, 2026-08-13
+
+Every finding above is left as written. Status per finding, with the remedy
+chosen and, where a claim could not be supported, the withdrawal.
+
+- **F1 — remediated by re-measurement, prior numbers withdrawn.** The
+  divergence was re-measured on the v2 policy and budget, per token, no
+  training, and committed to `artifacts/diagnostics/logprob_divergence/`
+  (declared in the index). The result, mean 0.0175 and max 0.354 over 19,347
+  pairs, is an order of magnitude below the withdrawn 0.2150/1.8477, which
+  confirms the finding: the deleted-run figures did not survive a provenanced
+  re-measurement. Section 6 and the README now carry the withdrawal and the new
+  numbers.
+- **F2 — remediated by counting.** 33 fault-measurement claims were added to
+  `published.json` (45 total), all recomputed from artifacts by
+  `alibi.report.metrics.fault_measurements`. Verify now covers 21 of the
+  report's 42 distinct numeric literals, and the closing line states that
+  counted figure, the prior false claim, and the residual, instead of claiming
+  full coverage.
+- **F3 — remediated by re-measurement; the audit's best guess was wrong.** The
+  bisection was re-run with a fresh process per repeat, three repeats per
+  budget, and the 613 MiB unevictable GPU baseline recorded. Every peak
+  replicated bit-identically and matches the prose table, so the v2 abandonment
+  stands. The artifact is committed and declared in the index, and section 5
+  now states that a load-bearing decision rested for a time on a single
+  unartifacted measurement. The audit's closing guess, that this table was the
+  number most likely wrong, did not survive its own re-measurement, which is
+  recorded here rather than quietly dropped.
+- **F4 — claim withdrawn.** The report now discloses that the bar, the
+  measurement and the result landed in one commit, that the ordering rests on
+  the author's word, and that the pre-declaration claim is withdrawn rather
+  than reworded.
+- **F5 — remediated.** The with/without-floor gap table is restored under the
+  floor bullet in section 3, with the excluded-fraction series in its figure
+  panel.
+- **F6 — remediated by removing the channel.** The `metadata` dict was deleted
+  from `ScoredCompletion` rather than guarded, because a generic container on
+  that type is an oracle field waiting for an assignment, and two tests now
+  fail on the exact smuggling path the audit used and on any container-typed
+  field reappearing. The `object.__setattr__` and unsigned-cache bypasses are
+  accepted as inherent to Python and to an editable repository, and are named
+  in this file rather than papered over.
+- **F7 — remediated.** The `grpo.py` docstring no longer calls itself TRL
+  GRPOTrainer wiring, and records why the line changed.
+- **F8 — promoted to fault 2.6.** With the recomputed numbers: a2 completed 0
+  of 5 attempts at a mean step of 58.97 seconds against a0's 40.85, and the
+  report states the generalisation, that a halt whose firing probability
+  depends on a treatment variable is a selection filter, and states that the
+  audit found it, not the instrument.
+- **F9 — disclosed.** The 97 percent population overlap and the
+  sample-size-driven upper bound are stated beside the estimate.
+- **F10 — disclosed.** The four-revision matrix and the diff result are in
+  provenance.
+- **F11 — disclosed.** Qualification-on-the-training-prefix is added to the
+  stated limits.
+
+The report also gained a section, "The audit, and where this report failed its
+own standard", naming the four section-3 failures in the report's own voice and
+citing what the audit verified as sound.
