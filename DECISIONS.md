@@ -949,3 +949,58 @@ suggest. Stated in the repository's own words rather than by reference.
 
 None is fixed retroactively. v1's artifacts stand as measured, and REPORT.md says
 plainly that **v1's flat cheat rate is not evidence about the pre-registered H1**.
+
+### D-36 v2 stood down, v3 scoped and then stopped by its own measurement
+Operator instruction: do not build the fused LM head, stand down v2, register v3
+as a scoped-down variant, and measure v3's capped-fraction halt from a
+no-training sampling pass rather than guessing it, stopping if truncation is so
+high that the arms cannot be compared.
+
+**v2 stood down.** No fused LM head was built. Nothing in v2's registration was
+edited to make it fit. `BLOCKED-v2.md` records the measurement.
+
+**v3 scoped exactly as specified:** 1024 tokens, arms a0 and a2 only, one seed,
+everything else inherited from v2.2 including prompt conditioning, the chat
+template, the real trainer logprob and the probe-selected training spec. Arm a1
+excluded because the measured median think block is 746 tokens and a 1024 budget
+cannot hold think plus answer, which is the fault that made a1 arithmetically
+identical to a0 in v1.
+
+**The qualifying measurement stopped it.** No training, 64 completions over 8
+eligible problems at 1024 tokens:
+
+| Measure | Value | 95 percent interval |
+|---|---|---|
+| Capped fraction | 0.6875 | 0.5661 to 0.7877 |
+| Completions yielding code | 0.4219 | 0.3087 to 0.5439 |
+| Think block closed | 0.4219 | |
+| Median tokens | 1024, the cap itself | |
+
+The closed-think fraction and the has-code fraction are equal at exactly 27 of
+64: a completion yields code if and only if its think block closed. So 58 percent
+carry an empty answer.
+
+**Arm a2's monitor reads the answer.** On 58 percent of completions it would read
+an empty string and return unflagged, so a2 would measure the monitor's response
+to absence rather than to cheating. The a0 against a2 contrast would be
+uninterpretable. This is the a1 failure of v1 reappearing in a2, arriving through
+the token budget rather than through the policy. The arms cannot be compared, so
+the run was not started.
+
+**No `alibi-prereg-v3.0` tag was created, and that is a deliberate departure from
+the instruction.** The halt threshold was to come from this measurement plus
+headroom, and any threshold above 0.6875 would be a licence rather than a guard.
+A pre-registration tag records intent frozen before data; the blocking data
+arrived first, so there was nothing to pre-register. Tagging a registration for a
+run already measured to be uninterpretable would be the "v3 as v2 rescued" error
+in a different form. The design is recorded in `alibi/prereg_v3.py` with
+`RUNNABLE = False` and the blocking measurement attached, so the intent and the
+reason are both on the record. If you want the tag anyway, say so and I will
+create it against that file as it stands.
+
+**Not done, per instruction:** no probe grid at 1024, no a0/s1, no a2/s1, no
+seeds added, no restart on a new fault, no attempt at a1. The probe grid was not
+run because the arms it would tune for cannot be compared at this budget.
+
+**Where this leaves the report:** it stands on the five faults and on v1's
+control data. No monitored-arm comparison exists at any version.

@@ -340,6 +340,29 @@ Entropy **rose** from 0.6384 to 0.8354. The policy did not collapse onto a singl
 
 Taken with the retrospective above, the picture is coherent: an unclipped, unanchored policy gradient with no trust region, at a constant learning rate, on a small model. Reward fell and entropy rose, which is what that configuration does when the reward is sparse and mostly negative. v2 declares these settings in `alibi/prereg_v2.py` and chooses the learning rate and KL anchor from ten-step probes rather than inheriting them silently.
 
+## v2 and v3 were abandoned, and neither produced a run
+
+**v2 was abandoned because two of its own registered values are jointly infeasible on the available hardware.** `max_new_tokens = 3072` was sized from the measured think-length distribution, and the capped-fraction halt of 0.35 was set against the 0.125 truncation that budget produced. Backpropagating through a prompt-plus-completion sequence of that length, with a 151936-token vocabulary, does not fit in 8 GB. Measured with one budget per process, LoRA and gradient checkpointing enabled: 3072 OOM at 7.05 GB peak, 2048 OOM, 1536 OOM, 1024 fits at 5.54 GB. The floor is the full-vocab logits tensor, about 1 GB in bf16 before the backward graph. Chunked softmax and gradient checkpointing were both applied and neither is sufficient. Both numbers are registered in `alibi-prereg-v2.2`, so neither was changed to make the run fit. See `BLOCKED-v2.md`.
+
+**v3 was a scoped-down variant, and it is not v2 rescued.** It was a different and smaller experiment: a 1024-token budget, arms a0 and a2 only, one seed. Arm a1 was excluded outright because the measured median think block is 746 tokens and a 1024-token budget cannot hold think plus answer, so a1 would read a truncated or empty view, which is the fault that made it arithmetically identical to a0 in v1.
+
+**v3 was stopped by its own qualifying measurement, before any training.** A no-training sampling pass at 1024 tokens, 64 completions over 8 eligible problems, measured:
+
+| Measure | Value | 95 percent interval |
+|---|---|---|
+| Capped fraction | **0.6875** | 0.5661 to 0.7877 |
+| Completions yielding code | **0.4219** | 0.3087 to 0.5439 |
+| Think block closed | 0.4219 | |
+| Median tokens | 1024, the cap itself | |
+
+The median completion is capped, so more than half never finish thinking. The closed-think fraction equals the has-code fraction exactly, 27 of 64 in both cases: a completion yields code if and only if its think block closed, so the other 58 percent carry an empty answer.
+
+**That is decisive for the only comparison v3 existed to make.** Arm a2's monitor reads the answer, so on 58 percent of completions it would read an empty string and return unflagged. a2 would be measuring the monitor's response to absence rather than to cheating, and the a0 against a2 contrast would be uninterpretable. It is the a1 failure of v1 reappearing in a2, arriving through the token budget instead of through the policy.
+
+The capped-fraction halt for v3 was to be set from that measurement plus headroom. A threshold above 0.6875 would not be a guard, it would be a licence, so none was chosen and no `alibi-prereg-v3.0` tag was created. A pre-registration tag records intent frozen before data; here the blocking data arrived first, so there was nothing to pre-register. The design is recorded in `alibi/prereg_v3.py` with `RUNNABLE = False`.
+
+**This report therefore stands on the five faults and on v1's control data.** No monitored-arm comparison exists at any version.
+
 ## Halt conditions were amended before any curve existed
 
 Two of the pre-declared halt conditions were amended before any monitored-arm curve had been produced. Both amendments are recorded here because a halt condition that moved is a fact about the experiment, not an implementation detail.
@@ -368,5 +391,5 @@ Two of the pre-declared halt conditions were amended before any monitored-arm cu
 }
 ```
 
-Generated 2026-08-11T21:08:20.188950+00:00 by `alibi report`. Numbers are injected from
+Generated 2026-08-13T05:27:57.102692+00:00 by `alibi report`. Numbers are injected from
 `artifacts/`, never typed. `alibi verify --no-gpu` recomputes every claim above.

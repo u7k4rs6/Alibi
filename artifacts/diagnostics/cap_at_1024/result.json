@@ -1,0 +1,25 @@
+{
+  "budget": 1024,
+  "capped": 44,
+  "capped_ci95": [
+    0.5660743364084737,
+    0.7876909049773426
+  ],
+  "capped_fraction": 0.6875,
+  "closed_think": 27,
+  "closed_think_fraction": 0.421875,
+  "has_code": 27,
+  "has_code_ci95": [
+    0.3086959366145158,
+    0.5439018794747275
+  ],
+  "has_code_fraction": 0.421875,
+  "model": "Qwen/Qwen3-0.6B",
+  "n_completions": 64,
+  "n_problems": 8,
+  "seconds": 234.1,
+  "tokens": {
+    "mean": 873.421875,
+    "median": 1024.0
+  }
+}
