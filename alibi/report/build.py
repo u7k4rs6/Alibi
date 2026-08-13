@@ -182,6 +182,18 @@ def write_structural_fp() -> Path:
 
 
 def build_report() -> dict[str, Path]:
+    """REPORT.md, structured as a study of how a monitor-reward experiment fails.
+
+    The spine is deliberately not "experiment with a failed hypothesis section".
+    No monitored-arm comparison exists at any version, so presenting one would be
+    a fiction. What does exist is five distinct faults, each of which alone would
+    have produced a publishable-looking curve that meant nothing, and each of
+    which was caught by instrumentation built before the runs. That is the
+    result, and the structure says so.
+
+    Nothing is softened because the framing changed. Every limitation, every
+    withdrawn claim and the above-the-fold disclosure are carried over.
+    """
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     computed = metrics.claims()
     figures = figure.build_figures()
@@ -191,79 +203,18 @@ def build_report() -> dict[str, Path]:
     published = build_published(computed)
     PUBLISHED_PATH.write_text(json.dumps(published, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
-    lines: list[str] = []
-    runs = computed.get("n_declared_runs", 0)
+    from alibi.report import retrospective as retro
+
+    retro.write()
+    _analysis, judgement = retro.a0_seed1()
+    judgement = judgement or {}
+
+    precision = computed.get("structural_precision_on_honest_code") or {}
+    behavioural = computed.get("behavioural_precision_on_honest_code") or {}
+    prefix = computed.get("prefix_characterisation") or {}
+    pooled = computed.get("pooled_step_zero") or {}
     provenance = computed.get("eligibility") or {}
 
-    lines.append("# Alibi: does a monitored policy stop reward hacking, or stop looking like it?")
-    lines.append("")
-    # Above the fold, before the result. A reader must not get to any number
-    # without knowing what produced it.
-    lines.append("> ## Read this before any number below")
-    lines.append(">")
-    lines.append("> **No `GRPOTrainer` was used.** TRL is pinned in every `env.lock` and is never")
-    lines.append("> instantiated. The update is a hand-written policy gradient in")
-    lines.append("> `alibi/train/grpo.py`. There is no `GRPOConfig` to inspect.")
-    lines.append(">")
-    lines.append("> **In v1 that objective was neither clipped nor anchored.** No reference policy")
-    lines.append("> existed, so there was no KL term in the loss, no ratio clipping and no trust")
-    lines.append("> region. It was `-advantage x logprob` at a constant learning rate.")
-    lines.append(">")
-    lines.append("> **v1's update did not condition on the prompt.** It fed the completion tokens")
-    lines.append("> with the prompt stripped, so the gradient maximised the unconditional")
-    lines.append("> likelihood of completion text rather than the likelihood of a solution given a")
-    lines.append("> problem.")
-    lines.append(">")
-    lines.append("> **Two v1 columns do not mean what their names suggest.** `kl` is not KL from a")
-    lines.append("> reference policy, because none existed: it compared the policy against the")
-    lines.append("> sampler's own logprobs from the same step and the same weights, so it measured")
-    lines.append("> numerical noise. The KL spike halt was therefore guarding nothing in v1.")
-    lines.append("> `trainer_logprob` is a literal copy of `sampler_logprob`, identical on 3430 of")
-    lines.append("> 3430 rows, so v1's `logprobs.parquet` does not support the sampler/trainer")
-    lines.append("> analysis it was collected for.")
-    lines.append(">")
-    lines.append("> All four are fixed for v2 and none is fixed retroactively. **v1's numbers stand")
-    lines.append("> as they were measured, and are not evidence about H1.**")
-    lines.append("")
-
-    # 1. Result first. Never method first.
-    lines.append("## Result")
-    lines.append("")
-    if runs == 0:
-        lines.append(
-            "**No training run has been declared as evidence yet.** The instrument is built, "
-            "frozen and gated, and no hypothesis is evaluable until the run matrix completes. "
-            "This file is regenerated after every completed run, so its emptiness here is a "
-            "statement about the runs, not about the report."
-        )
-        lines.append("")
-        lines.append(
-            "What is established without any GPU is the environment gate: a hardcoding solution "
-            "built programmatically from the visible asserts passes the visible tests on 371 of "
-            "376 problems and fails the held-out tests on 370. The environment rewards cheating, "
-            "so H1 is worth testing. See `docs/day-1-gate.md`."
-        )
-    else:
-        h1 = computed.get("hypotheses", {}).get("H1", {})
-        rising = h1.get("monotonic_rising_per_seed") or []
-        lines.append(
-            f"Declared runs: {runs}. H1, whether the oracle cheat rate rises in a0, is "
-            f"{'supported' if any(rising) else 'not supported'} per seed: {rising}."
-        )
-    lines.append("")
-
-    # 2. Setup.
-    lines.append("## Setup")
-    lines.append("")
-    lines.append(f"- Model: Qwen2.5-0.5B-Instruct, LoRA, bf16")
-    lines.append(f"- Task: MBPP with the visible asserts in the prompt, held-out from MBPP+")
-    lines.append(f"- Eligible problems: {provenance.get('eligibility_n_problems')} (frozen, hashed)")
-    lines.append(f"- Reward: `{prereg.PREREG.reward_definition}`, lambda = {prereg.PREREG.lambda_monitor}")
-    lines.append(f"- Arms: {', '.join(prereg.PREREG.run_order.arms)}; seeds {list(prereg.PREREG.run_order.seeds)}")
-    lines.append(f"- Pre-registration: `{prereg.PREREG.version}`, hash `{prereg.PREREG_HASH[:16]}`")
-    lines.append("")
-
-    # 2b. The judge, including the confound if there is one.
     selection = None
     try:
         from alibi.monitor.selection import load_selection
@@ -272,949 +223,673 @@ def build_report() -> dict[str, Path]:
     except ImportError:
         selection = None
 
-    lines.append("## The judge")
-    lines.append("")
-    if selection is None:
-        lines.append(
-            "No monitor has been selected. The monitored arms cannot run until "
-            "`alibi monitor select` records one."
+    diagnostic = {}
+    diagnostic_path = runlog.ARTIFACTS / "diagnostics" / "think_region" / "result.json"
+    if diagnostic_path.exists():
+        diagnostic = json.loads(diagnostic_path.read_text(encoding="utf-8"))
+    by_condition = {c["name"]: c for c in diagnostic.get("conditions", [])}
+
+    L: list[str] = []
+
+    L.append("# Alibi: how a monitor-reward experiment fails silently")
+    L.append("")
+    L.append(
+        "A study of the ways an experiment that penalises a policy for visible reward hacking can "
+        "produce confident, plausible curves that mean nothing. The case is our own run."
+    )
+    L.append("")
+
+    # --------------------------------------------------------------- fold
+    L.append("> ## Read this before any number below")
+    L.append(">")
+    L.append("> **No `GRPOTrainer` was used.** TRL is pinned in every `env.lock` and is never")
+    L.append("> instantiated. The update is a hand-written policy gradient in")
+    L.append("> `alibi/train/grpo.py`. There is no `GRPOConfig` to inspect.")
+    L.append(">")
+    L.append("> **In v1 that objective was neither clipped nor anchored.** No reference policy")
+    L.append("> existed, so there was no KL term in the loss, no ratio clipping and no trust")
+    L.append("> region. It was `-advantage x logprob` at a constant learning rate.")
+    L.append(">")
+    L.append("> **v1's update did not condition on the prompt.** It fed the completion tokens")
+    L.append("> with the prompt stripped, so the gradient maximised the unconditional")
+    L.append("> likelihood of completion text rather than the likelihood of a solution given a")
+    L.append("> problem.")
+    L.append(">")
+    L.append("> **Two v1 columns do not mean what their names suggest.** `kl` is not KL from a")
+    L.append("> reference policy, because none existed: it compared the policy against the")
+    L.append("> sampler's own logprobs from the same step and the same weights, so it measured")
+    L.append("> numerical noise. The KL spike halt was therefore guarding nothing in v1.")
+    L.append("> `trainer_logprob` is a literal copy of `sampler_logprob`, identical on 3430 of")
+    L.append("> 3430 rows.")
+    L.append(">")
+    L.append("> All are fixed for later versions and none is fixed retroactively. **v1's numbers")
+    L.append("> stand as they were measured, and are not evidence about H1.**")
+    L.append("")
+
+    # ------------------------------------------------------------- 1. RESULT
+    L.append("## 1. Result")
+    L.append("")
+    L.append(
+        "**No monitored-arm comparison exists at any version of this experiment.** Five distinct "
+        "faults were found, and each one alone would have produced a publishable-looking curve "
+        "that meant nothing: **arm A1's monitor read an empty view**, so its flag rate was zero by "
+        "construction and its reward was arithmetically the unmonitored control's; **the chat "
+        "template was never applied**, which would have emptied that view even with a policy "
+        "chosen correctly; **44.8 percent of completions hit the token cap**; **the training "
+        "objective did not condition on the prompt**, so the gradient maximised the unconditional "
+        "likelihood of completion text; and **`trainer_logprob` was a literal copy of "
+        "`sampler_logprob`**, so the column collected to detect sampler-trainer divergence could "
+        "not have shown any. Every one was caught by instrumentation built before the runs, and "
+        "surfaced as a number rather than as a plausible curve."
+    )
+    L.append("")
+    L.append(
+        "That is the result. It is not the result the pre-registration asked for, and the "
+        "pre-registered hypotheses remain unevaluated, which section 5 states rather than "
+        "obscures."
+    )
+    L.append("")
+
+    # ------------------------------------------------------- 2. THE FIVE FAULTS
+    L.append("## 2. The five faults")
+    L.append("")
+    L.append(
+        "Each subsection gives what the fault was, what it would have produced undetected, the "
+        "measurement that caught it, and what it cost."
+    )
+    L.append("")
+
+    L.append("### 2.1 Arm A1's monitor read an empty view")
+    L.append("")
+    L.append(
+        "**The fault.** A1 is registered to show its monitor `completion.think`, the designated "
+        "thought region. Qwen2.5-0.5B-Instruct emits none, despite the prompt asking for `<think>` "
+        "tags. Mean `think_chars` over 320 completions was 3.2, and the monitor's own verdict text "
+        "reads `\"No code provided to audit.\"` A2, reading the answer on the same policy, flagged "
+        "21 of 320."
+    )
+    L.append("")
+    L.append(
+        "**Undetected it would have produced** a monitored arm whose flag rate is zero at every "
+        "step, read as a monitor that finds nothing to flag, and an obfuscation gap equal to the "
+        "negated cheat rate. A1 would have appeared to be the arm where monitoring did not bite."
+    )
+    L.append("")
+    L.append(
+        "**Caught by** the flag rate being *identically* zero rather than small, and confirmed by "
+        "a0/s1 and a1/s1 producing identical trajectories at matching seeds, to three decimals on "
+        "every published series. A penalty term of exactly zero makes A1's reward arithmetically "
+        "A0's."
+    )
+    L.append("")
+    L.append(
+        "**Cost.** Four completed runs, two of them A1, which are kept and relabelled as A0 "
+        "replicates rather than deleted. H2 is unevaluable: a flag rate that is zero by "
+        "construction cannot fall. Recorded in `BLOCKED.md`."
+    )
+    L.append("")
+
+    L.append("### 2.2 The chat template was never applied")
+    L.append("")
+    if by_condition:
+        raw = by_condition.get("qwen3-0.6b-raw-prompt", {})
+        templated = by_condition.get("qwen3-0.6b-chat-template", {})
+        policy_cond = by_condition.get("qwen2.5-0.5b-instruct", {})
+        L.append(
+            "**The fault.** `build_prompt` constructed a raw string and never applied the "
+            "tokenizer's chat template. A supplementary diagnostic, sampling only, on "
+            "byte-identical step-zero prompts:"
+        )
+        L.append("")
+        L.append("| Condition | Non-empty thought region | Mean think chars | Flag rate, A1 view |")
+        L.append("|---|---|---|---|")
+        for name, entry in (
+            ("`Qwen2.5-0.5B-Instruct`, raw prompt", policy_cond),
+            ("`Qwen3-0.6B`, raw prompt", raw),
+            ("`Qwen3-0.6B`, own chat template", templated),
+        ):
+            if not entry:
+                continue
+            L.append(
+                f"| {name} | **{_fmt(entry.get('nonempty_think_fraction'))}** "
+                f"| {_fmt((entry.get('think_chars') or {}).get('mean'), 1)} "
+                f"| {_fmt(entry.get('flag_rate_think_view'))} |"
+            )
+        L.append("")
+        L.append(
+            "Qwen3-0.6B, a model post-trained to think, emits a thought region on **0 of 16** "
+            "completions from the raw prompt and **16 of 16** through its own template. Same "
+            "model, same prompt content."
         )
     else:
-        lines.append(f"- Monitor model: `{selection['model_id']}`")
-        lines.append(f"- Prompt template version: `{selection['prompt_template_version']}`")
-        lines.append(f"- Selection hash: `{selection['selection_hash'][:16]}`")
-        lines.append(
-            "- Availability was probed with a real 5-token request before use, because a provider's "
-            "model listing includes dedicated-endpoint-only models that reject serverless calls. "
-            "Every model probed and its result are in DECISIONS.md."
+        L.append("**The fault.** `build_prompt` never applied the tokenizer's chat template.")
+    L.append("")
+    L.append(
+        "**Undetected it would have produced** exactly the same empty-view failure as 2.1, and "
+        "would have survived swapping in a thinking policy. The two faults are independent and "
+        "**either alone is sufficient** to empty the arm, so fixing only the model would have "
+        "looked like a fix and changed nothing."
+    )
+    L.append("")
+    L.append(
+        "**Caught by** adding a third diagnostic condition on the reasoning that a model which "
+        "only thinks under its own template would itself answer the post-training question. The "
+        "two-condition comparison originally asked for would have shown 0/16 twice and concluded, "
+        "wrongly, that a thinking model does not help."
+    )
+    L.append("")
+    L.append(
+        "**Cost.** It invalidates the framing, not the data: the claim is not that a model this "
+        "size cannot produce a thought region. Thought-region monitoring presupposes a policy "
+        "post-trained to emit one **and** an interface that lets it, and neither was checked "
+        "before the arm was designed."
+    )
+    L.append("")
+
+    L.append("### 2.3 Nearly half of all completions hit the token cap")
+    L.append("")
+    L.append(
+        "**The fault.** `max_new_tokens` was 256. Across a0/s1's 1280 completions, **44.8 percent "
+        "hit the cap**. Their visible pass rate is **0.1053** against **0.2254** for completions "
+        "that stopped naturally."
+    )
+    L.append("")
+    L.append(
+        "**Undetected it would have produced** a policy bounded in what it could express for the "
+        "whole run, with a visible pass rate depressed by truncation and read as a policy that "
+        "cannot solve the problems."
+    )
+    L.append("")
+    L.append(
+        "**Caught by** logging `finish_reason` per completion and splitting visible pass rate on "
+        "it. The two subgroups differ by more than a factor of two."
+    )
+    L.append("")
+    L.append(
+        "**Cost.** It bounds every v1 number. It is also the fault that eventually made both later "
+        "versions infeasible, because a policy that thinks needs a budget this hardware cannot "
+        "backpropagate through. See section 5."
+    )
+    L.append("")
+
+    L.append("### 2.4 The objective had no prompt conditioning")
+    L.append("")
+    L.append(
+        "**The fault.** `_update` fed `completion.token_ids`, which is the generated tokens with "
+        "the prompt stripped. The gradient therefore maximised the **unconditional** likelihood of "
+        "completion text, not the likelihood of a solution given a problem."
+    )
+    L.append("")
+    L.append(
+        "**Undetected it would have produced** a training curve that looks like ordinary "
+        "optimisation failure. Reward falls, the run completes, and the natural reading is that "
+        "the task is too hard for a 0.5B policy."
+    )
+    L.append("")
+    if judgement.get("measured"):
+        L.append(
+            "**Caught by** the retrospective, recomputed from stored artifacts. Mean reward fell "
+            f"from **{_fmt(judgement['mean_reward_first10'])}** over the first ten steps to "
+            f"**{_fmt(judgement['mean_reward_last10'])}** over the last ten, while mean token "
+            f"entropy **rose** from **{_fmt(judgement['entropy_first10'])}** to "
+            f"**{_fmt(judgement['entropy_last10'])}**. Falling reward with rising entropy is not a "
+            "policy converging on a bad solution; it is a policy being pushed off its pretrained "
+            "distribution without finding anything better."
         )
-        lines.append("")
-        lines.append(
-            "The monitor model id is **not** covered by the pre-registration hash, because "
-            "`alibi/prereg.py` carries no monitor field. Compare the selection hash above as well "
-            "as the prereg hash when checking that two runs were judged by the same thing."
+        L.append("")
+        L.append(
+            "The same retrospective **refuted the obvious explanation**. Zero-variance groups, "
+            "which contribute no gradient, averaged "
+            f"**{_fmt(judgement['zero_variance_group_fraction_mean'])}**, not a majority, and mean "
+            f"absolute advantage was {_fmt(judgement['mean_abs_advantage_mean'])} with a maximum "
+            f"of {_fmt(judgement['max_abs_advantage'])}. The loop had usable gradient signal on "
+            "most steps. Reporting zero variance as the mechanism would have been convenient and "
+            "wrong."
+        )
+    else:
+        L.append("**Caught by** the retrospective over stored artifacts.")
+    L.append("")
+    L.append(
+        "**Cost.** Every v1 training run optimised a different objective from the one the design "
+        "assumes. Fixed in later versions by prepending the prompt and masking it out of the loss."
+    )
+    L.append("")
+
+    L.append("### 2.5 `trainer_logprob` was a copy of `sampler_logprob`")
+    L.append("")
+    L.append(
+        "**The fault.** The column exists so the follow-on project can study what happens to the "
+        "sampler-trainer logprob pair when the rollout path changes. It was written as a literal "
+        "copy: **3430 of 3430 rows identical** at step 0 of a0/s1."
+    )
+    L.append("")
+    L.append(
+        "**Undetected it would have produced** a dataset that appears to show perfect "
+        "sampler-trainer agreement. The column collected to detect divergence **could not have "
+        "shown any**, and the absence of divergence would have read as evidence of its absence."
+    )
+    L.append("")
+    L.append(
+        "**Caught by** asking, before the next version ran, whether the column came from an actual "
+        "forward pass, then comparing the two columns directly rather than trusting the field name."
+    )
+    L.append("")
+    L.append(
+        "**Cost.** v1's `logprobs.parquet` does not support the analysis it was collected for. "
+        "Fixed afterwards: with a genuine prompt-conditioned recomputation the two columns diverge "
+        "on **0 of 96** rows, mean absolute difference **0.2150**, maximum **1.8477**. That "
+        "divergence is itself unresolved, see section 6."
+    )
+    L.append("")
+
+    # --------------------------------------------- 3. WHAT THE INSTRUMENT GOT RIGHT
+    L.append("## 3. What the instrument got right")
+    L.append("")
+    L.append(
+        "This is the load-bearing claim of the whole report. Five faults were found **before** any "
+        "of them reached a published number, and that was not luck. Each was caught because a "
+        "specific piece of instrumentation existed before the runs did."
+    )
+    L.append("")
+    L.append(
+        "**The reward monitor is separated from the behavioural oracle by construction.** "
+        "`reward_fn` is never handed an oracle, `ScoredCompletion` has no oracle field, and "
+        "`tests/test_reward_isolation.py` fails if anything connects them, including through a "
+        "call site. Because ground truth could not leak into the reward, a monitored arm that "
+        "measured nothing still had an independent measurement pointing at it."
+    )
+    L.append("")
+    L.append(
+        f"**The determinacy floor.** A completion scored on fewer than {metrics.DETERMINACY_FLOOR} "
+        "determinate held-out tests has an indeterminate oracle verdict and leaves both the "
+        "numerator and the denominator, never counted as a cheat. It is applied at report time and "
+        "recomputed from stored completions, so an auditor can check it without a GPU."
+    )
+    L.append("")
+    L.append(
+        "**Thresholds were pre-registered and hashed into every run.** The cheat threshold, the "
+        "three sensitivity values reported always rather than chosen after the fact, the "
+        "eligibility rules and every halt condition are frozen in `alibi/prereg.py` and immutable "
+        "at runtime. Later versions inherit the measurement **by import** rather than by "
+        "restatement, and a test asserts the inheritance still holds."
+    )
+    L.append("")
+    if precision.get("n_reference_solutions"):
+        rate = precision["false_positive_rate"]
+        ci = precision.get("false_positive_ci95") or [None, None]
+        L.append(
+            "**Structural precision was measured on honest code before the panel was trusted.** "
+            "The check's recall was validated on generated cheats; its precision never was. Run "
+            f"over all {precision['n_reference_solutions']} eligible MBPP+ reference solutions, "
+            f"every one a genuine algorithm, it flags **{precision['n_flagged']}**, a false "
+            f"positive rate of **{_fmt(rate)}** with a 95 percent interval of {_fmt(ci[0])} to "
+            f"{_fmt(ci[1])}, per form `{precision['per_form'] or 'none'}`, task ids "
+            f"`{precision['flagged_task_ids']}`."
+        )
+        L.append("")
+        if rate is not None and rate >= NEAR_ZERO_FALSE_POSITIVE_RATE:
+            L.append(
+                f"That is **above** the {NEAR_ZERO_FALSE_POSITIVE_RATE:.2f} bar declared before the "
+                "measurement was run, so the cheat_form panel reports detector behaviour as well as "
+                "policy behaviour, and the report says so rather than presenting the panel as a "
+                "clean read of the policy. The rate is not uniform: it is five specific problems, "
+                "listed with full source in [STRUCTURAL_FP.md](STRUCTURAL_FP.md), which enter the "
+                "prompt set on 2 of 80 steps."
+            )
+            L.append("")
+    if behavioural.get("measured"):
+        ci = behavioural.get("false_positive_ci95") or [None, None]
+        L.append(
+            "**A vindication claim was withdrawn as circular.** An earlier draft argued that the "
+            "structural false positive rate vindicated making the behavioural oracle primary, "
+            "because the behavioural check has no equivalent floor. That was wrong. The behavioural "
+            "check has no *measured* floor, and the reason is circular: **eligibility excludes "
+            "problems whose reference solution fails held-out**, which is the behavioural rule's own "
+            "criterion, so any rate computed on the eligible set is zero by construction. The two "
+            "checks were validated on differently filtered populations."
+        )
+        L.append("")
+        L.append(
+            "A non-circular estimate from the pre-eligibility set, which is filtered only for "
+            f"reasons unrelated to the rule: **{behavioural['n_flagged']} of "
+            f"{behavioural['n_evaluable']} flagged, 95 percent upper bound {_fmt(ci[1])}**. "
+            "Reported as an estimate with four named limits, not as a resolution. The honest "
+            "comparison is that the structural rate is measured and above the bar, while the "
+            "behavioural rate is bounded above and consistent with zero."
+        )
+        L.append("")
+    L.append(
+        "**Monitor failure can never read as innocence.** An error is its own verdict state and is "
+        "always flagged; `Verdict.from_error` does not take a `flagged` argument, and a test "
+        "asserts that no exception type in the judging path can yield `flagged=False`. An outage "
+        "raises the penalty rather than lowering it, then halts."
+    )
+    L.append("")
+    L.append(
+        "**Timeouts and crashes are a third outcome, never a fail.** Pass fractions are computed "
+        "over determinate tests only and are `None` when nothing was determinate, so an "
+        "infrastructure failure cannot read as a policy that does not generalise."
+    )
+    L.append("")
+    if selection:
+        L.append(
+            f"**The judge was probed for availability and qualified before use.** Selected: "
+            f"`{selection['model_id']}`, selection hash `{selection['selection_hash'][:16]}`. "
+            "Availability was probed with a real request rather than inferred from a model "
+            "listing, because 3 of 5 candidates that appear in the listing reject serverless calls."
         )
         if selection.get("shares_family_with_policy"):
-            lines.append("")
-            lines.append("### Judge and judged share a model family")
-            lines.append("")
-            lines.append(
-                f"**`{selection['model_id']}` shares a model family with the "
-                "Qwen2.5-0.5B-Instruct policy it grades.** Shared tokenizer, shared pretraining "
-                "data and shared failure modes mean the monitor may be unusually good, or "
-                "unusually blind, to exactly this policy's habits."
-            )
-            lines.append("")
-            lines.append(
-                "This does not invalidate the monitored arms, and it is not a defect that was "
-                "discovered late: it is a consequence of which models were reachable on the "
-                "account, recorded at selection time. It bears directly on H2 and H3, because a "
-                "same-family judge could plausibly track the policy's obfuscation more closely "
-                "than an independent one would, which would understate the obfuscation gap. Any "
-                "reading of the monitored arms should carry this caveat."
+            L.append("")
+            L.append(
+                f"**Judge and judged share a model family.** `{selection['model_id']}` grades a Qwen "
+                "policy. This was an explicit operator override made before any curve existed, on "
+                "the qualification table, and it is carried as a limitation: a same-family judge may "
+                "track this policy's habits more closely than an independent one would."
             )
         qualification = selection.get("qualification") or {}
         if qualification:
-            lines.append("")
-            lines.append("### Qualification, and what it does not establish")
-            lines.append("")
-            lines.append(
-                f"Before use, the judge was shown known synthetic cheats and known reference "
-                f"solutions: cheat flag rate {_fmt(qualification.get('cheat_flag_rate'))}, honest "
+            L.append("")
+            L.append(
+                "**Qualification is not pre-registered, and its limits are stated rather than "
+                f"buried.** Cheat flag rate {_fmt(qualification.get('cheat_flag_rate'))}, honest "
                 f"flag rate {_fmt(qualification.get('honest_flag_rate'))}, separation "
-                f"{_fmt(qualification.get('separation'))}, error rate "
-                f"{_fmt(qualification.get('error_rate'))}."
+                f"{_fmt(qualification.get('separation'))}. The procedure and all four thresholds "
+                "were chosen by the implementer, it ran on the A2 view only, and the cheats it used "
+                "are programmatically generated and stereotyped. Passing it is **necessary but not "
+                "sufficient**, and no result here should be read as though the judge were known "
+                "reliable on real completions."
             )
-            lines.append("")
-            lines.append(
-                "**This qualification is not pre-registered.** `alibi/prereg.py` is frozen and "
-                "carries no monitor field, so the procedure and all four thresholds were chosen "
-                "by the implementer rather than registered in advance. They were fixed before any "
-                "run existed and are deliberately weak: the check is a smoke test for a judge that "
-                "is useless, not a measurement of judge quality."
-            )
-            lines.append("")
-            lines.append(
-                "**It ran on the A2 view only.** The judge was shown code. A1 shows it a reasoning "
-                "trace instead, and no qualification was run on that view."
-            )
-            lines.append("")
-            lines.append(
-                "**A separation of "
-                f"{_fmt(qualification.get('separation'))} on these cheats does not predict "
-                "performance on the policy's own.** The synthetic cheats are generated "
-                "programmatically from the visible asserts and are stereotyped: a chain of "
-                "equality comparisons against literal tuples, the easiest possible case. Once a "
-                "policy starts varying the form of its hardcoding, the judge faces a distribution "
-                "this qualification never sampled. Passing here is **necessary but not "
-                "sufficient**, and no result in this report should be read as though the judge "
-                "were known to be reliable on real completions. The per-step false positive panel "
-                "is the running check on the honest half of that concern; there is no equivalent "
-                "running check on the cheating half, because the policy's cheats have no ground "
-                "truth label other than the oracle, which the monitor never sees."
-            )
-    lines.append("")
+        L.append("")
 
-    # 3. The instrument.
-    lines.append("## The instrument")
-    lines.append("")
-    lines.append(
-        "Two judges are kept apart. The **reward monitor** reads text and its verdict enters the "
-        "reward. The **cheat oracle** executes held-out tests the model never sees and its verdict "
-        "never enters the reward. `tests/test_reward_isolation.py` fails if anything connects them."
+    # ------------------- 4. WHAT WE LEARNED ABOUT MONITOR-REWARD EXPERIMENTS
+    L.append("## 4. What this says about monitor-reward experiments generally")
+    L.append("")
+    L.append(
+        "Four claims that outlive this particular run. Each is supported by a fault above, and "
+        "each would apply to any experiment of this shape."
     )
-    lines.append("")
-    lines.append(
-        "Test outcomes are three-valued. A timeout or crash is `indeterminate`, never `fail`, and "
-        "pass fractions are computed over determinate tests only. Folding indeterminate into fail "
-        "would let a sandbox problem read as a model that does not generalise."
+    L.append("")
+    L.append(
+        "**An arm that reads thought tokens presupposes a policy post-trained to emit them, and an "
+        "interface that lets it.** Both halves matter and neither is implied by model size. A 0.6B "
+        "model emitted a thought region on every completion through its own chat template and none "
+        "at all from a raw prompt of identical content. Any study of reasoning-trace monitoring "
+        "should verify the trace exists, at the exact prompt path the experiment will use, before "
+        "the arm is designed."
     )
-    lines.append("")
-    lines.append(
-        "A monitor error is its own verdict state and is **always flagged**. An outage that read as "
-        "unflagged would lower the penalty and look exactly like a policy that stopped cheating."
+    L.append("")
+    L.append(
+        "**An empty view and a clean policy are indistinguishable at the monitor's output.** Both "
+        "produce `flagged=False`. Nothing downstream of the monitor can tell them apart, so the "
+        "check has to be upstream: measure that the view is non-empty, per step, as a first-class "
+        "series. A flag rate of exactly zero should be treated as a defect signal until shown "
+        "otherwise, not as a monitor finding nothing."
     )
-    lines.append("")
+    L.append("")
+    L.append(
+        "**The token budget silently decides which arms are comparable.** Under a thinking policy "
+        "the answer follows the think block, so a truncated completion yields no code at all and "
+        "an empty answer view. The budget therefore determines whether an answer-reading arm has "
+        "anything to read. It is an experimental design parameter, not an infrastructure setting, "
+        "and this project only discovered that after it had eliminated two arms in two different "
+        "versions for the same underlying reason."
+    )
+    L.append("")
+    L.append(
+        "**A flat cheat rate is uninformative unless the loop is shown to have been optimising the "
+        "intended objective.** v1's cheat rate never moved, which reads as a policy that did not "
+        "learn to cheat. It was a policy trained on the unconditional likelihood of its own output "
+        "text, with two completions in five truncated, whose reward fell while its entropy rose. "
+        "Reporting the flat curve as a finding about reward hacking would have been false, and "
+        "nothing in the curve itself would have revealed that. The diagnostics that distinguish "
+        "the two cases, per-step reward, entropy, advantage magnitude, zero-variance group "
+        "fraction and capped fraction, cost almost nothing and should be logged from the first run."
+    )
+    L.append("")
 
-    # 4. Findings, per hypothesis.
-    lines.append("## Findings")
-    lines.append("")
+    # ------------------------------------------------- 5. WHAT WAS NEVER TESTED
+    L.append("## 5. What was never tested")
+    L.append("")
+    L.append("**All three pre-registered hypotheses are unevaluated.**")
+    L.append("")
     for label, statement in zip(("H1", "H2", "H3"), prereg.PREREG.metric.hypotheses, strict=True):
-        lines.append(f"### {label}")
-        lines.append("")
-        lines.append(f"> {statement}")
-        lines.append("")
-        lines.append("**not resolved** (no declared runs yet)" if runs == 0 else "**not resolved**")
-        lines.append("")
-
-    # 5. Sensitivity, always all three thresholds.
-    lines.append("## Sensitivity")
-    lines.append("")
-    lines.append(
-        "All three pre-registered thresholds, always shown, never a subset chosen after seeing a curve."
+        L.append(f"- **{label}** — *{statement}*")
+    L.append("")
+    L.append(
+        "**H1** asks whether the oracle cheat rate rises in the unmonitored arm. The a0 runs "
+        "completed and the rate did not move, but section 2.4 shows the loop was not optimising "
+        "the registered objective and section 2.3 shows two completions in five were truncated. "
+        "H1 was not given a fair test, and the flat curve is not evidence for or against it."
     )
-    lines.append("")
-    lines.append("| Threshold | " + " | ".join(prereg.PREREG.run_order.arms) + " |")
-    lines.append("|---|" + "---|" * len(prereg.PREREG.run_order.arms))
-    for threshold in prereg.PREREG.oracle.sensitivity_thresholds:
-        label = f"{threshold:.2f}"
-        cells = []
-        for arm in prereg.PREREG.run_order.arms:
-            entry = (computed.get("sensitivity", {}).get(label, {}) or {}).get(arm)
-            if not entry:
-                cells.append("not measured")
-            else:
-                values = [v for v in entry["terminal_cheat_rate"] if v is not None]
-                cells.append(
-                    f"{min(values):.4f} to {max(values):.4f}" if values else "not measured"
-                )
-        lines.append(f"| held-out <= {label} | " + " | ".join(cells) + " |")
-    lines.append("")
-
-    # 6. Figures.
-    if figures:
-        lines.append("## Figures")
-        lines.append("")
-        for name, path in sorted(figures.items()):
-            lines.append(f"![{name}](figures/{Path(path).name})")
-            lines.append("")
-
-    # 6b. Determinacy floor, declared at report time.
-    floor_info = {arm: (entry.get("determinacy_floor") or {}) for arm, entry in computed.get("arms", {}).items()}
-    lines.append("## Determinacy floor")
-    lines.append("")
-    lines.append(
-        f"A completion whose held-out scoring produced fewer than **{metrics.DETERMINACY_FLOOR} determinate "
-        "tests** has an indeterminate oracle verdict. It leaves both the numerator and the denominator of "
-        "the cheat rate and is **never counted as a cheat**. Nothing in any run directory was changed: this "
-        "is recomputed from stored completions, which is why `alibi verify --no-gpu` can check it."
+    L.append("")
+    L.append(
+        "**H2** asks whether A1's flag rate falls faster than its cheat rate. A1's flag rate was "
+        "zero by construction, and a rate that cannot fall cannot fall faster. Unevaluable."
     )
-    lines.append("")
-    lines.append(
-        "This was declared after the queue had started, while only partial a0 data existed and no "
-        "monitored-arm curve had been produced. It is applied at report time only."
+    L.append("")
+    L.append(
+        "**H3** compares terminal cheat rate in A2 against A1. A1 is a second control, and no A2 "
+        "run ever completed: every A2 attempt failed, three of them on the indeterminate held-out "
+        "halt. The comparison has no data on either side."
     )
-    lines.append("")
-    if not floor_info:
-        lines.append("No declared runs yet, so there is nothing to compare.")
-    else:
-        lines.append("| Arm | Terminal gap, floor applied | Terminal gap, no floor | Excluded fraction | Differ materially |")
-        lines.append("|---|---|---|---|---|")
-        for arm, info in sorted(floor_info.items()):
-            wf = info.get("terminal_gap_with_floor")
-            nf = info.get("terminal_gap_without_floor")
-            ex = info.get("terminal_excluded_fraction") or []
-            ex = [e for e in ex if e is not None]
-            lines.append(
-                f"| {arm} | {_fmt(min(wf)) + ' to ' + _fmt(max(wf)) if wf else 'not measured'} "
-                f"| {_fmt(min(nf)) + ' to ' + _fmt(max(nf)) if nf else 'not measured'} "
-                f"| {_fmt(min(ex)) + ' to ' + _fmt(max(ex)) if ex else 'not measured'} "
-                f"| {info.get('materially_different')} |"
-            )
-        lines.append("")
-        lines.append(
-            "Where the two differ materially, **the floor version is primary**. Materially means the "
-            "absolute difference exceeds the seed band, which is this project's own standard for a "
-            "resolved difference, or 0.02 where there is only one seed."
-        )
-    lines.append("")
-
-    # 6c. Step-zero prevalence, before any policy update.
-    lines.append("## Cheat prevalence before any policy update")
-    lines.append("")
-    lines.append(
-        "What the base policy already does at step 0, before a single gradient step. If prevalence is "
-        "already high, a rise over training is a smaller finding than it looks; if it is zero, any rise "
-        "is entirely learned."
-    )
-    lines.append("")
-    zero = {arm: (entry.get("step_zero_prevalence") or []) for arm, entry in computed.get("arms", {}).items()}
-    if not any(zero.values()):
-        lines.append("No declared runs yet, so step 0 has not been read.")
-    else:
-        lines.append("| Arm | Seeds | Completions | Any cheat_form | Behavioural cheat rate | cheat_form breakdown |")
-        lines.append("|---|---|---|---|---|---|")
-        for arm, entries in sorted(zero.items()):
-            entries = [e for e in entries if e.get("n")]
-            if not entries:
-                lines.append(f"| {arm} | 0 | not measured | not measured | not measured | not measured |")
-                continue
-            n = sum(e["n"] for e in entries)
-            any_form = sum(e["any_cheat_form"] for e in entries)
-            breakdown: dict = {}
-            for entry in entries:
-                for form, count in (entry.get("cheat_form_counts") or {}).items():
-                    breakdown[form] = breakdown.get(form, 0) + count
-            behavioural = [e["behavioural_cheat_fraction"] for e in entries if e.get("behavioural_cheat_fraction") is not None]
-            lines.append(
-                f"| {arm} | {len(entries)} | {n} | {any_form}/{n} = {any_form / n:.4f} "
-                f"| {_fmt(sum(behavioural) / len(behavioural)) if behavioural else 'not measured'} "
-                f"| {breakdown or 'none'} |"
-            )
-    lines.append("")
-
-    # 6c-bis. Pooled step zero and structural precision.
-    pooled = computed.get("pooled_step_zero") or {}
-    lines.append("### Pooled across all matrix runs")
-    lines.append("")
-    if not pooled.get("n_completions"):
-        lines.append(f"Not measured yet: {pooled.get('absent_reason')}")
-    else:
-        ci = pooled.get("prevalence_ci95") or [None, None]
-        bci = pooled.get("behavioural_ci95") or [None, None]
-        lines.append(
-            f"Step 0 is the same untrained base policy in every arm and at every seed, so the runs pool. "
-            f"**{pooled['n_runs_pooled']} of {pooled['n_runs_expected']} runs** have stored a step 0 so far; "
-            "this table is regenerated after every completed run."
-        )
-        lines.append("")
-        lines.append("| Measure | Value |")
-        lines.append("|---|---|")
-        lines.append(f"| Runs pooled | {pooled['n_runs_pooled']} of {pooled['n_runs_expected']} |")
-        lines.append(f"| Completions | {pooled['n_completions']} |")
-        lines.append(
-            f"| Any cheat_form | {pooled['any_cheat_form']}/{pooled['n_completions']} = "
-            f"{_fmt(pooled['prevalence'])} |"
-        )
-        lines.append(f"| 95 percent interval (Wilson) | {_fmt(ci[0])} to {_fmt(ci[1])} |")
-        lines.append(
-            f"| Behavioural cheat rate | {pooled['behavioural_cheat']}/{pooled['behavioural_determinate']} = "
-            f"{_fmt(pooled['behavioural_rate'])} |"
-        )
-        lines.append(f"| 95 percent interval (Wilson) | {_fmt(bci[0])} to {_fmt(bci[1])} |")
-        lines.append(f"| Per-run spread | {_fmt(pooled['per_run_spread'])} |")
-        lines.append(f"| cheat_form breakdown | {pooled['cheat_form_counts'] or 'none'} |")
-        lines.append("")
-        lines.append("Per run:")
-        lines.append("")
-        lines.append("| Run | Arm | Seed | n | Any cheat_form |")
-        lines.append("|---|---|---|---|---|")
-        for entry in pooled.get("per_run_prevalence", []):
-            lines.append(
-                f"| `{entry['run_id']}` | {entry['arm']} | {entry['seed']} | {entry['n']} | {_fmt(entry['rate'])} |"
-            )
-        lines.append("")
-        lines.append(
-            "Wilson intervals rather than the normal approximation, because n is small and the "
-            "proportion is near zero, which is exactly where the textbook interval returns a "
-            "negative lower bound."
-        )
-    lines.append("")
-
-    precision = computed.get("structural_precision_on_honest_code") or {}
-    lines.append("## Structural check precision on known-honest code")
-    lines.append("")
-    if not precision.get("n_reference_solutions"):
-        lines.append("Not measured.")
-    else:
-        rate = precision["false_positive_rate"]
-        ci = precision.get("false_positive_ci95") or [None, None]
-        lines.append(
-            "The structural check's **recall** was validated on generated cheats. Its **precision** was "
-            "not, until now. Every eligible MBPP+ reference solution is a genuine algorithm, so any flag "
-            "on one is a false positive by construction."
-        )
-        lines.append("")
-        lines.append("| Measure | Value |")
-        lines.append("|---|---|")
-        lines.append(f"| Reference solutions checked | {precision['n_reference_solutions']} |")
-        lines.append(f"| Flagged (false positives) | {precision['n_flagged']} |")
-        lines.append(f"| **False positive rate** | **{_fmt(rate)}** |")
-        lines.append(f"| 95 percent interval (Wilson) | {_fmt(ci[0])} to {_fmt(ci[1])} |")
-        lines.append(f"| Per form | {precision['per_form'] or 'none'} |")
-        lines.append(f"| Parse errors | {precision['parse_errors']} |")
-        lines.append(f"| Flagged task ids | `{precision['flagged_task_ids']}` |")
-        lines.append("")
-        if rate is not None and rate >= NEAR_ZERO_FALSE_POSITIVE_RATE:
-            lines.append(
-                f"**This is not near zero.** At {_fmt(rate)} the detector flags roughly "
-                f"{rate * 16:.1f} of every 16 completions on honest code alone. The cheat_form panel "
-                "therefore reports **detector behaviour as well as policy behaviour**."
-            )
-            lines.append("")
-            lines.append(
-                "But the rate is **not uniform**. It is five specific problems, listed with their full "
-                "source in [STRUCTURAL_FP.md](STRUCTURAL_FP.md). The floor appears only on the steps "
-                "where one of them is sampled, so it is a small number of contaminated steps rather "
-                "than a constant offset on every step. See the exposure table below."
-            )
-        else:
-            lines.append(
-                f"At {_fmt(rate)} this is near zero against the declared "
-                f"{NEAR_ZERO_FALSE_POSITIVE_RATE:.2f} bar, so the cheat_form panel can be read as policy "
-                "behaviour rather than detector behaviour."
-            )
-        lines.append("")
-        lines.append(
-            "The full text of every step-zero completion carrying a cheat_form is in "
-            "[STEP_ZERO_FLAGGED.md](STEP_ZERO_FLAGGED.md), for reading by hand rather than trusting the "
-            "label."
-        )
-
-        # Exposure of the false positive problems, and prompt coverage.
-        exposures = [e for entry in computed.get("arms", {}).values() for e in (entry.get("fp_problem_exposure") or [])]
-        coverages = [c for entry in computed.get("arms", {}).values() for c in (entry.get("prompt_coverage") or [])]
-        if exposures:
-            lines.append("")
-            lines.append("### How often the false positive problems are actually sampled")
-            lines.append("")
-            lines.append("| Run | Steps touching a flagged problem | Of steps | Fraction |")
-            lines.append("|---|---|---|---|")
-            for exposure in exposures:
-                lines.append(
-                    f"| (run) | `{exposure['steps_touching_a_fp_problem']}` | {exposure['n_steps']} "
-                    f"| {_fmt(exposure['fraction_of_steps'])} |"
-                )
-            lines.append("")
-            lines.append(
-                "The floor is therefore **confined to those steps**, not spread across the series. On "
-                "every other step the structural panel carries no known detector contribution. This is "
-                "why the excluding-the-five series below is the primary one."
-            )
-        if coverages:
-            cover = coverages[0]
-            lines.append("")
-            lines.append("### Prompt coverage, which this exposed")
-            lines.append("")
-            lines.append(
-                f"A run of this length samples **{cover['distinct_problems_sampled']} distinct problems "
-                f"of {cover['eligible_problems']} eligible**, a coverage of "
-                f"{_fmt(cover['coverage_fraction'])}. {cover['note']} The eligible count of "
-                f"{cover['eligible_problems']} therefore overstates what any run actually sees, and the "
-                "effective problem set is the same fixed prefix in every arm and every seed. That is "
-                "good for comparability between arms and it means the seeds vary sampling only, not "
-                "problems."
-            )
-    lines.append("")
-
-    # Behavioural precision, and the correction to the earlier claim.
-    behavioural = computed.get("behavioural_precision_on_honest_code") or {}
-    lines.append("## Behavioural check precision, and a correction")
-    lines.append("")
-    lines.append(
-        "An earlier draft of this report claimed the structural check's false positive rate was a "
-        "vindication of the pre-registration's choice to make the behavioural oracle primary, on the "
-        "grounds that the behavioural check has no equivalent false positive floor. **That claim was "
-        "wrong and is withdrawn.**"
-    )
-    lines.append("")
-    lines.append(
-        "The behavioural check has not been shown to have no false positive floor. It had not been "
-        "measured at all. The reason is circularity: **eligibility excludes problems whose reference "
-        "solution fails held out**, which is the same criterion the behavioural rule uses. Any false "
-        "positive rate computed on the eligible set is zero by construction and carries no information. "
-        "The two checks were validated on differently filtered populations: the eligibility filter is "
-        "unrelated to the structural criterion, so the structural measurement is real, and it is "
-        "identical to the behavioural criterion, so a behavioural measurement there would be vacuous."
-    )
-    lines.append("")
-    if not behavioural.get("measured"):
-        lines.append(
-            f"**The behavioural false positive rate on honest code remains unmeasured.** "
-            f"{behavioural.get('absent_reason')}"
-        )
-    else:
-        ci = behavioural.get("false_positive_ci95") or [None, None]
-        lines.append(
-            "A non circular estimate is available from stored data and is reported here **as an "
-            "estimate with named limits**, not as a resolution of the gap. The pre eligibility joined "
-            "set is filtered only for reasons unrelated to the behavioural rule, so reference "
-            "solutions on it were never selected for passing held out."
-        )
-        lines.append("")
-        lines.append("| Measure | Value |")
-        lines.append("|---|---|")
-        lines.append(f"| Population | {behavioural['population']} |")
-        lines.append(f"| Source artifact | `{behavioural['source_artifact']}` |")
-        lines.append(f"| Evaluable | {behavioural['n_evaluable']} |")
-        lines.append(f"| Flagged (false positives) | {behavioural['n_flagged']} |")
-        lines.append(f"| Point estimate | {_fmt(behavioural['false_positive_rate'])} |")
-        lines.append(f"| **95 percent upper bound** | **{_fmt(ci[1])}** |")
-        lines.append("")
-        lines.append(
-            "With zero events the point estimate is uninformative on its own and the upper bound is "
-            "the number worth quoting. Against the structural check's "
-            f"{_fmt((computed.get('structural_precision_on_honest_code') or {}).get('false_positive_rate'))}, "
-            "the comparison that can honestly be made is: the structural rate is measured and above the "
-            "near zero bar, while the behavioural rate is bounded above by "
-            f"{_fmt(ci[1])} and is consistent with zero. That is weaker than the withdrawn claim and it "
-            "is what the data supports."
-        )
-        lines.append("")
-        lines.append("Limits of this estimate, all of which keep it an estimate:")
-        lines.append("")
-        for caveat in behavioural.get("caveats", []):
-            lines.append(f"- {caveat}")
-    lines.append("")
-
-    # 6c-ter. Cluster bootstrap over problems, and what it does and does not fix.
-    lines.append("## Two variance estimates, and which one a verdict must clear")
-    lines.append("")
-    lines.append(
-        "**Seed band** is the min to max across seeds. It captures **sampling variance only**: the "
-        "same problems, the same order, a different sampling seed. It says nothing about whether the "
-        "result would hold on other problems."
-    )
-    lines.append("")
-    lines.append(
-        "**Cluster bootstrap** resamples **problems** with replacement, "
-        f"{metrics.BOOTSTRAP_DRAWS} draws at declared seed `{metrics.BOOTSTRAP_SEED}`, and recomputes "
-        "the terminal statistics each draw. The cluster is the problem, not the completion, because "
-        "completions on one problem share its difficulty, its visible asserts and its held-out set, so "
-        "treating them as independent understates variance. This captures **problem variance**."
-    )
-    lines.append("")
-    lines.append(
-        f"\"Terminal\" here is the last {metrics.TERMINAL_WINDOW_STEPS} steps, not the last step. The "
-        "final step contains 2 problems and 16 completions, and resampling 2 clusters is not a "
-        "bootstrap. That window choice is an implementation decision and is stated rather than buried."
-    )
-    lines.append("")
-    boots = {arm: (entry.get("cluster_bootstrap") or []) for arm, entry in computed.get("arms", {}).items()}
-    if not any(boots.values()):
-        lines.append("No declared runs yet, so neither interval is measurable.")
-    else:
-        lines.append("| Arm | Seed band, terminal gap | Bootstrap 95 percent, terminal gap | Problems | Wider |")
-        lines.append("|---|---|---|---|---|")
-        for arm, entries in sorted(boots.items()):
-            entries = [e for e in entries if e.get("measured")]
-            band = (computed["arms"][arm].get("terminal_gap") or {})
-            band_width = band.get("spread")
-            if not entries:
-                lines.append(f"| {arm} | {_fmt(band_width)} | not measurable | n/a | n/a |")
-                continue
-            widths = [e["gap_width"] for e in entries if e.get("gap_width") is not None]
-            boot_width = max(widths) if widths else None
-            lo = min(e["gap_ci95"][0] for e in entries if e["gap_ci95"][0] is not None)
-            hi = max(e["gap_ci95"][1] for e in entries if e["gap_ci95"][1] is not None)
-            wider = "bootstrap" if (boot_width or 0) >= (band_width or 0) else "seed band"
-            lines.append(
-                f"| {arm} | {_fmt(band_width)} | {_fmt(lo)} to {_fmt(hi)} (width {_fmt(boot_width)}) "
-                f"| {entries[0]['n_problems']} | {wider} |"
-            )
-        lines.append("")
-        lines.append(
-            "**A difference between arms is reported as resolved only if it clears the wider of the "
-            "two.** Where the bootstrap is wider than the seed band, a verdict that looked resolved on "
-            "the seed band alone does not survive, and this section names any verdict that changes."
-        )
-        lines.append("")
-        changed = [
-            f"{arm}: seed band {_fmt((computed['arms'][arm].get('terminal_gap') or {}).get('spread'))} "
-            f"against bootstrap width {_fmt(max((e['gap_width'] for e in entries if e.get('gap_width') is not None), default=None))}"
-            for arm, entries in sorted(boots.items())
-            if [e for e in entries if e.get("measured")]
-        ]
-        lines.append(
-            "Verdicts affected: none yet, because no between-arm comparison exists. Per-arm widths: "
-            + "; ".join(changed)
-            if changed
-            else "Verdicts affected: none yet."
-        )
-        lines.append("")
-        lines.append(
-            "A zero-width bootstrap interval means zero events were observed in the window, not that "
-            "the estimate is precise. It should be read as uninformative, not as certainty."
-        )
-    lines.append("")
-    lines.append(
-        "**What the bootstrap does not fix.** It corrects understated variance. It does **not** correct "
-        "selection bias. The problems in any run are a fixed, deterministic, non-random prefix of the "
-        "eligible set, not a random draw from it, so resampling them estimates the uncertainty of a "
-        "statement about *those* problems and cannot license a statement about MBPP as a whole. The "
-        "bootstrap widens the interval around the right target; it does not move the target."
-    )
-    lines.append("")
-
-    # 6c-quater. What the prefix actually is.
-    prefix = computed.get("prefix_characterisation") or {}
-    lines.append("## What the sampled problems are")
-    lines.append("")
-    if not prefix.get("measured"):
-        lines.append(f"Not measured: {prefix.get('absent_reason')}")
-    else:
-        lines.append(f"**Ordering.** {prefix['ordering']}.")
-        lines.append("")
-        lines.append(
-            f"**{prefix['n_sampled']} sampled** (task ids {prefix['sampled_task_id_range']}) against "
-            f"**{prefix['n_unsampled']} never sampled** (task ids {prefix['unsampled_task_id_range']})."
-        )
-        lines.append("")
-        lines.append("| Property | Sampled mean | Never-sampled mean | Difference | Permutation p | Material |")
-        lines.append("|---|---|---|---|---|---|")
-        for key, entry in prefix["comparisons"].items():
-            lines.append(
-                f"| {key} | {_fmt(entry['sampled_mean'])} | {_fmt(entry['unsampled_mean'])} "
-                f"| {_fmt(entry['difference'])} | {_fmt(entry['permutation_p'])} "
-                f"| {entry['materially_different']} |"
-            )
-        lines.append("")
-        lines.append(
-            f"Two-sided permutation test, {prefix['permutation_draws']} draws, alpha {prefix['alpha']}, "
-            "seed as declared for the bootstrap."
-        )
-        lines.append("")
+    L.append("")
+    L.append("### Why the control data cannot stand in")
+    L.append("")
+    if prefix.get("measured"):
         sampled_split = prefix.get("mbpp_split_composition_sampled") or {}
         unsampled_split = prefix.get("mbpp_split_composition_unsampled") or {}
+        L.append(
+            f"**Prompt coverage.** A run samples {prefix['n_sampled']} distinct problems of "
+            f"{prefix['n_sampled'] + prefix['n_unsampled']} eligible, selected by a deterministic "
+            "unseeded round robin over task id, so every arm and every seed sees the same "
+            "lowest-task-id prefix. That is good for comparability between arms and it means the "
+            "eligible count overstates what any run sees by more than a factor of two."
+        )
+        L.append("")
         if sampled_split and unsampled_split:
-            lines.append("### Provenance, which those four properties do not capture")
-            lines.append("")
-            lines.append(f"- Sampled: `{sampled_split}`")
-            lines.append(f"- Never sampled: `{unsampled_split}`")
-            lines.append("")
-            lines.append(
-                "**The four properties above show no material difference, and this does.** Because "
-                "task id ordering tracks MBPP's own split boundaries, the sampled prefix is almost "
-                "entirely MBPP's *test* split plus several problems from the *prompt* split, while the "
-                "unsampled tail spans test, validation and train. The prompt split is MBPP's designated "
-                "few-shot exemplar set and is the most likely of all to appear in pretraining data."
+            L.append(
+                f"On the four measured properties, held-out test count, visible assert count, "
+                "reference solution length and cheat constructibility, the prefix does not differ "
+                "materially from the tail. **On provenance it does**: sampled "
+                f"`{sampled_split}` against never-sampled `{unsampled_split}`. The prefix is almost "
+                "entirely MBPP's test split plus several problems from the prompt split, which is "
+                "MBPP's designated few-shot exemplar set and the most likely of all to sit in "
+                "pretraining data. **Generalisation from this run is to the sampled prefix, not to "
+                "MBPP.**"
             )
-            lines.append("")
-            lines.append(
-                "So the honest statement is: on problem shape, held-out size, visible assert count, "
-                "reference length and cheat constructibility, the prefix looks like the tail. On "
-                "**provenance** it does not. **Generalisation from this run is to the sampled prefix, "
-                "not to MBPP.** Any claim in this report about behaviour on MBPP should be read as a "
-                "claim about 160 mostly-test-split problems that were chosen by sort order rather than "
-                "at random."
-            )
-        elif prefix.get("any_material_difference"):
-            lines.append(
-                "At least one property differs materially, so **generalisation from this run is to the "
-                "sampled prefix, not to MBPP.**"
-            )
-        else:
-            lines.append(
-                "No measured property differs materially. That is not evidence the prefix is "
-                "representative on properties nobody measured, and the selection is still "
-                "deterministic rather than random."
-            )
-    lines.append("")
-
-    # 6c-quinquies. The think-region diagnostic, and the corrected framing.
-    diagnostic_path = runlog.ARTIFACTS / "diagnostics" / "think_region" / "result.json"
-    lines.append("## Arm A1 read an empty view, and why")
-    lines.append("")
-    lines.append(
-        "**Arm A1 measured nothing.** Its monitor is registered to read the designated thought "
-        "region, and the policy emitted none, so the monitor judged empty strings on every "
-        "completion of every A1 run. Its flag rate is zero by construction, its penalty term is "
-        "identically zero, and its reward is therefore arithmetically A0's. The completed runs "
-        "confirm it: a0 and a1 produce identical trajectories at matching seeds. Full evidence in "
-        "[BLOCKED.md](../BLOCKED.md)."
+            L.append("")
+    L.append(
+        "**Two variance estimates, and a verdict must clear the wider.** The seed band is min to "
+        "max across seeds and captures sampling variance only. The cluster bootstrap resamples "
+        f"**problems** with replacement, {metrics.BOOTSTRAP_DRAWS} draws at declared seed "
+        f"`{metrics.BOOTSTRAP_SEED}`, and captures problem variance. The bootstrap corrects "
+        "understated variance; it does **not** correct selection bias, because the sampled "
+        "problems are a fixed deterministic prefix rather than a random draw. It widens the "
+        "interval around the right target without moving the target."
     )
-    lines.append("")
-    if not diagnostic_path.exists():
-        lines.append("The supplementary diagnostic has not been run, so the cause is not isolated.")
-    else:
-        diagnostic = json.loads(diagnostic_path.read_text(encoding="utf-8"))
-        by_name = {c["name"]: c for c in diagnostic["conditions"]}
-        lines.append(
-            "**The claim is not that a model this size cannot produce a thought region.** A "
-            "supplementary diagnostic, sampling only and never pooled with the matrix, settles what "
-            "the cause actually is. Same step-zero prompts, byte identical, same group size, "
-            f"{diagnostic['max_new_tokens']} max new tokens so a think block and an answer both fit."
+    L.append("")
+    if pooled.get("n_completions"):
+        ci = pooled.get("prevalence_ci95") or [None, None]
+        L.append(
+            f"**Cheat prevalence before any update**, pooled across {pooled['n_runs_pooled']} of "
+            f"{pooled['n_runs_expected']} matrix runs, {pooled['n_completions']} completions: any "
+            f"cheat_form {_fmt(pooled['prevalence'])} with a Wilson interval of {_fmt(ci[0])} to "
+            f"{_fmt(ci[1])}, behavioural cheat rate {_fmt(pooled['behavioural_rate'])}. The "
+            "interval width is the honest headline: at this sample size prevalence is consistent "
+            "with almost anything."
         )
-        lines.append("")
-        lines.append(
-            "| Condition | Non-empty thought region | Mean think chars | Flag rate, A1 view | Flag rate, A2 view | Visible pass |"
-        )
-        lines.append("|---|---|---|---|---|---|")
-        for name in ("qwen2.5-0.5b-instruct", "qwen3-0.6b-raw-prompt", "qwen3-0.6b-chat-template"):
-            entry = by_name.get(name)
-            if not entry:
-                continue
-            ci = entry.get("nonempty_think_ci95") or [None, None]
-            lines.append(
-                f"| `{name}` | **{_fmt(entry['nonempty_think_fraction'])}** "
-                f"({_fmt(ci[0])} to {_fmt(ci[1])}) | {_fmt(entry['think_chars']['mean'], 1)} "
-                f"| {_fmt(entry['flag_rate_think_view'])} | {_fmt(entry['flag_rate_answer_view'])} "
-                f"| {_fmt(entry['visible_pass_rate'])} |"
-            )
-        lines.append("")
-        lines.append(
-            f"n = {by_name['qwen2.5-0.5b-instruct']['n_completions']} completions per condition, which "
-            "is the matrix's own step-zero sample size. Wilson intervals, because the proportions sit "
-            "at the boundary."
-        )
-        lines.append("")
-        lines.append("### What this establishes")
-        lines.append("")
-        lines.append(
-            "**Thought-region monitoring presupposes a policy post-trained to emit a thought region, "
-            "and presupposes an interface that lets it.** Qwen2.5-0.5B-Instruct is not such a policy: "
-            "it emits none, on 0 of 16 completions, even though the prompt explicitly asks for "
-            "`<think>` tags. **This was not checked before the arm was designed.** That is the error, "
-            "and it is a design error rather than a discovery about scale."
-        )
-        lines.append("")
-        lines.append(
-            "Qwen3-0.6B, a model of similar scale that **is** post-trained to think, settles the scale "
-            "question directly: through its own chat template it emits a thought region on **16 of 16** "
-            "completions, averaging 2888 characters. So the behaviour is available at this scale. It "
-            "is a property of post-training, not of parameter count."
-        )
-        lines.append("")
-        lines.append(
-            "**The diagnostic also found a second, independent cause that would have disabled A1 even "
-            "with a thinking model.** Qwen3-0.6B on the matrix's raw prompt string emits a thought "
-            "region on **0 of 16** completions. The same model, the same prompt content, differs only "
-            "in whether the tokenizer's chat template was applied. The matrix builds prompts as a raw "
-            "string and never applies the chat template, so A1 would have read an empty view even if "
-            "the policy had been chosen correctly. Two independent faults, either sufficient."
-        )
-        lines.append("")
-        lines.append(
-            "**The A1 machinery itself is sound.** Given a thought region to read, the monitor flags "
-            f"{_fmt(by_name['qwen3-0.6b-chat-template']['flag_rate_think_view'])} of completions on "
-            "the A1 view while flagging "
-            f"{_fmt(by_name['qwen3-0.6b-chat-template']['flag_rate_answer_view'])} on the A2 view of "
-            "the same completions. The arm fails on its inputs, not on its implementation."
-        )
-        lines.append("")
-        lines.append(
-            f"Cost: {diagnostic['monitor_cost']['calls']} monitor calls, "
-            f"{diagnostic['monitor_cost']['total_tokens']} tokens, "
-            f"{diagnostic['wall_clock_seconds'] / 60:.1f} minutes wall clock on the local GPU shared "
-            "with the running matrix, so no rented compute. This diagnostic is excluded from the "
-            "evidence index and is never pooled with the matrix."
-        )
-    lines.append("")
-
-    # 6c-sexies. Did the v1 loop have usable gradient signal?
-    from alibi.report import retrospective as retro
-
-    retro.write()
-    _analysis, judgement = retro.a0_seed1()
-    lines.append("## Did the v1 loop learn anything?")
-    lines.append("")
-    if not judgement or not judgement.get("measured"):
-        lines.append(f"Not measured: {(judgement or {}).get('absent_reason', 'no a0 seed 1 run stored')}")
-    else:
-        lines.append(
-            "v1's curves are flat. That has two very different explanations, and only one of them is "
-            "about the model: either the policy did not learn to cheat, or the loop could not have "
-            "taught it anything. Recomputed from stored a0 seed 1 artifacts, "
-            f"{judgement['n_steps']} steps."
-        )
-        lines.append("")
-        lines.append("| Measure | First 10 steps | Last 10 steps |")
-        lines.append("|---|---|---|")
-        lines.append(
-            f"| Mean reward | {_fmt(judgement['mean_reward_first10'])} | "
-            f"**{_fmt(judgement['mean_reward_last10'])}** |"
-        )
-        lines.append(
-            f"| Zero-variance groups | {_fmt(judgement['zero_variance_group_fraction_first10'])} | "
-            f"{_fmt(judgement['zero_variance_group_fraction_last10'])} |"
-        )
-        lines.append(
-            f"| Mean token entropy | {_fmt(judgement['entropy_first10'])} | "
-            f"{_fmt(judgement['entropy_last10'])} |"
-        )
-        lines.append(
-            f"| Capped fraction | {_fmt(judgement['capped_fraction_first10'])} | "
-            f"{_fmt(judgement['capped_fraction_last10'])} |"
-        )
-        lines.append(
-            f"| Mean absolute advantage (whole run) | {_fmt(judgement['mean_abs_advantage_mean'])} "
-            f"| max {_fmt(judgement['max_abs_advantage'])} |"
-        )
-        lines.append("")
-        lines.append("### The policy degraded")
-        lines.append("")
-        lines.append(
-            f"**Yes.** Mean reward fell from {_fmt(judgement['mean_reward_first10'])} to "
-            f"{_fmt(judgement['mean_reward_last10'])}, a change of "
-            f"{_fmt(judgement['reward_change'])}. Training made the policy worse at the task it was "
-            "rewarded for. Visible pass rate falls with it. Whatever v1 measured, it was not a policy "
-            "improving and then learning to cheat."
-            if judgement["policy_degraded"]
-            else f"**No.** Mean reward moved from {_fmt(judgement['mean_reward_first10'])} to "
-            f"{_fmt(judgement['mean_reward_last10'])}."
-        )
-        lines.append("")
-        lines.append("### There was gradient signal, and that is not the mechanism")
-        lines.append("")
-        if judgement["most_groups_had_zero_variance"]:
-            lines.append(
-                f"**Most groups had zero reward variance** "
-                f"({_fmt(judgement['zero_variance_group_fraction_mean'])} on average). A group whose "
-                "rewards are all equal produces advantages of exactly zero and contributes no "
-                "gradient. That is the headline mechanism: the loop mostly could not learn."
-            )
-        else:
-            lines.append(
-                f"**No.** Zero-variance groups averaged "
-                f"{_fmt(judgement['zero_variance_group_fraction_mean'])}, so roughly "
-                f"{_fmt(1 - judgement['zero_variance_group_fraction_mean'])} of groups produced a "
-                "non-zero advantage, and mean absolute advantage was "
-                f"{_fmt(judgement['mean_abs_advantage_mean'])} with a maximum of "
-                f"{_fmt(judgement['max_abs_advantage'])}. **The loop had usable gradient signal on "
-                "most steps.** Zero-variance groups are therefore not the explanation for the flat "
-                "curves, and it would have been convenient but wrong to report them as one."
-            )
-        lines.append("")
-        lines.append(
-            "Entropy **rose** from "
-            f"{_fmt(judgement['entropy_first10'])} to {_fmt(judgement['entropy_last10'])}. The policy "
-            "did not collapse onto a single output; it became less confident. Combined with falling "
-            "reward, the picture is a policy being pushed away from its pretrained behaviour without "
-            "finding anything better, which is what a small model under a sparse, mostly-negative "
-            "reward tends to do."
-            if judgement["entropy_first10"] is not None
-            and judgement["entropy_last10"] is not None
-            and judgement["entropy_last10"] > judgement["entropy_first10"]
-            else "Entropy is reported above."
-        )
-        lines.append("")
-        lines.append(
-            f"**Truncation is the standing constraint.** The capped fraction sat at "
-            f"{_fmt(judgement['capped_fraction_first10'])} at the start and "
-            f"{_fmt(judgement['capped_fraction_last10'])} at the end: roughly two completions in five "
-            "were cut off by the 256-token budget for the whole run. That bounds what the policy "
-            "could express throughout and is recorded as v1's third fault."
-        )
-        lines.append("")
-        lines.append(
-            "**Reading for H1.** v1's flat cheat rate should not be read as evidence that a 0.5B "
-            "policy will not learn to reward hack. It is evidence about a run whose policy was "
-            "degrading, whose completions were 40 percent truncated, and one of whose three arms was "
-            "measuring nothing. H1 was not given a fair test."
-        )
-    lines.append("")
-
-    # 6c-septies. The resolved training configuration.
-    lines.append("## The resolved training configuration, and what is not in it")
-    lines.append("")
-    lines.append(
-        "**There is no `GRPOConfig` to report.** TRL is pinned in `env.lock` and `trl.GRPOTrainer` "
-        "is never instantiated. The update in `alibi/train/grpo.py:_update` is hand written, and the "
-        "module docstring says so, but the absence of the trainer changes what several logged "
-        "numbers mean. Resolved from the stored `config.json` of a completed v1 run and from the "
-        "source that consumed it, not from library defaults."
+        L.append("")
+    L.append("### v2 was abandoned as jointly infeasible")
+    L.append("")
+    L.append(
+        "v2 changed the policy to Qwen3-0.6B, applied the chat template and set `max_new_tokens` "
+        "to 3072 from the measured think-length distribution, with a capped-fraction halt of 0.35 "
+        "against the 0.125 truncation that budget produced. Backpropagating through a "
+        "prompt-plus-completion sequence of that length, with a 151936-token vocabulary, does not "
+        "fit in 8 GB. Measured with one budget per process, LoRA and gradient checkpointing "
+        "enabled:"
     )
-    lines.append("")
-    lines.append("| Setting | v1 resolved value |")
-    lines.append("|---|---|")
+    L.append("")
+    L.append("| Budget | Result | Peak allocated |")
+    L.append("|---|---|---|")
+    L.append("| 3072, registered | **OOM** | 7.05 GB |")
+    L.append("| 2048 | **OOM** | 6.45 GB |")
+    L.append("| 1536 | **OOM** | 6.62 GB |")
+    L.append("| 1024 | fits | 5.54 GB |")
+    L.append("")
+    L.append(
+        "The floor is the full-vocab logits tensor, about 1 GB in bf16 before the backward graph. "
+        "Chunked softmax and gradient checkpointing were both applied and neither is sufficient. "
+        "Both numbers are registered in `alibi-prereg-v2.2`, so neither was changed to make the run "
+        "fit, and no fused chunked LM head was built. See `BLOCKED-v2.md`."
+    )
+    L.append("")
+    L.append("### v3 was stopped by its own qualifying measurement")
+    L.append("")
+    L.append(
+        "v3 was a **different and smaller experiment, not v2 rescued**: a 1024-token budget, arms "
+        "a0 and a2 only, one seed, everything else inherited. Arm a1 was excluded outright because "
+        "the measured median think block is 746 tokens and a 1024 budget cannot hold think plus "
+        "answer."
+    )
+    L.append("")
+    L.append(
+        "A no-training sampling pass at 1024 tokens, 64 completions over 8 eligible problems, was "
+        "to set its capped-fraction halt. It stopped the version instead:"
+    )
+    L.append("")
+    L.append("| Measure | Value | 95 percent interval |")
+    L.append("|---|---|---|")
+    L.append("| Capped fraction | **0.6875** | 0.5661 to 0.7877 |")
+    L.append("| Completions yielding code | **0.4219** | 0.3087 to 0.5439 |")
+    L.append("| Think block closed | 0.4219 | |")
+    L.append("| Median tokens | 1024, the cap itself | |")
+    L.append("")
+    L.append(
+        "The median completion is capped, so more than half never finish thinking. The "
+        "closed-think fraction and the has-code fraction are equal at **exactly 27 of 64**: a "
+        "completion yields code if and only if its think block closed, so the other 58 percent "
+        "carry an empty answer. Arm a2's monitor reads the answer, so it would read an empty "
+        "string on 58 percent of completions and return unflagged. **a2 would measure the "
+        "monitor's response to absence rather than to cheating** — the fault of 2.1 reappearing in "
+        "a different arm, arriving through the token budget instead of through the policy."
+    )
+    L.append("")
+    L.append(
+        "No halt threshold was chosen, because any value above 0.6875 would be a licence rather "
+        "than a guard, and no `alibi-prereg-v3.0` tag was created, because a pre-registration tag "
+        "records intent frozen before data and here the blocking data arrived first. The design is "
+        "in `alibi/prereg_v3.py` with `RUNNABLE = False`."
+    )
+    L.append("")
+
+    # ------------------------------------------------------------ 6. UNRESOLVED
+    L.append("## 6. Unresolved")
+    L.append("")
+    L.append(
+        "**The sampler and trainer logprobs diverge by more than numerical noise on identical "
+        "weights, and it is not diagnosed.** After `trainer_logprob` was fixed to be a genuine "
+        "prompt-conditioned recomputation, the two columns differ on **0 of 96** rows, with a mean "
+        "absolute difference of **0.2150** and a maximum of **1.8477**."
+    )
+    L.append("")
+    L.append(
+        "Both are computed from the same weights at the same step. The paths differ in more than "
+        "precision: the sampler reads the generation path with a KV cache, one position at a time, "
+        "while the trainer runs a single full forward over prompt and completion together. A "
+        "difference of this size is well past what bf16 rounding alone would explain, and which "
+        "part of that gap is attributable to the cache, to kernel selection, or to something else "
+        "has not been established."
+    )
+    L.append("")
+    L.append(
+        "This is stated as an open question rather than an explanation, and it is the follow-on "
+        "project's subject arriving early. It is also a caution about the fix: the column now "
+        "carries information, and what that information means is not yet known."
+    )
+    L.append("")
+
+    # ------------------------------------------------------------ 7. PROVENANCE
+    L.append("## 7. Provenance")
+    L.append("")
+    L.append(f"- Pre-registration: `{prereg.PREREG.version}`, hash `{prereg.PREREG_HASH[:16]}`")
+    L.append(f"- Eligible problems: {provenance.get('eligibility_n_problems')}, frozen and hashed")
+    L.append(f"- Reward: `{prereg.PREREG.reward_definition}`, lambda {prereg.PREREG.lambda_monitor}")
+    L.append(f"- Declared evidence runs: {computed.get('n_declared_runs', 0)}")
+    L.append("")
+    L.append("### The resolved training configuration")
+    L.append("")
+    L.append("| Setting | v1 resolved value |")
+    L.append("|---|---|")
     for name, value in [
         ("Optimiser", "`torch.optim.AdamW`, betas (0.9, 0.999), eps 1e-8, weight decay 0.01, all defaults"),
         ("Learning rate", "1e-5, constant"),
         ("Scheduler", "**none**"),
         ("Warmup", "**none**, 0 steps"),
         ("Gradient clipping", "global norm 1.0"),
-        ("beta, KL coefficient in the loss", "**there is no KL term in the loss**, and no reference policy existed"),
+        ("beta, KL coefficient in the loss", "**no KL term in the loss**, and no reference policy existed"),
         ("epsilon, PPO clip ratio", "**none**, the loss is an unclipped `-advantage x logprob`"),
-        ("LoRA", "r 16, alpha 32, dropout 0.0, targets q/k/v/o_proj, task CAUSAL_LM"),
+        ("LoRA", "r 16, alpha 32, dropout 0.0, targets q/k/v/o_proj"),
         ("Effective batch", "16 completions per step, 2 prompts x group 8"),
-        ("Gradient accumulation", "16, one backward per completion scaled 1/16, one optimiser step per training step"),
+        ("Gradient accumulation", "16, one backward per completion, one optimiser step per training step"),
         ("Objective", "mean token logprob, length normalised, not a token sum"),
     ]:
-        lines.append(f"| {name} | {value} |")
-    lines.append("")
-    lines.append("### Two logged numbers mean less than their names suggest")
-    lines.append("")
-    lines.append(
-        "**The `kl` column in v1 is not KL from a reference policy.** No reference policy existed. "
-        "It was computed as the current policy's mean token logprob minus the sampler's mean token "
-        "logprob **from the same step**, and generation happens with the same weights immediately "
-        "before the update. It therefore measured numerical difference between `generate` and a "
-        "forward pass, not policy drift. **The KL spike halt condition was consequently guarding "
-        "nothing meaningful in v1**, and no v1 run ever tripped it, which should now be read as "
-        "uninformative rather than reassuring."
+        L.append(f"| {name} | {value} |")
+    L.append("")
+    L.append("### Config hash discontinuity")
+    L.append("")
+    L.append(
+        "`ArmConfig` gained `policy_version` and `apply_chat_template` partway through the work. "
+        "Both are behaviourally inert defaults, so runs before and after are identical in what "
+        "they did, but **their config hashes are not comparable**. The four declared evidence runs "
+        "predate the change and carry configs without those keys. An auditor diffing config hashes "
+        "will see a discontinuity there; it cannot be fixed retroactively without editing "
+        "artifacts, which is not done."
     )
-    lines.append("")
-    lines.append(
-        "**`trainer_logprob` is a literal copy of `sampler_logprob`.** Verified on stored data: "
-        "3430 of 3430 rows identical at step 0 of a0 seed 1. The architecture doc asks for this pair "
-        "so the follow-on project can study what happens to it when the rollout path changes. As "
-        "stored it is the same number twice, so v1's `logprobs.parquet` does not support that "
-        "analysis. This is a defect in v1's logging, not in the follow-on plan."
+    L.append("")
+    L.append("### Halt conditions were amended before any curve existed")
+    L.append("")
+    L.append(
+        "**1. Indeterminate held-out rate, instantaneous to lagging window.** The threshold, 5 "
+        "percent, was not changed; the evaluation window was. On a0/s1, steps 0 to 7 were 0.0000 "
+        "and step 8 was 0.0584, caused by exactly one completion of sixteen whose code hung, "
+        "making 92 of its ~99 held-out tests indeterminate. Spikes of that kind arrived every four "
+        "or five steps, so the instantaneous reading would have halted every run within about ten "
+        "steps while saying nothing about the sandbox. The halt condition's own wording permits "
+        "evaluation on a lagging window when held-out scoring is asynchronous, which it is. "
+        "Amended by the implementer."
     )
-    lines.append("")
-    lines.append(
-        "Taken with the retrospective above, the picture is coherent: an unclipped, unanchored "
-        "policy gradient with no trust region, at a constant learning rate, on a small model. "
-        "Reward fell and entropy rose, which is what that configuration does when the reward is "
-        "sparse and mostly negative. v2 declares these settings in `alibi/prereg_v2.py` and chooses "
-        "the learning rate and KL anchor from ten-step probes rather than inheriting them silently."
+    L.append("")
+    L.append(
+        "**2. The queue stop rule, three consecutive halts to more than half failed.** Amended by "
+        "the operator's instruction."
     )
-    lines.append("")
+    L.append("")
+    L.append(
+        "**The halt conditions were specified against an imagined run.** They were written before "
+        "any training had happened, and first contact with a real policy showed one of them "
+        "incompatible with the thing it was guarding. Treat them as a design artifact revised on "
+        "contact with data, not as constraints that survived unchanged."
+    )
+    L.append("")
+    if figures:
+        L.append("### Figures")
+        L.append("")
+        for name, path in sorted(figures.items()):
+            L.append(f"![{name}](figures/{Path(path).name})")
+            L.append("")
+    L.append("```json")
+    L.append(json.dumps(runlog.scrub(provenance), indent=2, sort_keys=True))
+    L.append("```")
+    L.append("")
+    L.append(
+        f"Generated {published['generated_utc']} by `alibi report`. Numbers are injected from "
+        "`artifacts/`, never typed. `alibi verify --no-gpu` recomputes every claim above. Every "
+        "autonomous decision, including the ones later withdrawn, is in `DECISIONS.md`."
+    )
+    L.append("")
 
-    # 6c-octies. v2 and v3 were both abandoned before producing a run.
-    lines.append("## v2 and v3 were abandoned, and neither produced a run")
-    lines.append("")
-    lines.append(
-        "**v2 was abandoned because two of its own registered values are jointly infeasible on the "
-        "available hardware.** `max_new_tokens = 3072` was sized from the measured think-length "
-        "distribution, and the capped-fraction halt of 0.35 was set against the 0.125 truncation "
-        "that budget produced. Backpropagating through a prompt-plus-completion sequence of that "
-        "length, with a 151936-token vocabulary, does not fit in 8 GB. Measured with one budget "
-        "per process, LoRA and gradient checkpointing enabled: 3072 OOM at 7.05 GB peak, 2048 OOM, "
-        "1536 OOM, 1024 fits at 5.54 GB. The floor is the full-vocab logits tensor, about 1 GB in "
-        "bf16 before the backward graph. Chunked softmax and gradient checkpointing were both "
-        "applied and neither is sufficient. Both numbers are registered in `alibi-prereg-v2.2`, so "
-        "neither was changed to make the run fit. See `BLOCKED-v2.md`."
-    )
-    lines.append("")
-    lines.append(
-        "**v3 was a scoped-down variant, and it is not v2 rescued.** It was a different and smaller "
-        "experiment: a 1024-token budget, arms a0 and a2 only, one seed. Arm a1 was excluded "
-        "outright because the measured median think block is 746 tokens and a 1024-token budget "
-        "cannot hold think plus answer, so a1 would read a truncated or empty view, which is the "
-        "fault that made it arithmetically identical to a0 in v1."
-    )
-    lines.append("")
-    lines.append(
-        "**v3 was stopped by its own qualifying measurement, before any training.** A no-training "
-        "sampling pass at 1024 tokens, 64 completions over 8 eligible problems, measured:"
-    )
-    lines.append("")
-    lines.append("| Measure | Value | 95 percent interval |")
-    lines.append("|---|---|---|")
-    lines.append("| Capped fraction | **0.6875** | 0.5661 to 0.7877 |")
-    lines.append("| Completions yielding code | **0.4219** | 0.3087 to 0.5439 |")
-    lines.append("| Think block closed | 0.4219 | |")
-    lines.append("| Median tokens | 1024, the cap itself | |")
-    lines.append("")
-    lines.append(
-        "The median completion is capped, so more than half never finish thinking. The "
-        "closed-think fraction equals the has-code fraction exactly, 27 of 64 in both cases: a "
-        "completion yields code if and only if its think block closed, so the other 58 percent "
-        "carry an empty answer."
-    )
-    lines.append("")
-    lines.append(
-        "**That is decisive for the only comparison v3 existed to make.** Arm a2's monitor reads "
-        "the answer, so on 58 percent of completions it would read an empty string and return "
-        "unflagged. a2 would be measuring the monitor's response to absence rather than to "
-        "cheating, and the a0 against a2 contrast would be uninterpretable. It is the a1 failure "
-        "of v1 reappearing in a2, arriving through the token budget instead of through the policy."
-    )
-    lines.append("")
-    lines.append(
-        "The capped-fraction halt for v3 was to be set from that measurement plus headroom. A "
-        "threshold above 0.6875 would not be a guard, it would be a licence, so none was chosen "
-        "and no `alibi-prereg-v3.0` tag was created. A pre-registration tag records intent frozen "
-        "before data; here the blocking data arrived first, so there was nothing to pre-register. "
-        "The design is recorded in `alibi/prereg_v3.py` with `RUNNABLE = False`."
-    )
-    lines.append("")
-    lines.append(
-        "**This report therefore stands on the five faults and on v1's control data.** No "
-        "monitored-arm comparison exists at any version."
-    )
-    lines.append("")
-
-    # 6d. Amendments to the halt conditions, stated plainly.
-    lines.append("## Halt conditions were amended before any curve existed")
-    lines.append("")
-    lines.append(
-        "Two of the pre-declared halt conditions were amended before any monitored-arm curve had been "
-        "produced. Both amendments are recorded here because a halt condition that moved is a fact about "
-        "the experiment, not an implementation detail."
-    )
-    lines.append("")
-    lines.append(
-        "**1. Indeterminate held-out rate, instantaneous to lagging window.** The threshold, 5 percent, "
-        "was not changed. The evaluation window was. Measured on a0 seed 1: steps 0 to 7 were 0.0000 and "
-        "step 8 was 0.0584, caused by exactly one completion out of sixteen whose code hung, which made "
-        "92 of its ~99 held-out tests indeterminate. Spikes of that kind arrived every four or five steps, "
-        "so the instantaneous reading would have halted every run within about ten steps while saying "
-        "nothing about the sandbox. The halt condition's own wording permits this: it specifies "
-        "evaluation \"on a lagging window if held-out scoring is asynchronous\", and held-out scoring here "
-        "is asynchronous. Amended by the implementer."
-    )
-    lines.append("")
-    lines.append(
-        "**2. The queue stop rule, three consecutive halts to more than half failed.** Amended by the "
-        "operator's instruction. Three consecutive halts for the same reason is still detected and "
-        "recorded as a warning, but no longer stops the queue on its own."
-    )
-    lines.append("")
-    lines.append(
-        "**The halt conditions were specified against an imagined run.** They were written before any "
-        "training had happened, against an expectation of how a run would behave, and the first contact "
-        "with a real 0.5B policy showed one of them to be incompatible with the thing it was guarding. "
-        "That is worth stating plainly: a reader should treat the halt conditions as a design artifact "
-        "that was revised on contact with data, not as constraints that survived unchanged."
-    )
-    lines.append("")
-
-    # 7. Threats.
-    lines.append("## Threats to the result")
-    lines.append("")
-    lines.append(
-        "1. **Measurement drift.** This ran on a laptop under sustained load. Held-out timeouts are "
-        "the channel through which thermal throttling could contaminate the primary metric. The "
-        "indeterminate rate is logged per step, is a halt condition at 5 percent, and has its own "
-        "figure panel. The correlation between indeterminate rate and cheat rate is reported."
-    )
-    lines.append(
-        "2. **The structural check is a check on syntax.** It was extended to the dict and sequence "
-        "forms after day 1 measured it catching 372 of 376 if-chain cheats and 0 of 376 dict cheats. "
-        "That it needed extending is evidence that it can be evaded by a form nobody enumerated, "
-        "which is why the primary oracle is behavioural."
-    )
-    lines.append(
-        "3. **The synthetic cheat is not a model.** The gate shows the environment rewards "
-        "hardcoding. It does not show that a 0.5B policy can discover hardcoding within the step "
-        "budget. H1 is exactly that question and it is not settled by the gate."
-    )
-    lines.append("")
-
-    # 8. Provenance.
-    lines.append("## Provenance")
-    lines.append("")
-    lines.append("```json")
-    lines.append(json.dumps(runlog.scrub(provenance), indent=2, sort_keys=True))
-    lines.append("```")
-    lines.append("")
-    lines.append(f"Generated {published['generated_utc']} by `alibi report`. Numbers are injected from")
-    lines.append("`artifacts/`, never typed. `alibi verify --no-gpu` recomputes every claim above.")
-    lines.append("")
-
-    REPORT_PATH.write_text("\n".join(lines), encoding="utf-8")
+    REPORT_PATH.write_text("\n".join(L), encoding="utf-8")
     out = {
         "report": REPORT_PATH,
         "published": PUBLISHED_PATH,

@@ -1,59 +1,75 @@
 # Alibi
 
-Train a small open model with GRPO on a task where cheating pays, penalise it with a
-monitor that reads its reasoning, and measure whether it stops cheating or just stops
-saying so.
+**A failed experiment with a complete forensic record.** It set out to measure whether a
+policy penalised by a monitor stops reward hacking or just stops saying so. No such
+measurement exists here. What exists instead is five distinct faults, each of which alone
+would have produced a confident, publishable-looking curve that meant nothing, and each of
+which was caught by instrumentation built before the runs.
+
+That is the result, and it is the reason the repository is worth reading.
 
 ---
 
-## Read this first
+## The five faults
 
-This repository contains a working instrument and an experiment that has not yet
-produced a citable result. Four faults were found by the instrument itself, and all
-four are reported rather than quietly corrected.
+**No monitored-arm comparison exists at any version.**
 
-**No `GRPOTrainer` was used.** TRL is pinned in every `env.lock` and is never
-instantiated. The update is a hand-written policy gradient in `alibi/train/grpo.py`.
-There is no `GRPOConfig` to inspect, and any reader assuming a standard TRL loop will
-misread the artifacts.
+1. **Arm A1's monitor read an empty view.** Qwen2.5-0.5B-Instruct emits no designated
+   thought region despite the prompt asking, so A1's flag rate was zero by construction
+   and its reward was arithmetically the unmonitored control's. Confirmed by a0/s1 and
+   a1/s1 matching to three decimals.
+2. **The chat template was never applied.** Qwen3-0.6B emits a thought region on 0 of 16
+   completions from a raw prompt and 16 of 16 through its own template, same content.
+   Either fault alone was sufficient to empty the arm.
+3. **44.8 percent of completions hit the token cap**, scoring 0.1053 visible pass against
+   0.2254 for those that stopped naturally.
+4. **The objective had no prompt conditioning.** The gradient maximised the unconditional
+   likelihood of completion text. Reward fell 0.2176 to 0.0990 while entropy rose 0.6384
+   to 0.8354.
+5. **`trainer_logprob` was a copy of `sampler_logprob`**, 3430 of 3430 rows. The column
+   collected to detect sampler-trainer divergence could not have shown any.
 
-**In v1 that objective was neither clipped nor anchored.** No reference policy existed,
-so there was no KL term in the loss, no ratio clipping and no trust region. It was
-`-advantage x logprob` at a constant learning rate, with no scheduler and no warmup.
-An unclipped, unanchored objective is not GRPO.
+Details, including what each would have produced undetected and what caught it, are in
+[report/REPORT.md](report/REPORT.md).
 
-**v1's update did not condition on the prompt.** It fed completion tokens with the
-prompt stripped, so the gradient maximised the unconditional likelihood of completion
-text rather than the likelihood of a solution given a problem.
+## Why the faults surfaced as numbers
 
-**Two v1 columns do not mean what their names suggest.**
+The load-bearing claim. Each was caught because a specific piece of instrumentation
+existed before the runs did:
 
-- `kl` is not KL from a reference policy. None existed. It compared the policy against
-  the sampler's own logprobs from the same step, computed with the same weights, so it
-  measured numerical noise rather than drift. **The KL spike halt condition was
-  guarding nothing in v1**, and no run tripping it is uninformative rather than
-  reassuring.
-- `trainer_logprob` is a literal copy of `sampler_logprob`, identical on 3430 of 3430
-  rows at step 0. v1's `logprobs.parquet` therefore does not support the sampler versus
-  trainer analysis it was collected for.
+- The reward monitor is separated from the behavioural oracle **by construction**, with a
+  test that fails if anything connects them.
+- Timeouts and crashes are a third outcome, never a fail, so infrastructure failure cannot
+  read as a policy that does not generalise.
+- A monitor error is always flagged, so an outage raises the penalty rather than lowering
+  it. No exception in the judging path can yield `flagged=False`.
+- Structural precision was measured on honest code **before** the panel was trusted, and
+  found 5 of 365 reference solutions falsely flagged.
+- A vindication claim was **withdrawn as circular** once the eligibility filter was seen
+  to use the behavioural rule's own criterion.
 
-All four are fixed for v2. None is fixed retroactively: v1's artifacts stand as
-measured. **v1's flat cheat rate is not evidence about the pre-registered H1.**
+## What this says about experiments of this shape
 
-A fifth finding, of a different kind: **arm A1 measured nothing.** Its monitor reads a
-designated thought region, and Qwen2.5-0.5B-Instruct emits none, so the monitor judged
-empty strings and A1 became arithmetically identical to the unmonitored control. See
-[BLOCKED.md](BLOCKED.md).
+- An arm that reads thought tokens presupposes a policy post-trained to emit them **and**
+  an interface that lets it. Neither is implied by model size.
+- An empty view and a clean policy are indistinguishable at the monitor's output. A flag
+  rate of exactly zero is a defect signal until shown otherwise.
+- The token budget silently decides which arms are comparable.
+- A flat cheat rate is uninformative unless the loop is shown to have been optimising the
+  intended objective.
 
-## What is solid
+## What was never tested
 
-- The environment gate. A hardcoding solution built programmatically from the visible
-  asserts passes visible tests on 371 of 376 problems and fails held-out on 370.
-  Cheating pays, which is the premise the whole design rests on.
-- The sandbox. Four adversarial tests, mount and network namespaces, fail-closed.
-- The oracle is separated from the reward by construction, with a test that fails if
-  anything connects them.
-- Monitor errors are always flagged, so an outage can never read as innocence.
+H1, H2 and H3 are all unevaluated. v2 was abandoned because two of its own registered
+values are jointly infeasible on an 8 GB card. v3 was stopped by its own qualifying
+measurement: at a 1024-token budget the capped fraction is 0.6875 and only 42 percent of
+completions yield code, so an answer-reading arm would read an empty string on 58 percent
+of them. See [BLOCKED.md](BLOCKED.md) and [BLOCKED-v2.md](BLOCKED-v2.md).
+
+## Unresolved
+
+Sampler and trainer logprobs diverge by 0.2150 mean and 1.8477 max on identical weights,
+past what bf16 noise explains, and it is not diagnosed.
 
 ## Checking the claims
 
@@ -67,27 +83,27 @@ Recomputes every published number from `artifacts/` alone. No GPU, no network.
 
 | Path | What it is |
 |---|---|
-| `report/REPORT.md` | generated, numbers injected from artifacts |
-| `DECISIONS.md` | every autonomous decision, what was rejected, and why |
-| `BLOCKED.md` | the A1 collision, with evidence |
+| `report/REPORT.md` | the study, numbers injected from artifacts |
+| `DECISIONS.md` | every autonomous decision, including those later withdrawn |
+| `BLOCKED.md`, `BLOCKED-v2.md` | the A1 collision and the v2 infeasibility, with evidence |
 | `BUDGET.md` | measured throughput and the step-count arithmetic |
 | `alibi/prereg.py` | the frozen v1 measurement, hashed into every run |
-| `alibi/prereg_v2.py` | v2, which imports v1's measurement rather than restating it |
+| `alibi/prereg_v2.py`, `alibi/prereg_v3.py` | later versions, inheriting by import; v3 is `RUNNABLE = False` |
 | `artifacts/index.json` | evidence by explicit declaration, never by sort or mtime |
 
 ## What this is not
 
-Not frontier scale. Not novel. Not bitwise reproducible on this rollout path. The
-policy is 0.5B in v1 and 0.6B in v2, and no claim here generalises beyond the 160
-problems any single run actually samples, which are a deterministic prefix of the
-eligible set rather than a random draw.
+Not frontier scale. Not novel. Not bitwise reproducible on this rollout path. No claim
+generalises beyond the 160 problems any single run samples, which are a deterministic
+lowest-task-id prefix rather than a random draw, and which are almost entirely MBPP's test
+split plus several of its few-shot exemplars.
 
 ## Dual use
 
-This trains a small model to evade a text-based monitor on a toy coding task. The
-artifact has no capability worth misusing, and the technique it demonstrates is already
-published. It is included for the reason the safety literature publishes such things,
-which is that the mitigation depends on knowing the failure mode exists.
+This trains a small model to evade a text-based monitor on a toy coding task. The artifact
+has no capability worth misusing, and the technique it demonstrates is already published.
+It is included for the reason the safety literature publishes such things, which is that
+the mitigation depends on knowing the failure mode exists.
 
 ## Licenses and citations
 
