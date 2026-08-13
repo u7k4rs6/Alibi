@@ -1,0 +1,28 @@
+{
+  "cross_path": {
+    "comparison": "sampler vs trainer, cross path",
+    "identical_fraction": 0.02992712048379594,
+    "identical_pairs": 579,
+    "max_abs_diff": 0.35368871688842773,
+    "mean_abs_diff": 0.01745590162342733,
+    "median_abs_diff": 0.0012603718787431717,
+    "n_token_pairs": 19347
+  },
+  "declared": "No training. Both distributions computed from the same completions in the same process on the same weights, so they are directly comparable. Cross path is the generation-time streaming recorder against the prompt-conditioned forward the update uses. Same path is that forward run twice, back to back.",
+  "diagnostic": "logprob_divergence_with_same_path_control",
+  "max_new_tokens": 3072,
+  "model": "Qwen/Qwen3-0.6B",
+  "n_completions": 16,
+  "ratio_max_cross_over_same": null,
+  "ratio_mean_cross_over_same": null,
+  "same_path_control": {
+    "comparison": "trainer vs trainer, same path repeated",
+    "identical_fraction": 1.0,
+    "identical_pairs": 19347,
+    "max_abs_diff": 0.0,
+    "mean_abs_diff": 0.0,
+    "median_abs_diff": 0.0,
+    "n_token_pairs": 19347
+  },
+  "seed": 1
+}

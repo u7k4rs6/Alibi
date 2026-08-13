@@ -9,6 +9,11 @@
       "path": "artifacts/diagnostics/logprob_divergence/result.json",
       "sha256": "3e12a1edca7c645220ebfdad16c68950360a1f76d6f20e2417127f317a3d9d31",
       "why": "backs REPORT.md section 6 after the audit found the prior numbers rested on a deleted run (audit F1)"
+    },
+    {
+      "path": "artifacts/diagnostics/logprob_divergence/same_path_control.json",
+      "sha256": "e2c85835dbc16ba55083af95882e632073c7199a88650b857106505e024f29a4",
+      "why": "same-path control for section 6: the trainer forward run twice on identical completions, which is the baseline the cross-path divergence lacked"
     }
   ],
   "excluded_by_policy": [

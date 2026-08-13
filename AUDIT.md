@@ -338,3 +338,27 @@ chosen and, where a claim could not be supported, the withdrawal.
 The report also gained a section, "The audit, and where this report failed its
 own standard", naming the four section-3 failures in the report's own voice and
 citing what the audit verified as sound.
+
+### Addendum: the same-path control
+
+Section 6's re-measurement (F1 remediation) was still missing its baseline: a
+cross-path spread means nothing without knowing what repeating one path costs.
+The control was run on the operator's instruction — trainer forward twice, same
+completions, same weights, same process, both distributions computed together.
+
+| Comparison | n | Bitwise identical | Mean abs | Median abs | Max abs |
+|---|---|---|---|---|---|
+| Trainer vs trainer, same path | 19,347 | 19,347 | 0.000000 | 0.000000 | 0.000000 |
+| Sampler vs trainer, cross path | 19,347 | 579 | 0.017456 | 0.001260 | 0.353689 |
+
+**The same path is bitwise identical on every pair.** Nondeterminism is absent,
+not merely small, so no part of the cross-path spread can be attributed to it.
+Section 6 changed from an open question to a resolved one: the divergence is a
+genuine property of the two paths. What remains open is its mechanism, which is
+a narrower and better-posed question than the one it replaces.
+
+Recorded here because the audit itself did not think to demand this control —
+it accepted a quantity with no baseline as an open question, which is a milder
+version of the same error the report documents. Artifact:
+`artifacts/diagnostics/logprob_divergence/same_path_control.json`, declared in
+the index and covered by verify.

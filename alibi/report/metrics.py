@@ -966,6 +966,18 @@ def fault_measurements() -> dict:
                                          "mean_abs_advantage_mean", "max_abs_advantage")
             }
 
+    # The same-path control, from its artifact.
+    ctrl_path = ARTIFACTS / "diagnostics" / "logprob_divergence" / "same_path_control.json"
+    if ctrl_path.exists():
+        ctrl = json.loads(ctrl_path.read_text(encoding="utf-8"))
+        out["logprob_same_path_control"] = {
+            "cross_" + k: ctrl["cross_path"][k]
+            for k in ("n_token_pairs", "identical_pairs", "mean_abs_diff", "median_abs_diff", "max_abs_diff")
+        } | {
+            "same_" + k: ctrl["same_path_control"][k]
+            for k in ("n_token_pairs", "identical_pairs", "mean_abs_diff", "median_abs_diff", "max_abs_diff")
+        }
+
     # The re-measured divergence, from its artifact.
     div_path = ARTIFACTS / "diagnostics" / "logprob_divergence" / "result.json"
     if div_path.exists():

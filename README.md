@@ -71,13 +71,20 @@ measurement: at a 1024-token budget the capped fraction is 0.6875 and only 42 pe
 completions yield code, so an answer-reading arm would read an empty string on 58 percent
 of them. See [BLOCKED.md](BLOCKED.md) and [BLOCKED-v2.md](BLOCKED-v2.md).
 
-## Unresolved
+## The sampler and trainer paths genuinely disagree
 
-An earlier revision quantified the sampler-trainer logprob divergence from a deleted run
-on the wrong configuration; those figures are withdrawn. Re-measured on the v2 policy and
-budget with a committed artifact: per-token mean 0.0175, median 0.0013, max 0.354 over
-19,347 pairs. The tail exceeds where mixed-precision rounding plausibly lives and its
-cause is not established.
+An earlier revision quantified this from a deleted run on the wrong configuration; those
+figures are withdrawn. Re-measured on the v2 policy and budget, with a same-path control
+from the same completions in the same process:
+
+| Comparison | Bitwise identical | Mean abs | Max abs |
+|---|---|---|---|
+| Trainer vs trainer, same path repeated | **19,347 of 19,347** | **0.000000** | **0.000000** |
+| Sampler vs trainer, cross path | 579 of 19,347 | 0.017456 | 0.353689 |
+
+Run-to-run nondeterminism here is not small, it is absent, so none of the cross-path
+spread is noise. The two paths compute different numbers for the same token under the same
+weights, reproducibly. **Whether they differ is settled; which one is right is not.**
 
 ## Checking the claims
 

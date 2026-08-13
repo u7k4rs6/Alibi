@@ -220,13 +220,26 @@ The median completion is capped, so more than half never finish thinking. The cl
 
 No halt threshold was chosen, because any value above 0.6875 would be a licence rather than a guard, and no `alibi-prereg-v3.0` tag was created, because a pre-registration tag records intent frozen before data and here the blocking data arrived first. The design is in `alibi/prereg_v3.py` with `RUNNABLE = False`.
 
-## 6. Unresolved
+## 6. Resolved: the sampler and trainer paths genuinely disagree
 
-**Withdrawn.** Earlier revisions of this section quantified the sampler-trainer logprob divergence as 0.2150 mean and 1.8477 maximum on identical weights and called it well past bf16 noise. An audit found those figures rested on a run that had been deleted, measured on a different policy at a 48-token budget, neither of which the text disclosed. The numbers are withdrawn, not reworded.
+**Withdrawn first.** Earlier revisions quantified the sampler-trainer logprob divergence as 0.2150 mean and 1.8477 maximum and called it well past bf16 noise. An audit found those figures rested on a run that had been deleted, measured on a different policy at a 48-token budget, neither disclosed. They are withdrawn, not reworded.
 
-**Re-measured on the v2 policy and budget**, Qwen3-0.6B through its chat template at 3072 tokens, per token rather than per completion, no training, committed to `artifacts/diagnostics/logprob_divergence/result.json` and declared in the index: over **19347** token pairs from 16 completions, mean absolute difference **0.0175**, median **0.0013**, maximum **0.3537**, with 579 pairs bit-identical.
+**And the replacement had no baseline.** The re-measured cross-path figure, on its own, could not distinguish a real path difference from ordinary run-to-run nondeterminism. The control that settles it is the trainer's own forward run twice on the same completions, same weights, same process. Both distributions below come from the **same completions in the same process**, so they are directly comparable rather than two separate experiments.
 
-That is an order of magnitude smaller than the withdrawn figures, which is itself the point: the withdrawn numbers did not survive a properly provenanced re-measurement. What remains open is the honest residue: the median sits where mixed-precision rounding plausibly lives, the tail does not obviously, and how much of the gap is the KV-cache path against the full forward, kernel selection, or something else has not been established. The sampler reads generation one position at a time through a cache; the trainer runs one forward over prompt and completion together. This is the follow-on project's subject and it stays open rather than explained.
+| Comparison | n token pairs | Bitwise identical | Mean abs | Median abs | Max abs |
+|---|---|---|---|---|---|
+| Trainer vs trainer, **same path repeated** | 19347 | **19347 of 19347** | **0.000000** | 0.000000 | **0.000000** |
+| Sampler vs trainer, **cross path** | 19347 | 579 of 19347 | 0.017456 | 0.001260 | 0.353689 |
+
+**The same path is bitwise identical on every one of its 19347 token pairs.** Mean, median and maximum absolute difference are all exactly zero. The ratio of cross-path to same-path spread is not reported because the denominator is exactly zero, which is a stronger statement than any ratio would be.
+
+**Which reading the data supports: the cross-path gap is real.** Run-to-run nondeterminism in this configuration is not small, it is absent, so none of the cross-path spread can be attributed to it. The two paths compute different numbers for the same token under the same weights, reproducibly. The median of 0.001260 is consistent with accumulated mixed-precision difference between a cached incremental decode and a single full forward; the maximum of 0.3537 on a log probability is not, and only 3 percent of cross-path pairs agree exactly.
+
+**So the question this section used to leave open is closed, and a narrower one replaces it.** It is settled that the divergence is a genuine property of the two paths rather than noise. What is not settled is its mechanism: the KV-cache incremental decode against the single full forward, kernel or reduction-order selection at different sequence shapes, or something else. That is a question about which path is right, not about whether they differ, and it is the follow-on project's subject stated more sharply than before.
+
+It also means the column is now doing the job it was collected for. In v1 the pair was the same number twice and could not have shown this; the fault in section 2.5 was hiding a real effect, not merely a redundant column.
+
+Artifacts: `artifacts/diagnostics/logprob_divergence/result.json` and `same_path_control.json`, both declared in the index.
 
 ## The audit, and where this report failed its own standard
 
@@ -290,4 +303,4 @@ The four declared evidence runs ran at four different git revisions. An audit di
 }
 ```
 
-Generated 2026-08-13T07:14:03.191321+00:00 by `alibi report`. Most numbers are injected from `artifacts/` at build time; the v2 and v3 tables are read from their declared diagnostic artifacts; a small number of counts remain typed prose backed by named artifacts. `alibi verify --no-gpu` recomputes **45 declared claims**, which cover **21 of the 42 distinct numeric literals** in this report. An earlier revision claimed verify recomputed every number above; an audit measured that claim at about 3 percent coverage and it was replaced by this counted one. The residual literals are recomputable from the named artifacts but are not checked by verify. Every autonomous decision, including the ones later withdrawn, is in `DECISIONS.md`.
+Generated 2026-08-13T07:48:58.297396+00:00 by `alibi report`. Most numbers are injected from `artifacts/` at build time; the v2 and v3 tables are read from their declared diagnostic artifacts; a small number of counts remain typed prose backed by named artifacts. `alibi verify --no-gpu` recomputes **49 declared claims**, which cover **19 of the 40 distinct numeric literals** in this report. An earlier revision claimed verify recomputed every number above; an audit measured that claim at about 3 percent coverage and it was replaced by this counted one. The residual literals are recomputable from the named artifacts but are not checked by verify. Every autonomous decision, including the ones later withdrawn, is in `DECISIONS.md`.

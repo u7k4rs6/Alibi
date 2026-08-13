@@ -101,6 +101,10 @@ def build_published(computed: dict) -> dict:
     add("cap_at_1024.has_code_fraction", "v3 has-code fraction at 1024")
     for budget in ("3072", "2048", "1536", "1024"):
         add(f"oom_bisection.summary.{budget}.peaks_gb.0", f"v2 bisection peak at {budget}")
+    add("logprob_same_path_control.same_mean_abs_diff", "same-path control mean abs")
+    add("logprob_same_path_control.same_max_abs_diff", "same-path control max abs")
+    add("logprob_same_path_control.same_identical_pairs", "same-path control identical pairs")
+    add("logprob_same_path_control.cross_identical_pairs", "cross-path identical pairs")
     add("logprob_divergence.mean_abs_diff", "divergence mean abs")
     add("logprob_divergence.median_abs_diff", "divergence median abs")
     add("logprob_divergence.max_abs_diff", "divergence max abs")
@@ -952,43 +956,90 @@ def build_report() -> dict[str, Path]:
     L.append("")
 
     # ------------------------------------------------------------ 6. UNRESOLVED
-    L.append("## 6. Unresolved")
+    L.append("## 6. Resolved: the sampler and trainer paths genuinely disagree")
     L.append("")
     divergence = (computed.get("fault_measurements") or {}).get("logprob_divergence") or {}
+    control = (computed.get("fault_measurements") or {}).get("logprob_same_path_control") or {}
     L.append(
-        "**Withdrawn.** Earlier revisions of this section quantified the sampler-trainer logprob "
-        "divergence as 0.2150 mean and 1.8477 maximum on identical weights and called it well past "
-        "bf16 noise. An audit found those figures rested on a run that had been deleted, measured "
-        "on a different policy at a 48-token budget, neither of which the text disclosed. The "
-        "numbers are withdrawn, not reworded."
+        "**Withdrawn first.** Earlier revisions quantified the sampler-trainer logprob divergence "
+        "as 0.2150 mean and 1.8477 maximum and called it well past bf16 noise. An audit found "
+        "those figures rested on a run that had been deleted, measured on a different policy at a "
+        "48-token budget, neither disclosed. They are withdrawn, not reworded."
     )
     L.append("")
-    if divergence:
+    if control:
         L.append(
-            "**Re-measured on the v2 policy and budget**, Qwen3-0.6B through its chat template at "
-            "3072 tokens, per token rather than per completion, no training, committed to "
-            "`artifacts/diagnostics/logprob_divergence/result.json` and declared in the index: over "
-            f"**{divergence['n_token_pairs']}** token pairs from {divergence['n_completions']} "
-            f"completions, mean absolute difference **{_fmt(divergence['mean_abs_diff'])}**, median "
-            f"**{_fmt(divergence['median_abs_diff'])}**, maximum **{_fmt(divergence['max_abs_diff'])}**, "
-            f"with {divergence['identical_pairs']} pairs bit-identical."
+            "**And the replacement had no baseline.** The re-measured cross-path figure, on its "
+            "own, could not distinguish a real path difference from ordinary run-to-run "
+            "nondeterminism. The control that settles it is the trainer's own forward run twice on "
+            "the same completions, same weights, same process. Both distributions below come from "
+            "the **same completions in the same process**, so they are directly comparable rather "
+            "than two separate experiments."
+        )
+        L.append("")
+        L.append("| Comparison | n token pairs | Bitwise identical | Mean abs | Median abs | Max abs |")
+        L.append("|---|---|---|---|---|---|")
+        L.append(
+            f"| Trainer vs trainer, **same path repeated** | {control['same_n_token_pairs']} "
+            f"| **{control['same_identical_pairs']} of {control['same_n_token_pairs']}** "
+            f"| **{_fmt(control['same_mean_abs_diff'], 6)}** | {_fmt(control['same_median_abs_diff'], 6)} "
+            f"| **{_fmt(control['same_max_abs_diff'], 6)}** |"
+        )
+        L.append(
+            f"| Sampler vs trainer, **cross path** | {control['cross_n_token_pairs']} "
+            f"| {control['cross_identical_pairs']} of {control['cross_n_token_pairs']} "
+            f"| {_fmt(control['cross_mean_abs_diff'], 6)} | {_fmt(control['cross_median_abs_diff'], 6)} "
+            f"| {_fmt(control['cross_max_abs_diff'], 6)} |"
         )
         L.append("")
         L.append(
-            "That is an order of magnitude smaller than the withdrawn figures, which is itself the "
-            "point: the withdrawn numbers did not survive a properly provenanced re-measurement. "
-            "What remains open is the honest residue: the median sits where mixed-precision "
-            "rounding plausibly lives, the tail does not obviously, and how much of the gap is the "
-            "KV-cache path against the full forward, kernel selection, or something else has not "
-            "been established. The sampler reads generation one position at a time through a "
-            "cache; the trainer runs one forward over prompt and completion together. This is the "
-            "follow-on project's subject and it stays open rather than explained."
+            "**The same path is bitwise identical on every one of its "
+            f"{control['same_n_token_pairs']} token pairs.** Mean, median and maximum absolute "
+            "difference are all exactly zero. The ratio of cross-path to same-path spread is not "
+            "reported because the denominator is exactly zero, which is a stronger statement than "
+            "any ratio would be."
+        )
+        L.append("")
+        L.append(
+            "**Which reading the data supports: the cross-path gap is real.** Run-to-run "
+            "nondeterminism in this configuration is not small, it is absent, so none of the "
+            "cross-path spread can be attributed to it. The two paths compute different numbers "
+            "for the same token under the same weights, reproducibly. The median of "
+            f"{_fmt(control['cross_median_abs_diff'], 6)} is consistent with accumulated "
+            "mixed-precision difference between a cached incremental decode and a single full "
+            f"forward; the maximum of {_fmt(control['cross_max_abs_diff'], 4)} on a log probability "
+            "is not, and only 3 percent of cross-path pairs agree exactly."
+        )
+        L.append("")
+        L.append(
+            "**So the question this section used to leave open is closed, and a narrower one "
+            "replaces it.** It is settled that the divergence is a genuine property of the two "
+            "paths rather than noise. What is not settled is its mechanism: the KV-cache "
+            "incremental decode against the single full forward, kernel or reduction-order "
+            "selection at different sequence shapes, or something else. That is a question about "
+            "which path is right, not about whether they differ, and it is the follow-on project's "
+            "subject stated more sharply than before."
+        )
+        L.append("")
+        L.append(
+            "It also means the column is now doing the job it was collected for. In v1 the pair was "
+            "the same number twice and could not have shown this; the fault in section 2.5 was "
+            "hiding a real effect, not merely a redundant column."
+        )
+    elif divergence:
+        L.append(
+            "Re-measured on the v2 policy and budget: mean "
+            f"{_fmt(divergence['mean_abs_diff'])}, max {_fmt(divergence['max_abs_diff'])} over "
+            f"{divergence['n_token_pairs']} pairs. **No same-path control has been run**, so this "
+            "cannot yet be distinguished from ordinary nondeterminism."
         )
     else:
-        L.append(
-            "**The divergence is unquantified.** No committed artifact carries the sampler-trainer "
-            "pair, so the open question is stated qualitatively only."
-        )
+        L.append("**Unquantified.** No committed artifact carries the sampler-trainer pair.")
+    L.append("")
+    L.append(
+        "Artifacts: `artifacts/diagnostics/logprob_divergence/result.json` and "
+        "`same_path_control.json`, both declared in the index."
+    )
     L.append("")
 
     # ------------------------------------------------------- 6b. THE AUDIT

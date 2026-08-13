@@ -181,21 +181,41 @@
       "value": 5.5411712
     },
     "claim42": {
+      "label": "same-path control mean abs",
+      "path": "fault_measurements.logprob_same_path_control.same_mean_abs_diff",
+      "value": 0.0
+    },
+    "claim43": {
+      "label": "same-path control max abs",
+      "path": "fault_measurements.logprob_same_path_control.same_max_abs_diff",
+      "value": 0.0
+    },
+    "claim44": {
+      "label": "same-path control identical pairs",
+      "path": "fault_measurements.logprob_same_path_control.same_identical_pairs",
+      "value": 19347
+    },
+    "claim45": {
+      "label": "cross-path identical pairs",
+      "path": "fault_measurements.logprob_same_path_control.cross_identical_pairs",
+      "value": 579
+    },
+    "claim46": {
       "label": "divergence mean abs",
       "path": "fault_measurements.logprob_divergence.mean_abs_diff",
       "value": 0.01745590162342733
     },
-    "claim43": {
+    "claim47": {
       "label": "divergence median abs",
       "path": "fault_measurements.logprob_divergence.median_abs_diff",
       "value": 0.0012603718787431717
     },
-    "claim44": {
+    "claim48": {
       "label": "divergence max abs",
       "path": "fault_measurements.logprob_divergence.max_abs_diff",
       "value": 0.35368871688842773
     },
-    "claim45": {
+    "claim49": {
       "label": "divergence token pairs",
       "path": "fault_measurements.logprob_divergence.n_token_pairs",
       "value": 19347
@@ -227,7 +247,7 @@
     }
   },
   "eligibility_hash": "ffdce1c3e4744a9fee2f5b7ee25f7da7ceb667c0042fbc0056bd7e542fcd7b10",
-  "generated_utc": "2026-08-13T07:14:03.191321+00:00",
+  "generated_utc": "2026-08-13T07:48:58.297396+00:00",
   "n_declared_runs": 4,
   "prereg_hash": "84c43a5085a5b6c036572f1d0308e1359a51afa281f31c996a62c06ce5ba2a16"
 }

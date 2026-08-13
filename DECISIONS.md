@@ -1037,3 +1037,26 @@ applied to itself.
 a new `fault_measurements()` in metrics, recomputed from artifacts so verify
 checks them. The closing line now counts its own coverage against the generated
 text at build time, so the number cannot drift from the prose it describes.
+
+### D-38 Same-path control closes section 6
+Operator instruction: run the trainer's forward twice on the same completions
+and report both distributions, saying plainly which reading the data supports.
+
+**Result: same path is bitwise identical on all 19,347 token pairs.** Mean,
+median and max absolute difference are exactly zero. Cross path over the same
+completions: 579 of 19,347 identical, mean 0.017456, median 0.001260, max
+0.353689.
+
+**Reading, stated plainly rather than left open because open is interesting:**
+the cross-path gap is real. Run-to-run nondeterminism in this configuration is
+absent, so none of the spread is noise. Section 6 is retitled from "Unresolved"
+to "Resolved: the sampler and trainer paths genuinely disagree", and the
+remaining open question is narrowed to mechanism, which path is right, rather
+than existence.
+
+The ratio of cross to same spread is deliberately not reported: the denominator
+is exactly zero, and saying so is stronger than any ratio.
+
+Both distributions were computed from the same completions in the same process,
+so they are directly comparable. Artifact declared in the index and covered by
+verify.
