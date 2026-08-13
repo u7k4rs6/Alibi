@@ -255,9 +255,39 @@ The quantity a PPO or GRPO surrogate actually uses is the importance ratio `exp(
 
 The centre of the distribution is where it should be: the median is 1.000000 and the mean is within 2 parts in 10,000 of unity. The tails are not. The minimum is 0.7021 and the maximum 1.4136, on tokens whose correct ratio is 1.
 
+**The effective sample size is 16 completions from 2 problems, not 19347 tokens.** Tokens within a completion share a prompt, a sampling trajectory and a KV cache, so they are not independent draws, and a pooled per-token percentage over 19,347 correlated tokens overstates its own precision. **The pooled fractions above should not be read without this sentence attached.**
+
+**Is the tail concentrated in one or two completions?** The honest answer has two halves. The per-token signed deltas were never stored, only aggregates, so the count of tail tokens per completion and per problem is **not recoverable** from this repository and no GPU re-run was permitted to obtain it. That is a real gap and it is the third time in this project that storing an aggregate destroyed a question asked later.
+
+What can be derived from the stored per-completion maxima is a bound, and it is enough to answer the question that mattered. A completion whose maximum absolute log-ratio falls below `ln(1+epsilon)` cannot contain any band-crossing token. At epsilon 0.2, **15 of 16 completions** exceed that threshold and so could hold tail tokens, leaving at most 1 provably clean. At epsilon 0.1, **16 of 16** could. **So the tail is spread across essentially every completion rather than concentrated in one or two**, which is the reassuring direction, and it is a bound rather than a measurement.
+
+The per-problem split is not recoverable either: the stored per-completion records do not carry a problem label. With two problems and sixteen completions, no clustering claim at the problem level is made.
+
 **The consequence, stated at the size the measurement supports.** A correctly written clipped objective treats a ratio outside the band as evidence that the policy has moved away from the one that sampled the token, and clips it, which zeroes that token's gradient contribution. Here **0.0036 of tokens at epsilon 0.2 and 0.0400 at epsilon 0.1** would be treated that way despite being exactly on-policy. The clipping would be triggered by arithmetic, not by drift.
 
-**What this does not establish.** The effect on training outcomes is unmeasured here. No run in this repository used per-token clipping: the only clipped configuration written, probe D, clips on the sequence mean logprob, and at that level the same completions give ratios between 0.998208 and 1.002141, with 0.0000 outside even the tighter band. Averaging over a sequence cancels most of the per-token spread. So the finding is about what a per-token clipped implementation would do on this hardware and this path pair, measured on 16 completions from 2 problems, and it is not a measured effect on any training curve.
+#### What a standard implementation actually does, from its source
+
+An earlier draft asserted what a correct implementation would do without citing one. The installed library was read instead. **TRL 1.9.2**, `trl/trainer/grpo_trainer.py`, computes the ratio and clips it at lines 3054 to 3091:
+
+```python
+log_ratio = per_token_logps - old_per_token_logps
+if self.importance_sampling_level == "token":
+    log_importance_weights = log_ratio
+elif self.importance_sampling_level == "sequence":
+    log_importance_weights = (log_ratio * mask).sum(-1) / mask.sum(-1).clamp(min=1.0)
+...
+coef_1 = torch.exp(log_importance_weights)
+coef_2 = torch.clamp(coef_1, 1 - self.epsilon_low, 1 + self.epsilon_high)
+per_token_loss = -torch.min(coef_1 * advantages, coef_2 * advantages)
+```
+
+`GRPOConfig` defaults, `trl/trainer/grpo_config.py`: `importance_sampling_level` defaults to **`"token"`** (line 750), `epsilon` to **0.2** (line 683), `loss_type` to `"dapo"` (line 791), which takes the clipping branch above. **So the default TRL GRPO configuration clips per token at exactly the band measured here.** The sequence-level option exists but is opt-in.
+
+That raises the relevance of the finding rather than lowering it, and it makes this repository's hand-written update the exception: **probe D averages the log-ratio over the sequence before clipping, which is TRL's non-default path.** At that level the same completions give ratios between 0.998208 and 1.002141, with 0.0000 outside even the tighter band, because averaging cancels most of the per-token spread. The configuration this project happened to write is the one the effect does not reach.
+
+**The phenomenon is known upstream.** The same file carries an explicit correction for a sampler-trainer logprob mismatch when generation runs under vLLM: `vllm_importance_sampling_correction` defaults to **True** (`grpo_config.py` line 915), and lines 2578 to 2600 compute `torch.exp(old_per_token_logps - sampling_per_token_logps)` and clamp it. TRL treats the gap between the sampling path's logprobs and the training path's as real enough to ship a mitigation for, which is independent corroboration that what section 6 measures is a property of path pairs and not an artifact of this repository. The mitigation is scoped to vLLM; the measurement here is on the plain `generate` path, where no such correction is applied.
+
+**What this still does not establish.** The effect on training outcomes is unmeasured here. No run in this repository used per-token clipping, so nothing in these artifacts shows a curve moving because of it. The measurement is 16 completions from 2 problems on one GPU and one path pair, bounded as above rather than resolved. It says what a default-configured TRL GRPO run would clip on this hardware; it does not say what that would do to the resulting policy.
 
 It is worth stating in the other direction too: this is a plausible mechanism by which a correct-looking GRPO implementation silently discards a few percent of its gradient signal, and it would be invisible to anyone who did not store both logprobs and compare them. That is the same shape as the faults in section 2, arriving in the one place this project had already instrumented to catch it.
 
@@ -325,4 +355,4 @@ The four declared evidence runs ran at four different git revisions. An audit di
 }
 ```
 
-Generated 2026-08-13T10:09:56.258888+00:00 by `alibi report`. Most numbers are injected from `artifacts/` at build time; the v2 and v3 tables are read from their declared diagnostic artifacts; a small number of counts remain typed prose backed by named artifacts. `alibi verify --no-gpu` recomputes **57 declared claims**, which cover **24 of the 44 distinct numeric literals** in this report. An earlier revision claimed verify recomputed every number above; an audit measured that claim at about 3 percent coverage and it was replaced by this counted one. The residual literals are recomputable from the named artifacts but are not checked by verify. Every autonomous decision, including the ones later withdrawn, is in `DECISIONS.md`.
+Generated 2026-08-13T10:26:17.843787+00:00 by `alibi report`. Most numbers are injected from `artifacts/` at build time; the v2 and v3 tables are read from their declared diagnostic artifacts; a small number of counts remain typed prose backed by named artifacts. `alibi verify --no-gpu` recomputes **60 declared claims**, which cover **24 of the 44 distinct numeric literals** in this report. An earlier revision claimed verify recomputed every number above; an audit measured that claim at about 3 percent coverage and it was replaced by this counted one. The residual literals are recomputable from the named artifacts but are not checked by verify. Every autonomous decision, including the ones later withdrawn, is in `DECISIONS.md`.

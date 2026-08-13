@@ -181,44 +181,44 @@
       "value": 5.5411712
     },
     "claim42": {
+      "label": "ratio clustering, completions",
+      "path": "fault_measurements.ratio_clustering.n_completions",
+      "value": 16
+    },
+    "claim43": {
+      "label": "ratio clustering, completions that could hold an eps 0.2 tail token",
+      "path": "fault_measurements.ratio_clustering.could_02",
+      "value": 15
+    },
+    "claim44": {
+      "label": "ratio clustering, completions that could hold an eps 0.1 tail token",
+      "path": "fault_measurements.ratio_clustering.could_01",
+      "value": 16
+    },
+    "claim45": {
       "label": "importance ratio mean",
       "path": "fault_measurements.importance_ratio.mean",
       "value": 1.0002119186888836
     },
-    "claim43": {
+    "claim46": {
       "label": "importance ratio median",
       "path": "fault_measurements.importance_ratio.median",
       "value": 1.0
     },
-    "claim44": {
+    "claim47": {
       "label": "importance ratio min",
       "path": "fault_measurements.importance_ratio.min",
       "value": 0.7020934831875467
     },
-    "claim45": {
+    "claim48": {
       "label": "importance ratio max",
       "path": "fault_measurements.importance_ratio.max",
       "value": 1.4136013868402453
     },
-    "claim46": {
+    "claim49": {
       "label": "ratio outside 0.2 band, count",
       "path": "fault_measurements.importance_ratio.outside_02_n",
       "value": 69
-    },
-    "claim47": {
-      "label": "ratio outside 0.2 band, fraction",
-      "path": "fault_measurements.importance_ratio.outside_02_fraction",
-      "value": 0.0035664444099860445
-    },
-    "claim48": {
-      "label": "ratio outside 0.1 band, count",
-      "path": "fault_measurements.importance_ratio.outside_01_n",
-      "value": 773
-    },
-    "claim49": {
-      "label": "ratio outside 0.1 band, fraction",
-      "path": "fault_measurements.importance_ratio.outside_01_fraction",
-      "value": 0.03995451491187264
     },
     "claim5": {
       "label": "a0 terminal gap min",
@@ -226,49 +226,64 @@
       "value": 0.0
     },
     "claim50": {
+      "label": "ratio outside 0.2 band, fraction",
+      "path": "fault_measurements.importance_ratio.outside_02_fraction",
+      "value": 0.0035664444099860445
+    },
+    "claim51": {
+      "label": "ratio outside 0.1 band, count",
+      "path": "fault_measurements.importance_ratio.outside_01_n",
+      "value": 773
+    },
+    "claim52": {
+      "label": "ratio outside 0.1 band, fraction",
+      "path": "fault_measurements.importance_ratio.outside_01_fraction",
+      "value": 0.03995451491187264
+    },
+    "claim53": {
       "label": "same-path control mean abs",
       "path": "fault_measurements.logprob_same_path_control.same_mean_abs_diff",
       "value": 0.0
     },
-    "claim51": {
+    "claim54": {
       "label": "same-path control max abs",
       "path": "fault_measurements.logprob_same_path_control.same_max_abs_diff",
       "value": 0.0
     },
-    "claim52": {
+    "claim55": {
       "label": "same-path control identical pairs",
       "path": "fault_measurements.logprob_same_path_control.same_identical_pairs",
       "value": 19347
     },
-    "claim53": {
+    "claim56": {
       "label": "cross-path identical pairs",
       "path": "fault_measurements.logprob_same_path_control.cross_identical_pairs",
       "value": 579
     },
-    "claim54": {
+    "claim57": {
       "label": "divergence mean abs",
       "path": "fault_measurements.logprob_divergence.mean_abs_diff",
       "value": 0.01745590162342733
     },
-    "claim55": {
+    "claim58": {
       "label": "divergence median abs",
       "path": "fault_measurements.logprob_divergence.median_abs_diff",
       "value": 0.0012603718787431717
     },
-    "claim56": {
+    "claim59": {
       "label": "divergence max abs",
       "path": "fault_measurements.logprob_divergence.max_abs_diff",
       "value": 0.35368871688842773
-    },
-    "claim57": {
-      "label": "divergence token pairs",
-      "path": "fault_measurements.logprob_divergence.n_token_pairs",
-      "value": 19347
     },
     "claim6": {
       "label": "a0 terminal gap max",
       "path": "arms.a0.terminal_gap.max",
       "value": 0.0
+    },
+    "claim60": {
+      "label": "divergence token pairs",
+      "path": "fault_measurements.logprob_divergence.n_token_pairs",
+      "value": 19347
     },
     "claim7": {
       "label": "a1 terminal cheat rate min",
@@ -287,7 +302,7 @@
     }
   },
   "eligibility_hash": "ffdce1c3e4744a9fee2f5b7ee25f7da7ceb667c0042fbc0056bd7e542fcd7b10",
-  "generated_utc": "2026-08-13T10:09:56.258888+00:00",
+  "generated_utc": "2026-08-13T10:26:17.843787+00:00",
   "n_declared_runs": 4,
   "prereg_hash": "84c43a5085a5b6c036572f1d0308e1359a51afa281f31c996a62c06ce5ba2a16"
 }

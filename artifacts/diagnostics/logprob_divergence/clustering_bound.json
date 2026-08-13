@@ -1,0 +1,62 @@
+{
+  "bounds": [
+    {
+      "completions_provably_zero": 1,
+      "completions_that_could_contain_a_tail_token": 15,
+      "epsilon": 0.2,
+      "threshold_log": 0.1823215567939546
+    },
+    {
+      "completions_provably_zero": 0,
+      "completions_that_could_contain_a_tail_token": 16,
+      "epsilon": 0.1,
+      "threshold_log": 0.09531017980432493
+    }
+  ],
+  "declared": "A partial answer, derived from stored per-completion maxima rather than measured. The per-token signed deltas were never stored, so the count of tail tokens per completion and per problem is NOT recoverable and no GPU re-run was permitted. What is derivable: a completion whose maximum absolute delta is below ln(1+epsilon) cannot contain any token outside the band, which bounds how concentrated the tail can be.",
+  "diagnostic": "importance_ratio_clustering_bound",
+  "n_completions": 16,
+  "n_problems": 2,
+  "n_tokens": 19347,
+  "not_recoverable": [
+    "tail tokens per completion",
+    "tail tokens per problem",
+    "outside-band fraction per completion"
+  ],
+  "per_completion_max_abs_delta": [
+    0.17090630531311035,
+    0.211151123046875,
+    0.23360109329223633,
+    0.2365732192993164,
+    0.23966646194458008,
+    0.24407005310058594,
+    0.24579477310180664,
+    0.24866724014282227,
+    0.2576003074645996,
+    0.3028993606567383,
+    0.3064713478088379,
+    0.33217382431030273,
+    0.34218716621398926,
+    0.3451499938964844,
+    0.34614062309265137,
+    0.35368871688842773
+  ],
+  "per_completion_n_tokens": [
+    527,
+    606,
+    627,
+    638,
+    640,
+    680,
+    755,
+    758,
+    874,
+    890,
+    1086,
+    1217,
+    1516,
+    2487,
+    2974,
+    3072
+  ]
+}

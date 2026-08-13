@@ -19,6 +19,11 @@
       "path": "artifacts/diagnostics/logprob_divergence/importance_ratio.json",
       "sha256": "63efbc5194f79b45211d402dc56b2a60fa2f32156cdda6b41601c4e73924f324",
       "why": "implied importance ratio per token for section 6: these tokens were sampled by the policy being updated, so the true ratio is exactly 1 and any deviation is path numerics"
+    },
+    {
+      "path": "artifacts/diagnostics/logprob_divergence/clustering_bound.json",
+      "sha256": "a379c005d5f8c9e55d66b3b50f46f134610f353ab02c45f550d966592ea4d749",
+      "why": "bounds the clustering of the importance-ratio tail across completions; the per-token deltas needed for the exact per-completion counts were never stored"
     }
   ],
   "excluded_by_policy": [

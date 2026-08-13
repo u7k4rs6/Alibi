@@ -101,6 +101,9 @@ def build_published(computed: dict) -> dict:
     add("cap_at_1024.has_code_fraction", "v3 has-code fraction at 1024")
     for budget in ("3072", "2048", "1536", "1024"):
         add(f"oom_bisection.summary.{budget}.peaks_gb.0", f"v2 bisection peak at {budget}")
+    add("ratio_clustering.n_completions", "ratio clustering, completions")
+    add("ratio_clustering.could_02", "ratio clustering, completions that could hold an eps 0.2 tail token")
+    add("ratio_clustering.could_01", "ratio clustering, completions that could hold an eps 0.1 tail token")
     add("importance_ratio.mean", "importance ratio mean")
     add("importance_ratio.median", "importance ratio median")
     add("importance_ratio.min", "importance ratio min")
@@ -1079,6 +1082,45 @@ def build_report() -> dict[str, Path]:
             "correct ratio is 1."
         )
         L.append("")
+        clustering = (computed.get("fault_measurements") or {}).get("ratio_clustering") or {}
+        L.append(
+            f"**The effective sample size is {clustering.get('n_completions', 16)} completions from "
+            f"{clustering.get('n_problems', 2)} problems, not {ratio['n']} tokens.** Tokens within a "
+            "completion share a prompt, a sampling trajectory and a KV cache, so they are not "
+            "independent draws, and a pooled per-token percentage over 19,347 correlated tokens "
+            "overstates its own precision. **The pooled fractions above should not be read without "
+            "this sentence attached.**"
+        )
+        L.append("")
+        if clustering:
+            L.append(
+                "**Is the tail concentrated in one or two completions?** The honest answer has two "
+                "halves. The per-token signed deltas were never stored, only aggregates, so the "
+                "count of tail tokens per completion and per problem is **not recoverable** from "
+                "this repository and no GPU re-run was permitted to obtain it. That is a real gap "
+                "and it is the third time in this project that storing an aggregate destroyed a "
+                "question asked later."
+            )
+            L.append("")
+            L.append(
+                "What can be derived from the stored per-completion maxima is a bound, and it is "
+                "enough to answer the question that mattered. A completion whose maximum absolute "
+                "log-ratio falls below `ln(1+epsilon)` cannot contain any band-crossing token. At "
+                f"epsilon 0.2, **{clustering['could_02']} of {clustering['n_completions']} "
+                "completions** exceed that threshold and so could hold tail tokens, leaving at most "
+                f"{clustering['zero_02']} provably clean. At epsilon 0.1, "
+                f"**{clustering['could_01']} of {clustering['n_completions']}** could. "
+                "**So the tail is spread across essentially every completion rather than "
+                "concentrated in one or two**, which is the reassuring direction, and it is a bound "
+                "rather than a measurement."
+            )
+            L.append("")
+            L.append(
+                "The per-problem split is not recoverable either: the stored per-completion records "
+                "do not carry a problem label. With two problems and sixteen completions, no "
+                "clustering claim at the problem level is made."
+            )
+            L.append("")
         L.append(
             "**The consequence, stated at the size the measurement supports.** A correctly written "
             "clipped objective treats a ratio outside the band as evidence that the policy has "
@@ -1089,17 +1131,65 @@ def build_report() -> dict[str, Path]:
             "arithmetic, not by drift."
         )
         L.append("")
+        L.append("#### What a standard implementation actually does, from its source")
+        L.append("")
         L.append(
-            "**What this does not establish.** The effect on training outcomes is unmeasured here. "
-            "No run in this repository used per-token clipping: the only clipped configuration "
-            "written, probe D, clips on the sequence mean logprob, and at that level the same "
-            f"completions give ratios between {_fmt(ratio['sequence_min'], 6)} and "
+            "An earlier draft asserted what a correct implementation would do without citing one. "
+            "The installed library was read instead. **TRL 1.9.2**, "
+            "`trl/trainer/grpo_trainer.py`, computes the ratio and clips it at lines 3054 to 3091:"
+        )
+        L.append("")
+        L.append("```python")
+        L.append("log_ratio = per_token_logps - old_per_token_logps")
+        L.append('if self.importance_sampling_level == "token":')
+        L.append("    log_importance_weights = log_ratio")
+        L.append('elif self.importance_sampling_level == "sequence":')
+        L.append("    log_importance_weights = (log_ratio * mask).sum(-1) / mask.sum(-1).clamp(min=1.0)")
+        L.append("...")
+        L.append("coef_1 = torch.exp(log_importance_weights)")
+        L.append("coef_2 = torch.clamp(coef_1, 1 - self.epsilon_low, 1 + self.epsilon_high)")
+        L.append("per_token_loss = -torch.min(coef_1 * advantages, coef_2 * advantages)")
+        L.append("```")
+        L.append("")
+        L.append(
+            "`GRPOConfig` defaults, `trl/trainer/grpo_config.py`: "
+            "`importance_sampling_level` defaults to **`\"token\"`** (line 750), `epsilon` to "
+            "**0.2** (line 683), `loss_type` to `\"dapo\"` (line 791), which takes the clipping "
+            "branch above. **So the default TRL GRPO configuration clips per token at exactly the "
+            "band measured here.** The sequence-level option exists but is opt-in."
+        )
+        L.append("")
+        L.append(
+            "That raises the relevance of the finding rather than lowering it, and it makes this "
+            "repository's hand-written update the exception: **probe D averages the log-ratio over "
+            "the sequence before clipping, which is TRL's non-default path.** At that level the "
+            f"same completions give ratios between {_fmt(ratio['sequence_min'], 6)} and "
             f"{_fmt(ratio['sequence_max'], 6)}, with "
-            f"{_fmt(ratio['sequence_outside_01_fraction'])} outside even the tighter band. "
-            "Averaging over a sequence cancels most of the per-token spread. So the finding is "
-            "about what a per-token clipped implementation would do on this hardware and this "
-            "path pair, measured on 16 completions from 2 problems, and it is not a measured "
-            "effect on any training curve."
+            f"{_fmt(ratio['sequence_outside_01_fraction'])} outside even the tighter band, because "
+            "averaging cancels most of the per-token spread. The configuration this project "
+            "happened to write is the one the effect does not reach."
+        )
+        L.append("")
+        L.append(
+            "**The phenomenon is known upstream.** The same file carries an explicit correction for "
+            "a sampler-trainer logprob mismatch when generation runs under vLLM: "
+            "`vllm_importance_sampling_correction` defaults to **True** "
+            "(`grpo_config.py` line 915), and lines 2578 to 2600 compute "
+            "`torch.exp(old_per_token_logps - sampling_per_token_logps)` and clamp it. TRL treats "
+            "the gap between the sampling path's logprobs and the training path's as real enough "
+            "to ship a mitigation for, which is independent corroboration that what section 6 "
+            "measures is a property of path pairs and not an artifact of this repository. The "
+            "mitigation is scoped to vLLM; the measurement here is on the plain `generate` path, "
+            "where no such correction is applied."
+        )
+        L.append("")
+        L.append(
+            "**What this still does not establish.** The effect on training outcomes is unmeasured "
+            "here. No run in this repository used per-token clipping, so nothing in these artifacts "
+            "shows a curve moving because of it. The measurement is 16 completions from 2 problems "
+            "on one GPU and one path pair, bounded as above rather than resolved. It says what a "
+            "default-configured TRL GRPO run would clip on this hardware; it does not say what that "
+            "would do to the resulting policy."
         )
         L.append("")
         L.append(

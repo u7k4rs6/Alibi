@@ -1089,3 +1089,51 @@ mechanism, not a demonstrated effect, and the report says so in those words.
 
 Artifact `importance_ratio.json` declared in the index; eight of its values are
 covered by verify, which now recomputes 57 claims.
+
+### D-40 The n was tokens, not completions; and TRL was read rather than assumed
+Two report-time corrections. No new runs, no GPU.
+
+**1. The pooled per-token rate overstated its precision.** 19,347 tokens come
+from 16 completions across 2 problems, and tokens inside a completion share a
+prompt, a trajectory and a KV cache. The report now states the effective sample
+size as **16 completions from 2 problems** and never gives the pooled fraction
+without that sentence attached.
+
+**The per-completion tail counts are not recoverable.** The signed per-token
+deltas were never stored, only aggregates. That is the **third** time in this
+project that storing an aggregate destroyed a question asked later, and it is
+recorded in the report rather than worked around.
+
+What is derivable from the stored per-completion maxima is a bound: a completion
+whose maximum absolute log-ratio is below `ln(1+epsilon)` cannot contain a
+band-crossing token. At epsilon 0.2, **15 of 16** completions exceed the
+threshold; at 0.1, **16 of 16**. So the tail is **spread across essentially every
+completion, not concentrated in one or two** — the reassuring direction, and a
+bound rather than a measurement. The per-problem split is not recoverable at all:
+the stored records carry no problem label, so no problem-level claim is made.
+
+**2. TRL was read, not characterised from memory.** Previous wording said what
+"a correctly written implementation" does without a source. Reading the pinned
+library, **TRL 1.9.2**:
+
+- `grpo_trainer.py` lines 3054 to 3091 compute `log_ratio = per_token_logps -
+  old_per_token_logps`, take `coef_1 = torch.exp(...)`, clamp to
+  `[1 - epsilon_low, 1 + epsilon_high]` and use `-torch.min(coef_1 * A,
+  coef_2 * A)`.
+- `grpo_config.py`: `importance_sampling_level` defaults to **`"token"`**
+  (line 750), `epsilon` to **0.2** (line 683), `loss_type` to `"dapo"`
+  (line 791), which takes that branch.
+
+**The default TRL GRPO configuration clips per token at exactly the band
+measured**, which raises the finding's relevance. It also makes this repo's
+probe D the exception: averaging the log-ratio over the sequence before clipping
+is TRL's opt-in path, and it is the configuration the effect does not reach.
+
+**Independent corroboration found while reading.** The same file ships
+`vllm_importance_sampling_correction`, default **True** (`grpo_config.py` line
+915), computing and clamping `exp(old_per_token_logps - sampling_per_token_logps)`
+at lines 2578 to 2600. TRL treats the sampling-path versus training-path logprob
+gap as real enough to mitigate. The mitigation is scoped to vLLM; this
+measurement is on the plain `generate` path, where none is applied.
+
+Still not claimed: any effect on training outcomes.

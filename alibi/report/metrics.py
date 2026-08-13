@@ -978,6 +978,20 @@ def fault_measurements() -> dict:
             for k in ("n_token_pairs", "identical_pairs", "mean_abs_diff", "median_abs_diff", "max_abs_diff")
         }
 
+    # The clustering bound on the importance-ratio tail.
+    clust_path = ARTIFACTS / "diagnostics" / "logprob_divergence" / "clustering_bound.json"
+    if clust_path.exists():
+        clust = json.loads(clust_path.read_text(encoding="utf-8"))
+        bounds = {str(b["epsilon"]): b for b in clust["bounds"]}
+        out["ratio_clustering"] = {
+            "n_completions": clust["n_completions"],
+            "n_problems": clust["n_problems"],
+            "could_02": bounds["0.2"]["completions_that_could_contain_a_tail_token"],
+            "zero_02": bounds["0.2"]["completions_provably_zero"],
+            "could_01": bounds["0.1"]["completions_that_could_contain_a_tail_token"],
+            "zero_01": bounds["0.1"]["completions_provably_zero"],
+        }
+
     # The implied importance ratio, from its artifact.
     ratio_path = ARTIFACTS / "diagnostics" / "logprob_divergence" / "importance_ratio.json"
     if ratio_path.exists():
