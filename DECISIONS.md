@@ -1060,3 +1060,32 @@ is exactly zero, and saying so is stronger than any ratio.
 Both distributions were computed from the same completions in the same process,
 so they are directly comparable. Artifact declared in the index and covered by
 verify.
+
+### D-39 The implied importance ratio, and what it would do to a clipped objective
+Operator instruction: compute `exp(trainer_logprob - sampler_logprob)` per token
+and report the distribution plus the fraction outside the PPO clip band.
+
+**The artifact could not answer it.** `same_path_control.json` stores aggregated
+**absolute** differences only, not per-token signed deltas, so the ratio was not
+recoverable from it. Re-measured at the same seed and config, which reproduces
+the same completions, and the signed deltas are kept this time.
+
+**Per token, n = 19,347:** mean 1.000212, median 1.000000, min 0.702093,
+max 1.413601. Outside [0.8, 1.2] at epsilon 0.2: **69 of 19,347 = 0.0036**.
+Outside [0.9, 1.1] at epsilon 0.1: **773 of 19,347 = 0.0400**.
+
+**The claim, at the size the measurement supports.** These tokens were sampled
+by the policy being updated, so the true ratio is exactly 1 for every one. A
+correctly written clipped objective would clip the ones outside the band and
+zero their gradient, on arithmetic rather than drift.
+
+**What is deliberately not claimed.** The effect on training outcomes is
+unmeasured. No run here used per-token clipping: probe D clips on the sequence
+mean logprob, and at that level the same completions give ratios between
+0.998208 and 1.002141 with **zero** outside even the tighter band, because
+averaging cancels most of the per-token spread. The measurement is 16
+completions from 2 problems on one hardware and path pair. It is a plausible
+mechanism, not a demonstrated effect, and the report says so in those words.
+
+Artifact `importance_ratio.json` declared in the index; eight of its values are
+covered by verify, which now recomputes 57 claims.

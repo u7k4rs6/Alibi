@@ -14,6 +14,11 @@
       "path": "artifacts/diagnostics/logprob_divergence/same_path_control.json",
       "sha256": "e2c85835dbc16ba55083af95882e632073c7199a88650b857106505e024f29a4",
       "why": "same-path control for section 6: the trainer forward run twice on identical completions, which is the baseline the cross-path divergence lacked"
+    },
+    {
+      "path": "artifacts/diagnostics/logprob_divergence/importance_ratio.json",
+      "sha256": "63efbc5194f79b45211d402dc56b2a60fa2f32156cdda6b41601c4e73924f324",
+      "why": "implied importance ratio per token for section 6: these tokens were sampled by the policy being updated, so the true ratio is exactly 1 and any deviation is path numerics"
     }
   ],
   "excluded_by_policy": [

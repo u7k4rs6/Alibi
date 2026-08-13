@@ -978,6 +978,26 @@ def fault_measurements() -> dict:
             for k in ("n_token_pairs", "identical_pairs", "mean_abs_diff", "median_abs_diff", "max_abs_diff")
         }
 
+    # The implied importance ratio, from its artifact.
+    ratio_path = ARTIFACTS / "diagnostics" / "logprob_divergence" / "importance_ratio.json"
+    if ratio_path.exists():
+        ratio = json.loads(ratio_path.read_text(encoding="utf-8"))
+        token = ratio["per_token"]
+        sequence = ratio["per_sequence_mean_logprob"]
+        out["importance_ratio"] = {
+            "n": token["n"],
+            "mean": token["mean"], "median": token["median"],
+            "min": token["min"], "max": token["max"],
+            "outside_02_n": token["outside_eps_0.2"]["n_outside"],
+            "outside_02_fraction": token["outside_eps_0.2"]["fraction"],
+            "outside_01_n": token["outside_eps_0.1"]["n_outside"],
+            "outside_01_fraction": token["outside_eps_0.1"]["fraction"],
+            "sequence_n": sequence["n"],
+            "sequence_min": sequence["min"], "sequence_max": sequence["max"],
+            "sequence_outside_02_fraction": sequence["outside_eps_0.2"]["fraction"],
+            "sequence_outside_01_fraction": sequence["outside_eps_0.1"]["fraction"],
+        }
+
     # The re-measured divergence, from its artifact.
     div_path = ARTIFACTS / "diagnostics" / "logprob_divergence" / "result.json"
     if div_path.exists():

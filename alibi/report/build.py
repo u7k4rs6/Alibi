@@ -101,6 +101,14 @@ def build_published(computed: dict) -> dict:
     add("cap_at_1024.has_code_fraction", "v3 has-code fraction at 1024")
     for budget in ("3072", "2048", "1536", "1024"):
         add(f"oom_bisection.summary.{budget}.peaks_gb.0", f"v2 bisection peak at {budget}")
+    add("importance_ratio.mean", "importance ratio mean")
+    add("importance_ratio.median", "importance ratio median")
+    add("importance_ratio.min", "importance ratio min")
+    add("importance_ratio.max", "importance ratio max")
+    add("importance_ratio.outside_02_n", "ratio outside 0.2 band, count")
+    add("importance_ratio.outside_02_fraction", "ratio outside 0.2 band, fraction")
+    add("importance_ratio.outside_01_n", "ratio outside 0.1 band, count")
+    add("importance_ratio.outside_01_fraction", "ratio outside 0.1 band, fraction")
     add("logprob_same_path_control.same_mean_abs_diff", "same-path control mean abs")
     add("logprob_same_path_control.same_max_abs_diff", "same-path control max abs")
     add("logprob_same_path_control.same_identical_pairs", "same-path control identical pairs")
@@ -1036,9 +1044,75 @@ def build_report() -> dict[str, Path]:
     else:
         L.append("**Unquantified.** No committed artifact carries the sampler-trainer pair.")
     L.append("")
+    ratio = (computed.get("fault_measurements") or {}).get("importance_ratio") or {}
+    if ratio:
+        L.append("### What the disagreement means for a clipped objective")
+        L.append("")
+        L.append(
+            "The quantity a PPO or GRPO surrogate actually uses is the importance ratio "
+            "`exp(trainer_logprob - sampler_logprob)`. **These tokens were sampled by the very "
+            "policy being updated, so their true ratio is exactly 1 for every one of them.** Any "
+            "deviation is the numerics of two code paths, not off-policy drift. Measured on the "
+            "same completions:"
+        )
+        L.append("")
+        L.append("| Quantity | Value |")
+        L.append("|---|---|")
+        L.append(f"| Tokens | {ratio['n']} |")
+        L.append(f"| Mean ratio | {_fmt(ratio['mean'], 6)} |")
+        L.append(f"| Median ratio | {_fmt(ratio['median'], 6)} |")
+        L.append(f"| Minimum | {_fmt(ratio['min'], 6)} |")
+        L.append(f"| Maximum | {_fmt(ratio['max'], 6)} |")
+        L.append(
+            f"| Outside [0.8, 1.2], the clip band at epsilon 0.2 | **{ratio['outside_02_n']} of "
+            f"{ratio['n']} = {_fmt(ratio['outside_02_fraction'])}** |"
+        )
+        L.append(
+            f"| Outside [0.9, 1.1], epsilon 0.1 | **{ratio['outside_01_n']} of {ratio['n']} = "
+            f"{_fmt(ratio['outside_01_fraction'])}** |"
+        )
+        L.append("")
+        L.append(
+            "The centre of the distribution is where it should be: the median is 1.000000 and the "
+            "mean is within 2 parts in 10,000 of unity. The tails are not. The minimum is "
+            f"{_fmt(ratio['min'], 4)} and the maximum {_fmt(ratio['max'], 4)}, on tokens whose "
+            "correct ratio is 1."
+        )
+        L.append("")
+        L.append(
+            "**The consequence, stated at the size the measurement supports.** A correctly written "
+            "clipped objective treats a ratio outside the band as evidence that the policy has "
+            "moved away from the one that sampled the token, and clips it, which zeroes that "
+            f"token's gradient contribution. Here **{_fmt(ratio['outside_02_fraction'])} of tokens "
+            f"at epsilon 0.2 and {_fmt(ratio['outside_01_fraction'])} at epsilon 0.1** would be "
+            "treated that way despite being exactly on-policy. The clipping would be triggered by "
+            "arithmetic, not by drift."
+        )
+        L.append("")
+        L.append(
+            "**What this does not establish.** The effect on training outcomes is unmeasured here. "
+            "No run in this repository used per-token clipping: the only clipped configuration "
+            "written, probe D, clips on the sequence mean logprob, and at that level the same "
+            f"completions give ratios between {_fmt(ratio['sequence_min'], 6)} and "
+            f"{_fmt(ratio['sequence_max'], 6)}, with "
+            f"{_fmt(ratio['sequence_outside_01_fraction'])} outside even the tighter band. "
+            "Averaging over a sequence cancels most of the per-token spread. So the finding is "
+            "about what a per-token clipped implementation would do on this hardware and this "
+            "path pair, measured on 16 completions from 2 problems, and it is not a measured "
+            "effect on any training curve."
+        )
+        L.append("")
+        L.append(
+            "It is worth stating in the other direction too: this is a plausible mechanism by "
+            "which a correct-looking GRPO implementation silently discards a few percent of its "
+            "gradient signal, and it would be invisible to anyone who did not store both logprobs "
+            "and compare them. That is the same shape as the faults in section 2, arriving in the "
+            "one place this project had already instrumented to catch it."
+        )
+        L.append("")
     L.append(
-        "Artifacts: `artifacts/diagnostics/logprob_divergence/result.json` and "
-        "`same_path_control.json`, both declared in the index."
+        "Artifacts: `artifacts/diagnostics/logprob_divergence/result.json`, "
+        "`same_path_control.json` and `importance_ratio.json`, all declared in the index."
     )
     L.append("")
 

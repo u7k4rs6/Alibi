@@ -239,7 +239,29 @@ No halt threshold was chosen, because any value above 0.6875 would be a licence 
 
 It also means the column is now doing the job it was collected for. In v1 the pair was the same number twice and could not have shown this; the fault in section 2.5 was hiding a real effect, not merely a redundant column.
 
-Artifacts: `artifacts/diagnostics/logprob_divergence/result.json` and `same_path_control.json`, both declared in the index.
+### What the disagreement means for a clipped objective
+
+The quantity a PPO or GRPO surrogate actually uses is the importance ratio `exp(trainer_logprob - sampler_logprob)`. **These tokens were sampled by the very policy being updated, so their true ratio is exactly 1 for every one of them.** Any deviation is the numerics of two code paths, not off-policy drift. Measured on the same completions:
+
+| Quantity | Value |
+|---|---|
+| Tokens | 19347 |
+| Mean ratio | 1.000212 |
+| Median ratio | 1.000000 |
+| Minimum | 0.702093 |
+| Maximum | 1.413601 |
+| Outside [0.8, 1.2], the clip band at epsilon 0.2 | **69 of 19347 = 0.0036** |
+| Outside [0.9, 1.1], epsilon 0.1 | **773 of 19347 = 0.0400** |
+
+The centre of the distribution is where it should be: the median is 1.000000 and the mean is within 2 parts in 10,000 of unity. The tails are not. The minimum is 0.7021 and the maximum 1.4136, on tokens whose correct ratio is 1.
+
+**The consequence, stated at the size the measurement supports.** A correctly written clipped objective treats a ratio outside the band as evidence that the policy has moved away from the one that sampled the token, and clips it, which zeroes that token's gradient contribution. Here **0.0036 of tokens at epsilon 0.2 and 0.0400 at epsilon 0.1** would be treated that way despite being exactly on-policy. The clipping would be triggered by arithmetic, not by drift.
+
+**What this does not establish.** The effect on training outcomes is unmeasured here. No run in this repository used per-token clipping: the only clipped configuration written, probe D, clips on the sequence mean logprob, and at that level the same completions give ratios between 0.998208 and 1.002141, with 0.0000 outside even the tighter band. Averaging over a sequence cancels most of the per-token spread. So the finding is about what a per-token clipped implementation would do on this hardware and this path pair, measured on 16 completions from 2 problems, and it is not a measured effect on any training curve.
+
+It is worth stating in the other direction too: this is a plausible mechanism by which a correct-looking GRPO implementation silently discards a few percent of its gradient signal, and it would be invisible to anyone who did not store both logprobs and compare them. That is the same shape as the faults in section 2, arriving in the one place this project had already instrumented to catch it.
+
+Artifacts: `artifacts/diagnostics/logprob_divergence/result.json`, `same_path_control.json` and `importance_ratio.json`, all declared in the index.
 
 ## The audit, and where this report failed its own standard
 
@@ -303,4 +325,4 @@ The four declared evidence runs ran at four different git revisions. An audit di
 }
 ```
 
-Generated 2026-08-13T07:48:58.297396+00:00 by `alibi report`. Most numbers are injected from `artifacts/` at build time; the v2 and v3 tables are read from their declared diagnostic artifacts; a small number of counts remain typed prose backed by named artifacts. `alibi verify --no-gpu` recomputes **49 declared claims**, which cover **19 of the 40 distinct numeric literals** in this report. An earlier revision claimed verify recomputed every number above; an audit measured that claim at about 3 percent coverage and it was replaced by this counted one. The residual literals are recomputable from the named artifacts but are not checked by verify. Every autonomous decision, including the ones later withdrawn, is in `DECISIONS.md`.
+Generated 2026-08-13T10:09:56.258888+00:00 by `alibi report`. Most numbers are injected from `artifacts/` at build time; the v2 and v3 tables are read from their declared diagnostic artifacts; a small number of counts remain typed prose backed by named artifacts. `alibi verify --no-gpu` recomputes **57 declared claims**, which cover **24 of the 44 distinct numeric literals** in this report. An earlier revision claimed verify recomputed every number above; an audit measured that claim at about 3 percent coverage and it was replaced by this counted one. The residual literals are recomputable from the named artifacts but are not checked by verify. Every autonomous decision, including the ones later withdrawn, is in `DECISIONS.md`.

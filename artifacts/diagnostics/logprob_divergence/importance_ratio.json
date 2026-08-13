@@ -1,0 +1,68 @@
+{
+  "declared": "exp(trainer_logprob - sampler_logprob) per token, on completions sampled by the policy being updated, so the true ratio is exactly 1 for every token. Same seed and config as logprob_divergence and same_path_control, so the completions are the same. No training.",
+  "diagnostic": "implied_importance_ratio",
+  "max_new_tokens": 3072,
+  "model": "Qwen/Qwen3-0.6B",
+  "per_sequence_mean_logprob": {
+    "max": 1.0021409161368566,
+    "mean": 0.9999122390829969,
+    "median": 0.9998425232431776,
+    "min": 0.9982084746521671,
+    "n": 16,
+    "note": "This repo's own probe D clips on the sequence mean logprob, not per token, so this row is the one that bears on its implementation.",
+    "outside_eps_0.1": {
+      "band": [
+        0.9,
+        1.1
+      ],
+      "epsilon": 0.1,
+      "fraction": 0.0,
+      "n_outside": 0
+    },
+    "outside_eps_0.2": {
+      "band": [
+        0.8,
+        1.2
+      ],
+      "epsilon": 0.2,
+      "fraction": 0.0,
+      "n_outside": 0
+    }
+  },
+  "per_token": {
+    "exactly_one": 579,
+    "max": 1.4136013868402453,
+    "mean": 1.0002119186888836,
+    "median": 1.0,
+    "min": 0.7020934831875467,
+    "n": 19347,
+    "outside_eps_0.1": {
+      "band": [
+        0.9,
+        1.1
+      ],
+      "epsilon": 0.1,
+      "fraction": 0.03995451491187264,
+      "n_outside": 773
+    },
+    "outside_eps_0.2": {
+      "band": [
+        0.8,
+        1.2
+      ],
+      "epsilon": 0.2,
+      "fraction": 0.0035664444099860445,
+      "n_outside": 69
+    },
+    "p01": 0.8882120077931374,
+    "p99": 1.1247951360850041
+  },
+  "same_path_control": {
+    "exactly_one": 19347,
+    "max": 1.0,
+    "mean": 1.0,
+    "min": 1.0,
+    "n": 19347
+  },
+  "seed": 1
+}
